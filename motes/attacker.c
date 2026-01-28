@@ -11,6 +11,7 @@
 #include "net/ipv6/uip.h"
 #include "net/ipv6/uipbuf.h"
 #include "net/ipv6/uip-ds6.h"
+#include "net/ipv6/uiplib.h"
 #include "net/linkaddr.h"
 #include "random.h"
 #include "net/routing/routing.h"
@@ -24,6 +25,10 @@
 
 #define UDP_PORT 8765
 
+#ifndef WARMUP_SECONDS
+#define WARMUP_SECONDS 60
+#endif
+
 #ifndef ATTACK_DROP_PCT
 #define ATTACK_DROP_PCT 50
 #endif
@@ -34,6 +39,28 @@
 
 static uip_ipaddr_t root_ipaddr;
 static uint8_t attack_enabled;
+static uint32_t fwd_total;
+static uint32_t fwd_udp_root;
+static uint32_t fwd_udp_root_dropped;
+
+static void
+log_preferred_parent(void)
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+  unsigned node_id = (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
+  if(dag == NULL || dag->preferred_parent == NULL) {
+    printf("CSV,PARENT,%u,none\n", node_id);
+    return;
+  }
+  const uip_ipaddr_t *paddr = rpl_neighbor_get_ipaddr(dag->preferred_parent);
+  printf("CSV,PARENT,%u,", node_id);
+  if(paddr != NULL) {
+    uiplib_ipaddr_print(paddr);
+  } else {
+    printf("unknown");
+  }
+  printf("\n");
+}
 
 static uint8_t
 should_attack_drop(void)
@@ -77,9 +104,19 @@ ip_output(const linkaddr_t *localdest)
     return NETSTACK_IP_PROCESS;
   }
 
+  if(!uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr)) {
+    fwd_total++;
+  }
+
   if(is_forwarded_udp_to_root() && should_attack_drop()) {
+    fwd_udp_root++;
+    fwd_udp_root_dropped++;
     LOG_WARN("drop fwd UDP to root\n");
     return NETSTACK_IP_DROP;
+  }
+
+  if(is_forwarded_udp_to_root()) {
+    fwd_udp_root++;
   }
 
   return NETSTACK_IP_PROCESS;
@@ -97,6 +134,8 @@ PROCESS_THREAD(attacker_process, ev, data)
 {
   static struct etimer warmup_timer;
   static struct etimer dis_timer;
+  static struct etimer parent_timer;
+  static struct etimer stats_timer;
 
   (void)ev; (void)data;
 
@@ -110,7 +149,12 @@ PROCESS_THREAD(attacker_process, ev, data)
   rpl_set_leaf_only(0);
 
   etimer_set(&dis_timer, 30 * CLOCK_SECOND);
+  etimer_set(&parent_timer, 30 * CLOCK_SECOND);
+  etimer_set(&stats_timer, 30 * CLOCK_SECOND);
   attack_enabled = 0;
+  fwd_total = 0;
+  fwd_udp_root = 0;
+  fwd_udp_root_dropped = 0;
   if(ATTACK_WARMUP_SECONDS > 0) {
     etimer_set(&warmup_timer, ATTACK_WARMUP_SECONDS * CLOCK_SECOND);
   } else {
@@ -130,6 +174,17 @@ PROCESS_THREAD(attacker_process, ev, data)
         rpl_icmp6_dis_output(NULL);
       }
       etimer_reset(&dis_timer);
+    }
+    if(etimer_expired(&parent_timer)) {
+      log_preferred_parent();
+      etimer_reset(&parent_timer);
+    }
+    if(etimer_expired(&stats_timer)) {
+      printf("CSV,FWD,3,%lu,%lu,%lu\n",
+             (unsigned long)fwd_total,
+             (unsigned long)fwd_udp_root,
+             (unsigned long)fwd_udp_root_dropped);
+      etimer_reset(&stats_timer);
     }
   }
 

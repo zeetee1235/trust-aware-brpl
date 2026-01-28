@@ -50,6 +50,11 @@ if [ -f "$LOG_DIR/$LOG_FILE" ]; then
     rm -f "$LOG_DIR/$LOG_FILE"
 fi
 
+# Force rebuild to honor DEFINES changes
+make -C "$PROJECT_DIR/motes" -f Makefile.receiver TARGET=cooja clean >/dev/null || true
+make -C "$PROJECT_DIR/motes" -f Makefile.sender TARGET=cooja clean >/dev/null || true
+make -C "$PROJECT_DIR/motes" -f Makefile.attacker TARGET=cooja clean >/dev/null || true
+
 # ScriptRunner placeholder 채우기 (시뮬레이션 시간 설정)
 SIM_TMP="$PROJECT_DIR/configs/simulation_tmp.csc"
 sed \

@@ -101,30 +101,6 @@ GUI 모드에서:
 
 ---
 
-## 네트워크 토폴로지
-
-```
-                    Root (ID=1)
-                   [0, 0]
-                      |
-      +---------------+---------------+
-      |               |               |
-   Node 5          Node 2          Node 7
-  [30,30]         [30,0]         [30,-30]
-      |               |               |
-   Node 6          Node 3          Node 8
-  [60,30]         [60,0]         [60,-30]
-                      |
-                   Node 4
-                  [90,0]
-```
-
-- **Root (Node 1)**: RPL Root + UDP Receiver
-- **Nodes 2-8**: Sensor Sender nodes
-- **Radio range**: 50m (transmission), 100m (interference)
-- **Topology**: Multi-hop with redundant paths
-
----
 
 ## 결과 분석
 

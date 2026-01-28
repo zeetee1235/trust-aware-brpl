@@ -35,6 +35,25 @@
 static struct simple_udp_connection udp_conn;
 static uip_ipaddr_t root_ipaddr;
 
+static void
+log_preferred_parent(void)
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+  unsigned node_id = (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
+  if(dag == NULL || dag->preferred_parent == NULL) {
+    printf("CSV,PARENT,%u,none\n", node_id);
+    return;
+  }
+  const uip_ipaddr_t *paddr = rpl_neighbor_get_ipaddr(dag->preferred_parent);
+  printf("CSV,PARENT,%u,", node_id);
+  if(paddr != NULL) {
+    uiplib_ipaddr_print(paddr);
+  } else {
+    printf("unknown");
+  }
+  printf("\n");
+}
+
 static int
 parse_payload(const uint8_t *data, uint16_t len, uint32_t *seq_out, uint32_t *t0_out)
 {
@@ -106,6 +125,8 @@ PROCESS_THREAD(sender_process, ev, data)
   /* Root is aaaa::1 as configured by receiver_root.c. */
   uip_ip6addr(&root_ipaddr, 0xaaaa,0,0,0,0,0,0,1);
 
+  rpl_set_leaf_only(0);
+
   simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, echo_rx_callback);
   etimer_set(&periodic_timer, SEND_INTERVAL);
   etimer_set(&dis_timer, 30 * CLOCK_SECOND);
@@ -152,6 +173,7 @@ PROCESS_THREAD(sender_process, ev, data)
       }
       LOG_INFO_("\n");
     }
+    log_preferred_parent();
 
     if(etimer_expired(&dis_timer) && !NETSTACK_ROUTING.node_has_joined()) {
       LOG_INFO("send DIS (not joined)\n");
