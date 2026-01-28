@@ -1,0 +1,18 @@
+# Exclude Cooja simulation files from language statistics
+*.csc linguist-generated=true
+*.csc linguist-documentation
+
+# Exclude log files
+*.log linguist-generated=true
+*.testlog linguist-generated=true
+
+# Exclude result files
+results/** linguist-generated=true
+
+# Mark scripts as linguist-detectable
+scripts/*.sh linguist-detectable
+scripts/*.py linguist-detectable
+
+# Mark tools as linguist-detectable
+tools/*.py linguist-detectable
+tools/*.R linguist-detectable

@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #include "brpl-trust.h"
+#include "brpl-blacklist.h"
 
 #define LOG_MODULE "ATTACK"
 #define LOG_LEVEL LOG_LEVEL_INFO
@@ -107,6 +108,13 @@ handle_trust_input(const char *line)
     uint16_t self_id = (uint16_t)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
     brpl_trust_override((uint16_t)node_id, (uint16_t)trust);
     printf("CSV,TRUST_IN,%u,%u,%u\n", self_id, node_id, trust);
+    
+    /* Auto-blacklist if trust is below threshold */
+    if(trust < BLACKLIST_TRUST_THRESHOLD) {
+      brpl_blacklist_add((uint16_t)node_id);
+    } else {
+      brpl_blacklist_remove((uint16_t)node_id);
+    }
   }
 }
 
@@ -114,6 +122,11 @@ static enum netstack_ip_action
 ip_output(const linkaddr_t *localdest)
 {
   (void)localdest;
+
+  /* Check blacklist first - drop packets to/from blacklisted nodes */
+  if(brpl_blacklist_should_drop_packet(&UIP_IP_BUF->destipaddr, &UIP_IP_BUF->srcipaddr)) {
+    return NETSTACK_IP_DROP;
+  }
 
   if(!attack_enabled) {
     return NETSTACK_IP_PROCESS;
@@ -169,6 +182,7 @@ PROCESS_THREAD(attacker_process, ev, data)
   netstack_ip_packet_processor_add(&packet_processor);
   rpl_set_leaf_only(0);
   serial_line_init();
+  brpl_blacklist_init();
 
   etimer_set(&dis_timer, 30 * CLOCK_SECOND);
   etimer_set(&parent_timer, 30 * CLOCK_SECOND);

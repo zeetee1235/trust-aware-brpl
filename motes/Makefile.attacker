@@ -4,6 +4,9 @@ all: $(CONTIKI_PROJECT)
 # BRPL objective function
 PROJECT_SOURCEFILES += ../brpl-of.c
 
+# Blacklist module
+PROJECT_SOURCEFILES += brpl-blacklist.c
+
 # CONTIKI_NG_PATH 기본값 설정
 ifndef CONTIKI_NG_PATH
   CONTIKI_NG_PATH=/home/dev/contiki-ng

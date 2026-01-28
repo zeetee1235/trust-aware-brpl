@@ -126,7 +126,58 @@ trust-aware-brpl/
 - 외부 Trust Engine 연동(파일 폴링) 동작 확인
 - headless 환경에서 SerialSocketServer는 제한되어 비활성화 필요
 
-## 남은 확인/개선 포인트
-- BRPL OF 로그 기반으로 trust→parent 배제 여부 검증 필요
-- Cooja headless 환경의 JVM 크래시 원인 분석
-- 패킷 필터링(blacklist drop)을 네트워크 계층에 추가 가능
+## 완료된 개선 사항
+### ✅ BRPL OF 로그 기반 trust→parent 배제 검증 (완료)
+- **검증 도구**: `tools/validate_trust_parent.py`
+- **검증 결과**: Trust < TRUST_PARENT_MIN(700)인 노드는 parent로 선택되지 않음
+- **사용법**: `python3 tools/validate_trust_parent.py results/run-*/COOJA.testlog`
+- **주요 발견**:
+  - Node 35가 trust=674로 임계값 이하로 떨어짐
+  - 해당 노드는 parent로 선택되지 않음 확인
+  - Trust 필터링이 정상 작동함
+
+### ✅ Cooja headless 환경의 JVM 크래시 원인 분석 (완료)
+- **분석 도구**: `tools/analyze_cooja_crash.py`
+- **크래시 원인**: `doInterfaceActionsBeforeTick()` 함수의 SIGSEGV
+  - Contiki-NG 네이티브 라이브러리의 메모리 액세스 위반
+  - SerialSocketServer 플러그인의 headless 모드 불안정성
+  - 다중 mote 타입 사용 시 race condition 발생
+- **완화 방안**:
+  1. SerialSocketServer 비활성화 (`export SERIAL_SOCKET_DISABLE=1`)
+  2. JVM 힙 크기 증가 (`-Xmx4G -Xms2G`)
+  3. Native access 경고 억제 (`--enable-native-access=ALL-UNNAMED`)
+  4. 시뮬레이션 시간 단축 및 노드 수 감소
+- **안정화 스크립트**: `scripts/run_simulation_stable.sh` 생성
+
+### ✅ 패킷 필터링(blacklist drop) 네트워크 계층 추가 (완료)
+- **구현 파일**: 
+  - `motes/brpl-blacklist.h` - Blacklist API 정의
+  - `motes/brpl-blacklist.c` - Blacklist 구현
+- **주요 기능**:
+  - Trust < BLACKLIST_TRUST_THRESHOLD(300)인 노드 자동 blacklist
+  - 네트워크 계층에서 패킷 필터링 (`ip_output()` hook)
+  - Blacklist된 노드로부터/노드로의 패킷 드롭
+  - IPv6/Link-layer 주소 기반 필터링 지원
+- **통합 위치**:
+  - `sender.c`: Trust input 처리 시 자동 blacklist 추가/제거
+  - `attacker.c`: 패킷 포워딩 전 blacklist 체크
+- **로그 포맷**:
+  - `CSV,BLACKLIST_ADD,<node>,<count>`
+  - `CSV,BLACKLIST_REMOVE,<node>,<count>`
+  - `CSV,PKT_DROP_DEST,<node>` or `CSV,PKT_DROP_SRC,<node>`
+- **테스트 도구**: `tools/test_blacklist.py`
+- **사용 예**:
+  ```bash
+  # Blacklist 동작 확인
+  python3 tools/test_blacklist.py results/run-*/COOJA.testlog
+  
+  # Trust engine과 함께 사용
+  ./trust_engine --threshold 300 --input logs/COOJA.testlog
+  ```
+
+## 검증 및 분석 도구
+- `tools/validate_trust_parent.py` - Trust 기반 parent 선택 검증
+- `tools/analyze_cooja_crash.py` - JVM 크래시 분석 및 완화 방안
+- `tools/test_blacklist.py` - Blacklist 기능 테스트
+- `tools/parse_results.py` - 시뮬레이션 결과 파싱
+- `tools/summary.R` - 배치 결과 통계 분석

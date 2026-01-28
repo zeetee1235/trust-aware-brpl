@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "brpl-trust.h"
+#include "brpl-blacklist.h"
 
 #define LOG_MODULE "SENDER"
 #define LOG_LEVEL LOG_LEVEL_INFO
@@ -117,6 +118,14 @@ handle_trust_input(const char *line)
     uint16_t self_id = (uint16_t)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
     brpl_trust_override((uint16_t)node_id, (uint16_t)trust);
     printf("CSV,TRUST_IN,%u,%u,%u\n", self_id, node_id, trust);
+    
+    /* Auto-blacklist if trust is below threshold */
+    if(trust < BLACKLIST_TRUST_THRESHOLD) {
+      brpl_blacklist_add((uint16_t)node_id);
+    } else {
+      /* Remove from blacklist if trust recovers */
+      brpl_blacklist_remove((uint16_t)node_id);
+    }
   }
 }
 
@@ -148,6 +157,7 @@ PROCESS_THREAD(sender_process, ev, data)
 
   rpl_set_leaf_only(0);
   serial_line_init();
+  brpl_blacklist_init();
 
   simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, echo_rx_callback);
   etimer_set(&periodic_timer, SEND_INTERVAL);
