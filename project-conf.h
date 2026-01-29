@@ -38,9 +38,19 @@ extern rpl_of_t rpl_brpl;
 #define TRUST_PARENT_MIN 700
 #endif
 
+/* CSV logging control (reduce RS232 buffer overflow) */
+#ifndef CSV_LOG_SAMPLE_RATE
+#define CSV_LOG_SAMPLE_RATE 10  /* Only log 1 out of every N events */
+#endif
+
 /* Keep logs readable in Cooja for experiment parsing. */
-#define LOG_LEVEL_APP LOG_LEVEL_INFO
-#define LOG_CONF_LEVEL_RPL LOG_LEVEL_DBG
-#define LOG_CONF_LEVEL_IPV6 LOG_LEVEL_INFO
+#define LOG_LEVEL_APP LOG_LEVEL_WARN
+#define LOG_CONF_LEVEL_RPL LOG_LEVEL_WARN
+#define LOG_CONF_LEVEL_IPV6 LOG_LEVEL_WARN
+
+/* Disable verbose CSV logging by default to prevent RS232 overflow */
+#ifndef CSV_VERBOSE_LOGGING
+#define CSV_VERBOSE_LOGGING 0
+#endif
 
 #endif /* PROJECT_CONF_H_ */

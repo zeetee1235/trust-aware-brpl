@@ -115,9 +115,11 @@ handle_trust_input(const char *line)
   unsigned node_id = 0;
   unsigned trust = 0;
   if(sscanf(line, "TRUST,%u,%u", &node_id, &trust) == 2) {
-    uint16_t self_id = (uint16_t)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
     brpl_trust_override((uint16_t)node_id, (uint16_t)trust);
+#if CSV_VERBOSE_LOGGING
+    uint16_t self_id = (uint16_t)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
     printf("CSV,TRUST_IN,%u,%u,%u\n", self_id, node_id, trust);
+#endif
     
     /* Auto-blacklist if trust is below threshold */
     if(trust < BLACKLIST_TRUST_THRESHOLD) {

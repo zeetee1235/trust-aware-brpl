@@ -298,7 +298,7 @@ function pollTrust() {
         } catch (e) {
         }
       }
-      log.log("INJECT " + cmd);
+      // log.log("INJECT " + cmd);  // Disabled to reduce RS232 buffer overflow
     }
     lastPos = raf.getFilePointer();
     raf.close();

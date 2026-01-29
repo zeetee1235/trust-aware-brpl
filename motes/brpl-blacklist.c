@@ -21,7 +21,9 @@ brpl_blacklist_init(void)
   memset(blacklist, 0, sizeof(blacklist));
   blacklist_size = 0;
   LOG_INFO("initialized (max %d nodes)\n", BLACKLIST_MAX_NODES);
+#if CSV_VERBOSE_LOGGING
   printf("CSV,BLACKLIST_INIT,%d\n", BLACKLIST_MAX_NODES);
+#endif
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -38,7 +40,9 @@ brpl_blacklist_add(uint16_t node_id)
   if(blacklist_size < BLACKLIST_MAX_NODES) {
     blacklist[blacklist_size++] = node_id;
     LOG_WARN("added node %u (total: %u)\n", node_id, blacklist_size);
+#if CSV_VERBOSE_LOGGING
     printf("CSV,BLACKLIST_ADD,%u,%u\n", node_id, blacklist_size);
+#endif
     return 1;
   }
   
@@ -57,7 +61,9 @@ brpl_blacklist_remove(uint16_t node_id)
       }
       blacklist_size--;
       LOG_INFO("removed node %u (total: %u)\n", node_id, blacklist_size);
+#if CSV_VERBOSE_LOGGING
       printf("CSV,BLACKLIST_REMOVE,%u,%u\n", node_id, blacklist_size);
+#endif
       return 1;
     }
   }
@@ -153,14 +159,18 @@ brpl_blacklist_should_drop_packet(const uip_ipaddr_t *dest_ipaddr,
   /* Check destination */
   if(dest_ipaddr != NULL && brpl_blacklist_contains_ipaddr(dest_ipaddr)) {
     LOG_DBG("drop: dest blacklisted\n");
+#if CSV_VERBOSE_LOGGING
     printf("CSV,PKT_DROP_DEST,%u\n", extract_node_id_from_ipaddr(dest_ipaddr));
+#endif
     return 1;
   }
   
   /* Check source */
   if(src_ipaddr != NULL && brpl_blacklist_contains_ipaddr(src_ipaddr)) {
     LOG_DBG("drop: src blacklisted\n");
+#if CSV_VERBOSE_LOGGING
     printf("CSV,PKT_DROP_SRC,%u\n", extract_node_id_from_ipaddr(src_ipaddr));
+#endif
     return 1;
   }
   
