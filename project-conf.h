@@ -17,9 +17,8 @@ extern rpl_of_t rpl_brpl;
 #endif
 
 /* Force RPL-Classic routing for BRPL support. */
-#ifndef NETSTACK_CONF_ROUTING
+#undef NETSTACK_CONF_ROUTING
 #define NETSTACK_CONF_ROUTING rpl_classic
-#endif
 
 /* Enable IPv6 forwarding on non-root nodes (required for manual routes). */
 #ifndef UIP_CONF_ROUTER

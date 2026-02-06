@@ -11,14 +11,15 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RESULTS_BASE="results/quick_test_$TIMESTAMP"
 mkdir -p "$RESULTS_BASE"
 
-# Test scenario: BRPL + 30% Attack + No Trust
+# Test scenario: BRPL + 30% Attack (Trust ON/OFF selectable)
 SCENARIO="4_brpl_attack_notrust"
 ROUTING="BRPL"
 BRPL_MODE=1  # BRPL=1, MRHOF=0
 ATTACK="ATTACK"
-TRUST=0
+TRUST_ENABLED=${TRUST_ENABLED:-1}
 ATTACK_RATE=30
 SEED=999888
+ATTACKER_NODE_ID=2
 
 RUN_NAME="${SCENARIO}_p${ATTACK_RATE}_s${SEED}"
 RUN_DIR="$RESULTS_BASE/$RUN_NAME"
@@ -31,8 +32,9 @@ echo "Scenario: $SCENARIO"
 echo "Attack Rate: ${ATTACK_RATE}%"
 echo "========================================="
 
-# Environment
-export CONTIKI_NG_PATH=${CONTIKI_NG_PATH:-/home/dev/contiki-ng}
+# Environment - Use submodule for build, system Cooja for simulation
+export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
+export COOJA_PATH="/home/dev/contiki-ng"
 export SERIAL_SOCKET_DISABLE=1
 export JAVA_OPTS="-Xmx4G -Xms2G"
 
@@ -48,8 +50,9 @@ sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$SEED<\/randomseed>/g" \
     -e "s/@SIM_TIME_SEC@/${SIM_TIME}/g" \
     -e "s|@TRUST_FEEDBACK_PATH@|${TRUST_FEEDBACK_FILE}|g" \
     -e "s/BRPL_MODE=[0-9]/BRPL_MODE=$BRPL_MODE/g" \
+    -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=$TRUST_ENABLED/g" \
     -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=$ATTACK_RATE/g" \
-    "configs/simulation.csc" > "$TEMP_CONFIG"
+    "configs/topologies/T1_S.csc" > "$TEMP_CONFIG"
 
 # Disable SerialSocketServer
 awk '
@@ -76,7 +79,7 @@ LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 timeout 800 java --enable-preview ${JAVA_OPTS} \
-    -jar "$CONTIKI_NG_PATH/tools/cooja/build/libs/cooja.jar" \
+    -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
     --no-gui \
     --autostart \
     --contiki="$CONTIKI_NG_PATH" \
@@ -122,7 +125,8 @@ grep "CSV,PARENT" "$LOG_FILE" | sort -u | while read line; do
     
     parent_name=$parent
     [ "$parent" == "fe80::201:1:1:1" ] && parent_name="Root"
-    [ "$parent" == "fe80::202:2:2:2" ] && parent_name="Attacker"
+    last_hex=$(echo "$parent" | awk -F':' '{print $NF}')
+    [ "$last_hex" == "$(printf "%x" "$ATTACKER_NODE_ID")" ] && parent_name="Attacker"
     
     node_name="Node$node"
     [ "$node" == "2" ] && node_name="Attacker"
@@ -136,7 +140,13 @@ echo "========================================="
 echo "Validation:"
 
 # Check multi-hop routing
-attacker_parent_count=$(awk -F',' '$1=="CSV" && $2=="PARENT" && $3>=4 && $3<=8 && $4=="fe80::203:3:3:3"{c++} END{print c+0}' "$LOG_FILE")
+attacker_parent_count=$(awk -F',' -v aid="$ATTACKER_NODE_ID" '
+  $1=="CSV" && $2=="PARENT" && $3>=4 && $3<=12 {
+    split($4, parts, ":");
+    if(length(parts) && parts[length(parts)] == sprintf("%x", aid)) { c++ }
+  }
+  END{print c+0}
+' "$LOG_FILE")
 if [ "$attacker_parent_count" -ge 3 ]; then
     echo "✅ Multi-hop routing confirmed (${attacker_parent_count}/5 senders via Attacker)"
 else

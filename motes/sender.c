@@ -13,8 +13,8 @@
 #include "net/ipv6/uip-ds6-route.h"
 #include "net/nbr-table.h"
 #include "net/routing/routing.h"
-#include "net/routing/rpl-lite/rpl.h"
-#include "net/routing/rpl-lite/rpl-icmp6.h"
+#include "net/routing/rpl-classic/rpl.h"
+#include "net/routing/rpl-classic/rpl-private.h"
 #include "net/ipv6/simple-udp.h"
 #include "dev/serial-line.h"
 
@@ -44,8 +44,12 @@ static struct simple_udp_connection udp_conn;
 static uip_ipaddr_t root_ipaddr;
 static uip_ipaddr_t forwarder_ipaddr;
 
-#define ATTACKER_NODE_ID 3
-#define RELAY_NODE_ID 2
+#ifndef ATTACKER_NODE_ID
+#define ATTACKER_NODE_ID 2
+#endif
+#ifndef RELAY_NODE_ID
+#define RELAY_NODE_ID 4
+#endif
 #define TRUST_SWITCH_THRESHOLD 700
 
 static uint16_t trust_attacker = TRUST_SCALE;
@@ -78,7 +82,7 @@ log_preferred_parent(void)
     printf("CSV,PARENT,%u,none\n", node_id);
     return;
   }
-  const uip_ipaddr_t *paddr = rpl_neighbor_get_ipaddr(dag->preferred_parent);
+  const uip_ipaddr_t *paddr = rpl_parent_get_ipaddr(dag->preferred_parent);
   printf("CSV,PARENT,%u,", node_id);
   if(paddr != NULL) {
     uiplib_ipaddr_print(paddr);
@@ -202,7 +206,6 @@ PROCESS_THREAD(sender_process, ev, data)
   printf("CSV,BRPL_MODE,%u,0\n", (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1]);
 #endif
 
-  rpl_set_leaf_only(0);
   serial_line_init();
   brpl_blacklist_init();
 
@@ -278,7 +281,7 @@ PROCESS_THREAD(sender_process, ev, data)
 
     if(etimer_expired(&dis_timer) && !NETSTACK_ROUTING.node_has_joined()) {
       LOG_INFO("send DIS (not joined)\n");
-      rpl_icmp6_dis_output(NULL);
+      dis_output(NULL);
       etimer_reset(&dis_timer);
     }
 

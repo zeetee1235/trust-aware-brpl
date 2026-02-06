@@ -4,6 +4,12 @@ all: $(CONTIKI_PROJECT)
 # Use project-wide config
 PROJECT_CONF_PATH = ..
 
+# Force RPL Classic (BRPL requires rpl-classic)
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+# Trust module
+PROJECT_SOURCEFILES += brpl-trust.c
+
 # Blacklist module
 PROJECT_SOURCEFILES += brpl-blacklist.c
 

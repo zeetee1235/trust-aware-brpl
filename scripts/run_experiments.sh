@@ -144,8 +144,9 @@ for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
             log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
             log_info "  Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Seed: $seed"
             
-            # Set environment
-            export CONTIKI_NG_PATH=${CONTIKI_NG_PATH:-/home/dev/contiki-ng}
+            # Set environment - Use submodule for build, system Cooja for simulation
+            export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
+            export COOJA_PATH="/home/dev/contiki-ng"
             export SERIAL_SOCKET_DISABLE=1
             export JAVA_OPTS="-Xmx4G -Xms2G"
             
@@ -229,7 +230,7 @@ for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
             fi
             
             timeout 800 java --enable-preview ${JAVA_OPTS} \
-                -jar "$CONTIKI_NG_PATH/tools/cooja/build/libs/cooja.jar" \
+                -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
                 --no-gui \
                 --autostart \
                 --contiki="$CONTIKI_NG_PATH" \

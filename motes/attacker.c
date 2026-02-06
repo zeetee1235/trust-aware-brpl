@@ -16,10 +16,9 @@
 #include "net/linkaddr.h"
 #include "random.h"
 #include "net/routing/routing.h"
-#include "net/routing/rpl-lite/rpl.h"
-#include "net/routing/rpl-lite/rpl-icmp6.h"
+#include "net/routing/rpl-classic/rpl.h"
+#include "net/routing/rpl-classic/rpl-private.h"
 #include "dev/serial-line.h"
-#include "net/ipv6/uip-ds6-route.h"
 #include "net/nbr-table.h"
 
 #include <stdint.h>
@@ -53,32 +52,10 @@ static uint8_t attack_enabled;
 static uint32_t fwd_total;
 static uint32_t fwd_udp_root;
 static uint32_t fwd_udp_root_dropped;
-static uip_ds6_defrt_t *defrt;
 static uint32_t last_seq[256];
 
 #define ROOT_NODE_ID 1
-#define RELAY_NODE_ID 2
 
-static void
-set_default_router(uint16_t node_id)
-{
-  uip_lladdr_t lladdr;
-  uip_ipaddr_t lladdr_ip;
-  memset(&lladdr, 0, sizeof(lladdr));
-  for(uint8_t i = 0; i < UIP_LLADDR_LEN; i++) {
-    lladdr.addr[i] = (i % 2 == 0) ? 0x00 : (uint8_t)node_id;
-  }
-
-  uip_ip6addr(&lladdr_ip, 0xfe80, 0, 0, 0, 0, 0, 0, 0);
-  uip_ds6_set_addr_iid(&lladdr_ip, &lladdr);
-  uip_ds6_nbr_add(&lladdr_ip, &lladdr, 1, NBR_REACHABLE, NBR_TABLE_REASON_ROUTE, NULL);
-
-  if(defrt != NULL) {
-    uip_ds6_defrt_rm(defrt);
-  }
-  defrt = uip_ds6_defrt_add(&lladdr_ip, 0);
-  printf("CSV,ROUTE_SWITCH,%u\n", (unsigned)node_id);
-}
 
 static void
 log_preferred_parent(void)
@@ -89,7 +66,7 @@ log_preferred_parent(void)
     printf("CSV,PARENT,%u,none\n", node_id);
     return;
   }
-  const uip_ipaddr_t *paddr = rpl_neighbor_get_ipaddr(dag->preferred_parent);
+  const uip_ipaddr_t *paddr = rpl_parent_get_ipaddr(dag->preferred_parent);
   printf("CSV,PARENT,%u,", node_id);
   if(paddr != NULL) {
     uiplib_ipaddr_print(paddr);
@@ -271,18 +248,11 @@ PROCESS_THREAD(attacker_process, ev, data)
   random_init();
 
   netstack_ip_packet_processor_add(&packet_processor);
-  rpl_set_leaf_only(0);
   serial_line_init();
   brpl_blacklist_init();
   
-  /* Explicit attacker identification */
-  {
-    unsigned node_id = (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
-    effective_drop_pct = ATTACK_DROP_PCT;
-    if(node_id == RELAY_NODE_ID) {
-      effective_drop_pct = 0;
-    }
-  }
+  /* Effective drop rate for this node */
+  effective_drop_pct = ATTACK_DROP_PCT;
   LOG_INFO("=== ATTACKER NODE INITIALIZED === (Node ID: %u)\n", 
            (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1]);
   LOG_INFO("attack will start after %u second warmup\n", ATTACK_WARMUP_SECONDS);
@@ -299,8 +269,6 @@ PROCESS_THREAD(attacker_process, ev, data)
     printf("\n");
   }
   simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, udp_rx_callback);
-  defrt = NULL;
-  set_default_router(ROOT_NODE_ID);
 
   etimer_set(&dis_timer, 30 * CLOCK_SECOND);
   etimer_set(&parent_timer, 30 * CLOCK_SECOND);
@@ -328,7 +296,7 @@ PROCESS_THREAD(attacker_process, ev, data)
     if(etimer_expired(&dis_timer)) {
       if(!NETSTACK_ROUTING.node_has_joined()) {
         LOG_INFO("send DIS (not joined)\n");
-        rpl_icmp6_dis_output(NULL);
+        dis_output(NULL);
       }
       etimer_reset(&dis_timer);
     }

@@ -43,6 +43,7 @@ struct TrustState {
 fn usage() {
     eprintln!("Usage: trust_engine [--input <log>] [--output <trust_out>] [--metrics-out <metrics_csv>] ");
     eprintln!("                  [--metric ewma|bayes|beta] [--alpha <0..1>] [--beta-a <f>] [--beta-b <f>] ");
+    eprintln!("                  (alpha is EWMA lambda: weight of previous trust value)");
     eprintln!("                  [--ewma-min <n>] [--bayes-min <0..1>] [--beta-min <0..1>] [--miss-threshold <n>]");
     eprintln!("                  [--forwarders-only] [--fwd-drop-threshold <0..1>]");
     eprintln!("                  [--follow] [--poll-ms <ms>] [--from-start] [--serial-socket <host:port>]");
@@ -190,41 +191,34 @@ fn process_reader<R: BufRead>(
             }
 
             let delta_success = delta_udp.saturating_sub(delta_dropped);
-            let obs = (delta_success as f64) / (delta_udp as f64);
-
-            if !st.seen {
-                st.ewma = obs;
-                st.seen = true;
-            } else {
-                st.ewma = cfg.alpha * obs + (1.0 - cfg.alpha) * st.ewma;
-            }
 
             st.succ += delta_success;
             st.fail += delta_dropped;
 
+            let beta_est = (cfg.beta_a + st.succ as f64)
+                / (cfg.beta_a + cfg.beta_b + st.succ as f64 + st.fail as f64);
             let bayes = (1.0 + st.succ as f64) / (2.0 + st.succ as f64 + st.fail as f64);
-            let beta = (cfg.beta_a + st.succ as f64) / (cfg.beta_a + cfg.beta_b + st.succ as f64 + st.fail as f64);
+            let beta = beta_est;
+
+            if !st.seen {
+                st.ewma = beta_est;
+                st.seen = true;
+            } else {
+                // EWMA with lambda = cfg.alpha (weight of previous value)
+                st.ewma = cfg.alpha * st.ewma + (1.0 - cfg.alpha) * beta_est;
+            }
 
             let mut is_blacklisted = *blacklist.get(&node_id).unwrap_or(&false);
+            let mut blacklisted_now = false;
             if !is_blacklisted {
-                if obs <= (1.0 - cfg.fwd_drop_threshold)
+                if beta_est <= (1.0 - cfg.fwd_drop_threshold)
                     || st.ewma < cfg.ewma_min
                     || bayes < cfg.bayes_min
                     || beta < cfg.beta_min
                 {
                     is_blacklisted = true;
+                    blacklisted_now = true;
                     blacklist.insert(node_id, true);
-                    let _ = writeln!(
-                        blacklist_out,
-                        "{},{},{},{:.4},{:.4},{:.4}",
-                        node_id,
-                        st.succ,
-                        st.fail,
-                        st.ewma,
-                        bayes,
-                        beta
-                    );
-                    let _ = blacklist_out.flush();
                 }
             }
 
@@ -237,19 +231,38 @@ fn process_reader<R: BufRead>(
                     _ => (st.ewma * TRUST_SCALE).round() as u16,
                 }
             };
+            let trust_value = (trust_val as f64) / TRUST_SCALE;
+
+            if blacklisted_now {
+                let _ = writeln!(
+                    blacklist_out,
+                    "{},{},{},{:.4},{:.4},{:.4},{:.4},{}",
+                    node_id,
+                    st.succ,
+                    st.fail,
+                    st.ewma,
+                    bayes,
+                    beta,
+                    trust_value,
+                    trust_val
+                );
+                let _ = blacklist_out.flush();
+            }
 
             let _ = writeln!(out, "TRUST,{},{}", node_id, trust_val);
             let _ = out.flush();
 
             let _ = writeln!(
                 metrics,
-                "{},{},{},{:.4},{:.4},{:.4}",
+                "{},{},{},{:.4},{:.4},{:.4},{:.4},{}",
                 node_id,
                 delta_success,
                 delta_dropped,
                 st.ewma,
                 bayes,
-                beta
+                beta,
+                trust_value,
+                trust_val
             );
             let _ = metrics.flush();
 
@@ -288,14 +301,14 @@ fn main() -> io::Result<()> {
         .truncate(true)
         .open(&cfg.metrics_out)?;
 
-    writeln!(metrics, "node_id,success,failed,ewma,bayes,beta")?;
+    writeln!(metrics, "node_id,success,failed,ewma,bayes,beta,trust_value,trust_raw")?;
 
     let mut blacklist_out = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(&cfg.blacklist_out)?;
-    writeln!(blacklist_out, "node_id,success,failed,ewma,bayes,beta")?;
+    writeln!(blacklist_out, "node_id,success,failed,ewma,bayes,beta,trust_value,trust_raw")?;
 
     if let Some(sock) = &cfg.serial_socket {
         let mut parts = sock.split(':');
