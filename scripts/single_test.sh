@@ -59,6 +59,8 @@ sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$SEED<\/randomseed>/g" \
     -e "s/BRPL_MODE=[0-9]/BRPL_MODE=$BRPL_MODE/g" \
     -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=$TRUST_ENABLED/g" \
     -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA:-0}/g" \
+    -e "s/TRUST_GAMMA=[0-9][0-9]*/TRUST_GAMMA=${TRUST_GAMMA:-1}/g" \
+    -e "/TRUST_GAMMA=/! s/TRUST_LAMBDA=${TRUST_LAMBDA:-0}/TRUST_LAMBDA=${TRUST_LAMBDA:-0},TRUST_GAMMA=${TRUST_GAMMA:-1}/g" \
     -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=$ATTACK_RATE/g" \
     "$TOPOLOGY" > "$TEMP_CONFIG"
 
