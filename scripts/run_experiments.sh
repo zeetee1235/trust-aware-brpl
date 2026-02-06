@@ -16,6 +16,11 @@ INCLUDE_OPTIONAL_SCENARIOS=0  # set to 1 to include 7/8 (Trust ON, no attack)
 SEND_INTERVAL_SECONDS=30
 WARMUP_SECONDS=120
 
+# Topology list (override with TOPOLOGIES env var)
+# Example: TOPOLOGIES="configs/topologies/T1_S.csc configs/topologies/T3.csc" ./scripts/run_experiments.sh
+TOPOLOGIES_DEFAULT=$(ls configs/topologies/*.csc 2>/dev/null | tr '\n' ' ')
+TOPOLOGIES="${TOPOLOGIES:-$TOPOLOGIES_DEFAULT}"
+
 if [ "$QUICK_PREVIEW" -eq 1 ]; then
     SIM_TIME=240
     SEEDS=(123456)
@@ -28,18 +33,14 @@ RESULTS_BASE="results/experiments-$TIMESTAMP"
 mkdir -p "$RESULTS_BASE"
 
 # Scenarios definition: routing,has_attack,trust_enabled
-# 6 ESSENTIAL scenarios only (add optional 7/8 via flag)
+# BRPL-only scenarios
 declare -A SCENARIOS=(
-    ["1_mrhof_normal_notrust"]="MRHOF,NO_ATTACK,0"
     ["2_brpl_normal_notrust"]="BRPL,NO_ATTACK,0"
-    ["3_mrhof_attack_notrust"]="MRHOF,ATTACK,0"
     ["4_brpl_attack_notrust"]="BRPL,ATTACK,0"
-    ["5_mrhof_attack_trust"]="MRHOF,ATTACK,1"
     ["6_brpl_attack_trust"]="BRPL,ATTACK,1"
 )
 
 if [ "$INCLUDE_OPTIONAL_SCENARIOS" -eq 1 ]; then
-    SCENARIOS["7_mrhof_normal_trust"]="MRHOF,NO_ATTACK,1"
     SCENARIOS["8_brpl_normal_trust"]="BRPL,NO_ATTACK,1"
 fi
 
@@ -70,16 +71,18 @@ echo "scenario,routing,attack_rate,trust,seed,pdr,avg_delay_ms,tx,rx,lost" > "$S
 count_runs() {
     local total=0
     local scenario_name routing attack trust
-    for scenario_name in "${!SCENARIOS[@]}"; do
-        IFS=',' read -r routing attack trust <<< "${SCENARIOS[$scenario_name]}"
-        for attack_rate in "${ATTACK_RATES[@]}"; do
-            if [ "$attack" == "ATTACK" ] && [ "$attack_rate" -eq 0 ]; then
-                continue
-            fi
-            if [ "$attack" == "NO_ATTACK" ] && [ "$attack_rate" -gt 0 ]; then
-                continue
-            fi
-            total=$((total + ${#SEEDS[@]}))
+    for topo in $TOPOLOGIES; do
+        for scenario_name in "${!SCENARIOS[@]}"; do
+            IFS=',' read -r routing attack trust <<< "${SCENARIOS[$scenario_name]}"
+            for attack_rate in "${ATTACK_RATES[@]}"; do
+                if [ "$attack" == "ATTACK" ] && [ "$attack_rate" -eq 0 ]; then
+                    continue
+                fi
+                if [ "$attack" == "NO_ATTACK" ] && [ "$attack_rate" -gt 0 ]; then
+                    continue
+                fi
+                total=$((total + ${#SEEDS[@]}))
+            done
         done
     done
     echo "$total"
@@ -91,12 +94,26 @@ CURRENT_RUN=0
 log_info "============================================"
 log_info "Trust-Aware BRPL Comprehensive Experiments"
 log_info "============================================"
-log_info "Total scenarios: ${#SCENARIOS[@]}"
+log_info "Total scenarios: ${#SCENARIOS[@]} (BRPL-only)"
+log_info "Topologies: $TOPOLOGIES"
 log_info "Attack rates: ${ATTACK_RATES[@]}"
 log_info "Seeds: ${#SEEDS[@]}"
 log_info "Total runs: $TOTAL_RUNS"
 log_info "Results directory: $RESULTS_BASE"
 log_info ""
+
+render_progress() {
+    local current="$1"
+    local total="$2"
+    local width=40
+    local percent=$(( current * 100 / total ))
+    local filled=$(( current * width / total ))
+    local empty=$(( width - filled ))
+    local bar=""
+    for ((i=0; i<filled; i++)); do bar+="#"; done
+    for ((i=0; i<empty; i++)); do bar+="-"; done
+    printf "\r[%s] %3d%% (%d/%d)" "$bar" "$percent" "$current" "$total"
+}
 
 # Build if needed
 if [ ! -f "motes/build/cooja/receiver_root.cooja" ]; then
@@ -120,29 +137,32 @@ if [ ! -f "tools/trust_engine/target/release/trust_engine" ]; then
 fi
 
 # Run experiments
-for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
-    IFS=',' read -r routing attack trust <<< "${SCENARIOS[$scenario_name]}"
-    
-    for attack_rate in "${ATTACK_RATES[@]}"; do
-        # Skip attack scenarios when attack_rate=0
-        if [ "$attack" == "ATTACK" ] && [ "$attack_rate" -eq 0 ]; then
-            continue
-        fi
-        # Skip non-attack scenarios when attack_rate>0
-        if [ "$attack" == "NO_ATTACK" ] && [ "$attack_rate" -gt 0 ]; then
-            continue
-        fi
+for topo in $TOPOLOGIES; do
+    TOPO_NAME=$(basename "$topo" .csc)
+    for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
+        IFS=',' read -r routing attack trust <<< "${SCENARIOS[$scenario_name]}"
         
-        for seed in "${SEEDS[@]}"; do
-            CURRENT_RUN=$((CURRENT_RUN + 1))
-            PROGRESS=$((CURRENT_RUN * 100 / TOTAL_RUNS))
+        for attack_rate in "${ATTACK_RATES[@]}"; do
+            # Skip attack scenarios when attack_rate=0
+            if [ "$attack" == "ATTACK" ] && [ "$attack_rate" -eq 0 ]; then
+                continue
+            fi
+            # Skip non-attack scenarios when attack_rate>0
+            if [ "$attack" == "NO_ATTACK" ] && [ "$attack_rate" -gt 0 ]; then
+                continue
+            fi
             
-            RUN_NAME="${scenario_name}_p${attack_rate}_s${seed}"
-            RUN_DIR="$RESULTS_BASE/$RUN_NAME"
-            mkdir -p "$RUN_DIR"
-            
-            log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
-            log_info "  Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Seed: $seed"
+            for seed in "${SEEDS[@]}"; do
+                CURRENT_RUN=$((CURRENT_RUN + 1))
+                PROGRESS=$((CURRENT_RUN * 100 / TOTAL_RUNS))
+                render_progress "$CURRENT_RUN" "$TOTAL_RUNS"
+                
+                RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_s${seed}"
+                RUN_DIR="$RESULTS_BASE/$RUN_NAME"
+                mkdir -p "$RUN_DIR"
+                
+                log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
+                log_info "  Topology: $TOPO_NAME | Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Seed: $seed"
             
             # Set environment - Use submodule for build, system Cooja for simulation
             export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
@@ -157,15 +177,11 @@ for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
                 BRPL_MODE=0
             fi
             
-            # Select config file (use working simulation.csc as base)
-            BASE_CONFIG="configs/simulation.csc"
+            # Select config file (use topologies/*.csc as base)
+            BASE_CONFIG="$topo"
             
-            # Determine BRPL_MODE
-            if [ "$routing" == "BRPL" ]; then
-                BRPL_MODE=1
-            else
-                BRPL_MODE=0
-            fi
+            # Determine BRPL_MODE (BRPL-only)
+            BRPL_MODE=1
             
             # Create temporary config with all modifications
             TEMP_CONFIG="$PROJECT_DIR/configs/temp_${RUN_NAME}.csc"
@@ -276,6 +292,7 @@ for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
             
             log_info "  Completed: $RUN_NAME"
             echo ""
+            done
         done
     done
 done
@@ -283,6 +300,7 @@ done
 log_info "============================================"
 log_info "All experiments completed!"
 log_info "============================================"
+echo ""
 log_info "Results saved to: $RESULTS_BASE"
 log_info "Summary file: $SUMMARY_FILE"
 log_info ""
