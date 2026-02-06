@@ -1,0 +1,11 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260207-001219/T1_M_2_brpl_normal_notrust_p0_s123456/logs/COOJA.testlog
+Traceback (most recent call last):
+  File "/home/dev/WSN-IoT/trust-aware-brpl/tools/parse_results.py", line 267, in <module>
+    main()
+  File "/home/dev/WSN-IoT/trust-aware-brpl/tools/parse_results.py", line 261, in main
+    tx_packets, rx_packets, delays, rpl_packets, exposure = parse_cooja_log(log_file)
+                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dev/WSN-IoT/trust-aware-brpl/tools/parse_results.py", line 45, in parse_cooja_log
+    seq = int(parts[1])
+          ^^^^^^^^^^^^^
+ValueError: invalid literal for int() with base 10: 'aaaa::208:8:8:8'

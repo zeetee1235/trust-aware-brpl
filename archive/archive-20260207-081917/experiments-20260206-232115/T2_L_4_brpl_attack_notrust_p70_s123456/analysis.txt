@@ -1,0 +1,54 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260206-232115/T2_L_4_brpl_attack_notrust_p70_s123456/logs/COOJA.testlog
+
+============================================================
+Performance Analysis Results
+============================================================
+
+[1] PDR (Packet Delivery Ratio)
+------------------------------------------------------------
+Node 14: TX=  23, RX=   1, PDR=  4.35%
+Node 15: TX=  23, RX=   0, PDR=  0.00%
+Node 16: TX=  23, RX=   0, PDR=  0.00%
+Node 17: TX=  23, RX=   1, PDR=  4.35%
+Node 18: TX=  23, RX=   0, PDR=  0.00%
+Node 19: TX=  23, RX=   0, PDR=  0.00%
+Node 20: TX=  23, RX=   0, PDR=  0.00%
+Node 21: TX=  23, RX=   1, PDR=  4.35%
+Node 22: TX=  23, RX=   0, PDR=  0.00%
+Node 23: TX=  23, RX=   0, PDR=  0.00%
+Node 24: TX=  23, RX=   0, PDR=  0.00%
+Node 25: TX=  23, RX=   0, PDR=  0.00%
+Node 26: TX=  23, RX=   0, PDR=  0.00%
+Node 27: TX=  23, RX=   2, PDR=  8.70%
+Node 28: TX=  23, RX=   0, PDR=  0.00%
+Node 29: TX=  23, RX=   0, PDR=  0.00%
+Node 30: TX=  23, RX=   1, PDR=  4.35%
+Node 31: TX=  23, RX=   1, PDR=  4.35%
+Node 32: TX=  23, RX=   0, PDR=  0.00%
+Node 33: TX=  23, RX=   1, PDR=  4.35%
+Node 34: TX=  23, RX=   0, PDR=  0.00%
+Node 35: TX=  23, RX=   0, PDR=  0.00%
+Node 36: TX=  23, RX=   0, PDR=  0.00%
+Node 37: TX=  23, RX=   0, PDR=  0.00%
+Node 38: TX=  23, RX=   1, PDR=  4.35%
+Node 39: TX=  23, RX=   0, PDR=  0.00%
+Node 40: TX=  23, RX=   0, PDR=  0.00%
+
+Overall: TX= 621, RX=   9, PDR=  1.45%
+
+[2] End-to-End Delay (based on RTT)
+------------------------------------------------------------
+No RTT data available
+
+[3] Overhead (Control Packets)
+------------------------------------------------------------
+RPL packets:  0
+Control/Data: 0.00%
+
+[4] Exposure (Attacker Path Inclusion)
+------------------------------------------------------------
+E1 (via attacker 3): 2.74% (UDP to root)
+E3 (parent=attacker): 3.97% (28/705)
+Attacker drop ratio: 58.82% (10/17)
+
+============================================================

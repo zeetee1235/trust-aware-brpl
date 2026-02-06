@@ -16,4 +16,8 @@ PROJECT_SOURCEFILES += brpl-blacklist.c
 # Use submodule
 CONTIKI = ../contiki-ng-brpl
 
+# Enable project configuration + verbose BRPL logging (set before Makefile.include)
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
 include $(CONTIKI)/Makefile.include

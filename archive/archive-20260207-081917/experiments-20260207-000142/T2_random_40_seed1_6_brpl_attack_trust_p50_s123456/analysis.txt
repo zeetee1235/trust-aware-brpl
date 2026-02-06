@@ -1,0 +1,67 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260207-000142/T2_random_40_seed1_6_brpl_attack_trust_p50_s123456/logs/COOJA.testlog
+
+============================================================
+Performance Analysis Results
+============================================================
+
+[1] PDR (Packet Delivery Ratio)
+------------------------------------------------------------
+Node  3: TX=  23, RX=  23, PDR=100.00%
+Node  4: TX=  23, RX=  22, PDR= 95.65%
+Node  5: TX=  23, RX=  23, PDR=100.00%
+Node  6: TX=  23, RX=  23, PDR=100.00%
+Node  7: TX=  23, RX=  18, PDR= 78.26%
+Node  8: TX=  23, RX=  21, PDR= 91.30%
+Node  9: TX=  23, RX=  21, PDR= 91.30%
+Node 10: TX=  23, RX=  23, PDR=100.00%
+Node 11: TX=  23, RX=  23, PDR=100.00%
+Node 12: TX=  23, RX=  22, PDR= 95.65%
+Node 13: TX=  23, RX=  23, PDR=100.00%
+Node 14: TX=  23, RX=  16, PDR= 69.57%
+Node 15: TX=  23, RX=  18, PDR= 78.26%
+Node 16: TX=  23, RX=  22, PDR= 95.65%
+Node 17: TX=  23, RX=  21, PDR= 91.30%
+Node 18: TX=  23, RX=  17, PDR= 73.91%
+Node 19: TX=  23, RX=  23, PDR=100.00%
+Node 20: TX=  23, RX=  17, PDR= 73.91%
+Node 21: TX=  23, RX=  21, PDR= 91.30%
+Node 22: TX=  23, RX=  23, PDR=100.00%
+Node 23: TX=  23, RX=  23, PDR=100.00%
+Node 24: TX=  23, RX=  23, PDR=100.00%
+Node 25: TX=  23, RX=  18, PDR= 78.26%
+Node 26: TX=  23, RX=  23, PDR=100.00%
+Node 27: TX=  23, RX=  23, PDR=100.00%
+Node 28: TX=  23, RX=  20, PDR= 86.96%
+Node 29: TX=  23, RX=  23, PDR=100.00%
+Node 30: TX=  23, RX=  20, PDR= 86.96%
+Node 31: TX=  23, RX=  19, PDR= 82.61%
+Node 32: TX=  23, RX=  13, PDR= 56.52%
+Node 33: TX=  23, RX=  18, PDR= 78.26%
+Node 34: TX=  23, RX=  23, PDR=100.00%
+Node 35: TX=  23, RX=  23, PDR=100.00%
+Node 36: TX=  23, RX=  20, PDR= 86.96%
+Node 37: TX=  23, RX=  21, PDR= 91.30%
+Node 38: TX=  23, RX=  23, PDR=100.00%
+Node 39: TX=  23, RX=  23, PDR=100.00%
+Node 40: TX=  23, RX=  21, PDR= 91.30%
+
+Overall: TX= 874, RX= 797, PDR= 91.19%
+
+[2] End-to-End Delay (based on RTT)
+------------------------------------------------------------
+Sample count: 61
+Average:      124.66 ms
+Min:          9.50 ms
+Max:          541.50 ms
+
+[3] Overhead (Control Packets)
+------------------------------------------------------------
+RPL packets:  0
+Control/Data: 0.00%
+
+[4] Exposure (Attacker Path Inclusion)
+------------------------------------------------------------
+E1 (via attacker 3): 0.00% (UDP to root)
+E3 (parent=attacker): 6.24% (55/881)
+
+============================================================

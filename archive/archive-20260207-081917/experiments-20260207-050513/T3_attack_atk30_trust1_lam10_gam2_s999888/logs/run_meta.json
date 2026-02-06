@@ -1,0 +1,11 @@
+{
+  "run": "T3_attack_atk30_trust1_lam10_gam2_s999888",
+  "topology": "T3",
+  "scenario": "attack",
+  "attack_rate": 30,
+  "trust": 1,
+  "lambda": 10,
+  "gamma": 2,
+  "seed": 999888,
+  "timestamp": "2026-02-07T05:05:57"
+}

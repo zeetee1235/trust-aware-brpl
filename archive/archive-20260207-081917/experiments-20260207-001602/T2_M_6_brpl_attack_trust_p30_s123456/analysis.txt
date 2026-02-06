@@ -1,0 +1,45 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260207-001602/T2_M_6_brpl_attack_trust_p30_s123456/logs/COOJA.testlog
+
+============================================================
+Performance Analysis Results
+============================================================
+
+[1] PDR (Packet Delivery Ratio)
+------------------------------------------------------------
+Node 10: TX=  23, RX=  13, PDR= 56.52%
+Node 11: TX=  23, RX=   9, PDR= 39.13%
+Node 12: TX=  23, RX=  12, PDR= 52.17%
+Node 13: TX=  23, RX=  12, PDR= 52.17%
+Node 14: TX=  23, RX=  13, PDR= 56.52%
+Node 15: TX=  23, RX=  12, PDR= 52.17%
+Node 16: TX=  23, RX=  16, PDR= 69.57%
+Node 17: TX=  23, RX=   9, PDR= 39.13%
+Node 18: TX=  23, RX=  10, PDR= 43.48%
+Node 19: TX=  23, RX=  13, PDR= 56.52%
+Node 20: TX=  23, RX=  10, PDR= 43.48%
+Node 21: TX=  23, RX=  11, PDR= 47.83%
+Node 22: TX=  23, RX=   9, PDR= 39.13%
+Node 23: TX=  23, RX=   7, PDR= 30.43%
+Node 24: TX=  23, RX=  11, PDR= 47.83%
+Node 25: TX=  23, RX=  11, PDR= 47.83%
+
+Overall: TX= 368, RX= 178, PDR= 48.37%
+
+[2] End-to-End Delay (based on RTT)
+------------------------------------------------------------
+Sample count: 158
+Average:      701.80 ms
+Min:          94.00 ms
+Max:          1317.00 ms
+
+[3] Overhead (Control Packets)
+------------------------------------------------------------
+RPL packets:  0
+Control/Data: 0.00%
+
+[4] Exposure (Attacker Path Inclusion)
+------------------------------------------------------------
+E1 (via attacker 3): 0.00% (UDP to root)
+E3 (parent=attacker): 0.00% (0/424)
+
+============================================================

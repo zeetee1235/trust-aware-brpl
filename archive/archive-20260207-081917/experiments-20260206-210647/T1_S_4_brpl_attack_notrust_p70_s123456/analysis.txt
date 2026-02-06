@@ -1,0 +1,34 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260206-210647/T1_S_4_brpl_attack_notrust_p70_s123456/logs/COOJA.testlog
+
+============================================================
+Performance Analysis Results
+============================================================
+
+[1] PDR (Packet Delivery Ratio)
+------------------------------------------------------------
+Node  5: TX=  23, RX=   0, PDR=  0.00%
+Node  6: TX=  23, RX=   0, PDR=  0.00%
+Node  7: TX=  23, RX=   0, PDR=  0.00%
+Node  8: TX=  23, RX=   0, PDR=  0.00%
+Node  9: TX=  23, RX=   0, PDR=  0.00%
+Node 10: TX=  23, RX=   0, PDR=  0.00%
+Node 11: TX=  23, RX=   0, PDR=  0.00%
+Node 12: TX=  23, RX=   0, PDR=  0.00%
+
+Overall: TX= 184, RX=   0, PDR=  0.00%
+
+[2] End-to-End Delay (based on RTT)
+------------------------------------------------------------
+No RTT data available
+
+[3] Overhead (Control Packets)
+------------------------------------------------------------
+RPL packets:  0
+Control/Data: 0.00%
+
+[4] Exposure (Attacker Path Inclusion)
+------------------------------------------------------------
+E1 (via attacker 3): 0.00% (UDP to root)
+E3 (parent=attacker): 3.41% (7/205)
+
+============================================================

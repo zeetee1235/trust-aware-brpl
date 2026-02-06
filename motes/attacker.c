@@ -80,6 +80,24 @@ log_preferred_parent(void)
   printf("\n");
 }
 
+static void
+log_routing_status(void)
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+  unsigned node_id = (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
+  unsigned joined = NETSTACK_ROUTING.node_has_joined() ? 1 : 0;
+  printf("CSV,ROUTING,%u,%u,", node_id, joined);
+  if(dag != NULL && dag->preferred_parent != NULL) {
+    const uip_ipaddr_t *paddr = rpl_parent_get_ipaddr(dag->preferred_parent);
+    if(paddr != NULL) {
+      uiplib_ipaddr_print(paddr);
+      printf("\n");
+      return;
+    }
+  }
+  printf("none\n");
+}
+
 static uint8_t
 should_attack_drop(void)
 {
@@ -182,6 +200,13 @@ udp_rx_callback(struct simple_udp_connection *c,
     fwd_udp_root_dropped++;
     LOG_WARN("drop fwd UDP to root\n");
     return;
+  }
+
+  if(seq > 0) {
+    printf("CSV,FWD_PKT,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)sender_id,
+           (unsigned long)seq);
   }
 
   /* Echo back to sender to enable RTT logging (proxy delay). */
@@ -306,6 +331,7 @@ PROCESS_THREAD(attacker_process, ev, data)
     }
     if(etimer_expired(&parent_timer)) {
       log_preferred_parent();
+      log_routing_status();
       etimer_reset(&parent_timer);
     }
     if(etimer_expired(&stats_timer)) {

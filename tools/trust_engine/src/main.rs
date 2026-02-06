@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufRead, BufReader, Write};
@@ -16,6 +16,7 @@ struct Config {
     exposure_out: String,
     parent_out: String,
     stats_out: String,
+    final_out: String,
     stats_interval: u64,
     metric: String,
     alpha: f64,
@@ -37,7 +38,6 @@ struct Config {
 #[derive(Debug, Default)]
 struct TrustState {
     seen: bool,
-    last_seq: u32,
     ewma: f64,
     succ: u64,
     fail: u64,
@@ -71,6 +71,7 @@ fn parse_args() -> Config {
         exposure_out: "".to_string(),
         parent_out: "".to_string(),
         stats_out: "".to_string(),
+        final_out: "".to_string(),
         stats_interval: 200,
         metric: "ewma".to_string(),
         alpha: 0.2,
@@ -109,6 +110,9 @@ fn parse_args() -> Config {
             }
             "--stats-out" => {
                 if let Some(v) = args.next() { cfg.stats_out = v; }
+            }
+            "--final-out" => {
+                if let Some(v) = args.next() { cfg.final_out = v; }
             }
             "--stats-interval" => {
                 if let Some(v) = args.next() { cfg.stats_interval = v.parse().unwrap_or(cfg.stats_interval); }
@@ -181,12 +185,17 @@ fn process_reader<R: BufRead>(
     exposure_out: &mut Option<File>,
     parent_out: &mut Option<File>,
     stats_out: &mut Option<File>,
+    final_out: &mut Option<File>,
 ) -> io::Result<()> {
     let mut states: HashMap<u16, TrustState> = HashMap::new();
     let mut forwarders: HashMap<u16, bool> = HashMap::new();
     let mut parent_states: HashMap<u16, ParentState> = HashMap::new();
     let mut total_parent_samples: u64 = 0;
     let mut total_parent_attacker: u64 = 0;
+    let mut e1_den: u64 = 0;
+    let mut e1_num: u64 = 0;
+    let mut delivered_to_root: HashSet<u64> = HashSet::new();
+    let mut passed_attacker: HashSet<u64> = HashSet::new();
     let mut total_tx: u64 = 0;
     let mut tx_seen: HashMap<u64, bool> = HashMap::new();
     let mut line_idx: u64 = 0;
@@ -214,6 +223,43 @@ fn process_reader<R: BufRead>(
                     if !tx_seen.contains_key(&key) {
                         tx_seen.insert(key, true);
                         total_tx += 1;
+                    }
+                }
+            }
+            continue;
+        }
+        if trimmed.starts_with("CSV,RX,") {
+            let parts: Vec<&str> = trimmed.split(',').collect();
+            if parts.len() >= 6 && parts[2] == "node=1" {
+                if let Some(src_id) = parse_node_id(parts[3]) {
+                    if let Ok(seq) = parts[4].parse::<u64>() {
+                        let key = ((src_id as u64) << 32) | (seq & 0xffffffff);
+                        if delivered_to_root.insert(key) {
+                            e1_den += 1;
+                            if passed_attacker.contains(&key) {
+                                e1_num += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+        if trimmed.starts_with("CSV,FWD_PKT,") {
+            let parts: Vec<&str> = trimmed.split(',').collect();
+            if parts.len() >= 5 {
+                let node_id: u16 = match parts[2].parse() {
+                    Ok(v) => v,
+                    Err(_) => continue,
+                };
+                if node_id == cfg.attacker_id {
+                    if let (Ok(src_id), Ok(seq)) = (parts[3].parse::<u64>(), parts[4].parse::<u64>()) {
+                        let key = (src_id << 32) | (seq & 0xffffffff);
+                        if passed_attacker.insert(key) {
+                            if delivered_to_root.contains(&key) {
+                                e1_num += 1;
+                            }
+                        }
                     }
                 }
             }
@@ -345,23 +391,31 @@ fn process_reader<R: BufRead>(
             }
 
             if let Some(file) = exposure_out.as_mut() {
-                if total_tx > 0 {
-                    let e1 = (attacker_udp_total as f64) * 100.0 / (total_tx as f64);
+                if e1_den > 0 {
+                    let e1 = (e1_num as f64) * 100.0 / (e1_den as f64);
                     let e3 = if total_parent_samples > 0 {
                         (total_parent_attacker as f64) * 100.0 / (total_parent_samples as f64)
                     } else {
                         0.0
                     };
+                    let e3_num = total_parent_attacker;
+                    let e3_den = total_parent_samples;
                     let _ = writeln!(
                         file,
-                        "{},{},{},{},{},{:.2},{:.2}",
+                        "{},{},{},{},{},{},{:.2},{},{},{:.2},{},{},{}",
                         line_idx,
                         total_tx,
                         attacker_udp_total,
                         attacker_udp_dropped,
                         total_parent_samples,
+                        total_parent_attacker,
                         e1,
-                        e3
+                        e1_num,
+                        e1_den,
+                        e3,
+                        e3_num,
+                        e3_den,
+                        cfg.attacker_id
                     );
                     let _ = file.flush();
                 }
@@ -369,12 +423,14 @@ fn process_reader<R: BufRead>(
 
             if let Some(file) = stats_out.as_mut() {
                 if cfg.stats_interval > 0 && (line_idx % cfg.stats_interval == 0) {
-                    let e1 = if total_tx > 0 {
-                        (attacker_udp_total as f64) * 100.0 / (total_tx as f64)
+                    let e1 = if e1_den > 0 {
+                        (e1_num as f64) * 100.0 / (e1_den as f64)
                     } else { 0.0 };
                     let e3 = if total_parent_samples > 0 {
                         (total_parent_attacker as f64) * 100.0 / (total_parent_samples as f64)
                     } else { 0.0 };
+                    let e3_num = total_parent_attacker;
+                    let e3_den = total_parent_samples;
                     let mut total_changes = 0u64;
                     let mut total_pairs = 0u64;
                     for st in parent_states.values() {
@@ -388,20 +444,46 @@ fn process_reader<R: BufRead>(
                     } else { 0.0 };
                     let _ = writeln!(
                         file,
-                        "{},{},{},{},{},{:.2},{:.2},{:.4}",
+                        "{},{},{},{},{},{},{:.2},{},{},{:.2},{},{},{:.4}",
                         line_idx,
                         total_tx,
                         attacker_udp_total,
                         attacker_udp_dropped,
                         total_parent_samples,
+                        total_parent_attacker,
                         e1,
+                        e1_num,
+                        e1_den,
                         e3,
+                        e3_num,
+                        e3_den,
                         switch_rate
                     );
                     let _ = file.flush();
                 }
             }
 
+            continue;
+        }
+
+        if trimmed.starts_with("CSV,ROUTING,") {
+            let parts: Vec<&str> = trimmed.split(',').collect();
+            if parts.len() < 5 {
+                continue;
+            }
+            let joined: u8 = match parts[3].parse() {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            if joined == 1 {
+                let parent_ip = parts[4];
+                total_parent_samples += 1;
+                if let Some(parent_id) = parse_node_id(parent_ip) {
+                    if parent_id == cfg.attacker_id {
+                        total_parent_attacker += 1;
+                    }
+                }
+            }
             continue;
         }
 
@@ -415,12 +497,6 @@ fn process_reader<R: BufRead>(
                 Err(_) => continue,
             };
             let parent_ip = parts[3];
-            if let Some(parent_id) = parse_node_id(parent_ip) {
-                total_parent_samples += 1;
-                if parent_id == cfg.attacker_id {
-                    total_parent_attacker += 1;
-                }
-            }
             let st = parent_states.entry(node_id).or_default();
             st.samples += 1;
             if let Some(prev) = &st.last_parent {
@@ -439,6 +515,20 @@ fn process_reader<R: BufRead>(
                 (st.changes as f64) / ((st.samples - 1) as f64)
             } else { 0.0 };
             let _ = writeln!(file, "{},{},{},{:.4}", node_id, st.samples, st.changes, rate);
+        }
+        let _ = file.flush();
+    }
+
+    if let Some(file) = final_out.as_mut() {
+        for (node_id, st) in states.iter() {
+            let trust_val = match cfg.metric.as_str() {
+                "bayes" => ((1.0 + st.succ as f64) / (2.0 + st.succ as f64 + st.fail as f64)) * TRUST_SCALE,
+                "beta" => ((cfg.beta_a + st.succ as f64)
+                    / (cfg.beta_a + cfg.beta_b + st.succ as f64 + st.fail as f64)) * TRUST_SCALE,
+                _ => st.ewma * TRUST_SCALE,
+            };
+            let trust_value = trust_val / TRUST_SCALE;
+            let _ = writeln!(file, "TRUST_FINAL: node={} T={:.3}", node_id, trust_value);
         }
         let _ = file.flush();
     }
@@ -478,7 +568,10 @@ fn main() -> io::Result<()> {
             .write(true)
             .truncate(true)
             .open(&cfg.exposure_out)?;
-        writeln!(f, "line,tx_total,attacker_udp_total,attacker_udp_dropped,parent_samples,e1,e3")?;
+        writeln!(
+            f,
+            "line,tx_total,attacker_udp_total,attacker_udp_dropped,parent_samples,parent_attacker_samples,e1,e1_num,e1_den,e3,e3_num,e3_den,attacker_id"
+        )?;
         Some(f)
     };
 
@@ -502,7 +595,21 @@ fn main() -> io::Result<()> {
             .write(true)
             .truncate(true)
             .open(&cfg.stats_out)?;
-        writeln!(f, "line,tx_total,attacker_udp_total,attacker_udp_dropped,parent_samples,e1,e3,parent_switch_rate")?;
+        writeln!(
+            f,
+            "line,tx_total,attacker_udp_total,attacker_udp_dropped,parent_samples,parent_attacker_samples,e1,e1_num,e1_den,e3,e3_num,e3_den,parent_switch_rate"
+        )?;
+        Some(f)
+    };
+
+    let mut final_out = if cfg.final_out.is_empty() {
+        None
+    } else {
+        let f = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&cfg.final_out)?;
         Some(f)
     };
 
@@ -525,6 +632,7 @@ fn main() -> io::Result<()> {
             &mut exposure_out,
             &mut parent_out,
             &mut stats_out,
+            &mut final_out,
         )?;
     } else {
         let file = File::open(&cfg.input)?;
@@ -546,6 +654,7 @@ fn main() -> io::Result<()> {
             &mut exposure_out,
             &mut parent_out,
             &mut stats_out,
+            &mut final_out,
         )?;
     }
 

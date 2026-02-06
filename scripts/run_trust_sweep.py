@@ -57,6 +57,17 @@ def update_trust_defines(contents, trust_lambda, trust_gamma):
             contents,
         )
     contents = re.sub(r"TRUST_LAMBDA=\d+", f"TRUST_LAMBDA={trust_lambda}", contents)
+    contents = re.sub(
+        r"TRUST_PENALTY_GAMMA=\d+", f"TRUST_PENALTY_GAMMA={trust_gamma}", contents
+    )
+    contents = re.sub(
+        r"TRUST_LAMBDA_CONF=\d+", f"TRUST_LAMBDA_CONF={trust_lambda}", contents
+    )
+    contents = re.sub(
+        r"TRUST_PENALTY_GAMMA_CONF=\d+",
+        f"TRUST_PENALTY_GAMMA_CONF={trust_gamma}",
+        contents,
+    )
     return contents
 
 
@@ -129,6 +140,8 @@ def run_simulation(args, combo, results_dir):
             (r"ATTACK_DROP_PCT=\d+", f"ATTACK_DROP_PCT={combo['attack_rate']}"),
             (r"SEND_INTERVAL_SECONDS=\d+", f"SEND_INTERVAL_SECONDS={args.send_interval}"),
             (r"WARMUP_SECONDS=\d+", f"WARMUP_SECONDS={args.warmup}"),
+            (r",PROJECT_CONF_PATH=[^,< ]+", ""),
+            (r",PROJECT_CONF_PATH=\"[^\"]+\"", ""),
         ],
     )
     trust_lambda = combo["lambda"] if combo["lambda"] is not None else 0

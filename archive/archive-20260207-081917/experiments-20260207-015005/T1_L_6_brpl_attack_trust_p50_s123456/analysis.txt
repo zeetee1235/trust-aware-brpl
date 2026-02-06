@@ -1,0 +1,58 @@
+Parsing log file: /home/dev/WSN-IoT/trust-aware-brpl/results/experiments-20260207-015005/T1_L_6_brpl_attack_trust_p50_s123456/logs/COOJA.testlog
+
+============================================================
+Performance Analysis Results
+============================================================
+
+[1] PDR (Packet Delivery Ratio)
+------------------------------------------------------------
+Node  6: TX=  23, RX=   2, PDR=  8.70%
+Node  7: TX=  23, RX=   4, PDR= 17.39%
+Node  8: TX=  23, RX=   4, PDR= 17.39%
+Node  9: TX=  23, RX=   5, PDR= 21.74%
+Node 10: TX=  23, RX=   2, PDR=  8.70%
+Node 11: TX=  23, RX=   0, PDR=  0.00%
+Node 12: TX=  23, RX=   4, PDR= 17.39%
+Node 13: TX=  23, RX=   2, PDR=  8.70%
+Node 14: TX=  23, RX=   2, PDR=  8.70%
+Node 15: TX=  23, RX=   3, PDR= 13.04%
+Node 16: TX=  23, RX=   2, PDR=  8.70%
+Node 17: TX=  23, RX=   3, PDR= 13.04%
+Node 18: TX=  23, RX=   2, PDR=  8.70%
+Node 19: TX=  23, RX=   2, PDR=  8.70%
+Node 20: TX=  23, RX=   1, PDR=  4.35%
+Node 21: TX=  23, RX=   3, PDR= 13.04%
+Node 22: TX=  23, RX=   4, PDR= 17.39%
+Node 23: TX=  23, RX=   2, PDR=  8.70%
+Node 24: TX=  23, RX=   3, PDR= 13.04%
+Node 25: TX=  23, RX=   0, PDR=  0.00%
+Node 26: TX=  23, RX=   3, PDR= 13.04%
+Node 27: TX=  23, RX=   0, PDR=  0.00%
+Node 28: TX=  23, RX=   1, PDR=  4.35%
+Node 29: TX=  23, RX=   1, PDR=  4.35%
+Node 30: TX=  23, RX=   3, PDR= 13.04%
+Node 31: TX=  23, RX=   5, PDR= 21.74%
+Node 32: TX=  23, RX=   2, PDR=  8.70%
+Node 33: TX=  23, RX=   4, PDR= 17.39%
+
+Overall: TX= 644, RX=  69, PDR= 10.71%
+
+[2] End-to-End Delay (based on RTT)
+------------------------------------------------------------
+Sample count: 59
+Average:      571.39 ms
+Min:          3.00 ms
+Max:          1132.00 ms
+
+[3] Overhead (Control Packets)
+------------------------------------------------------------
+RPL packets:  0
+Control/Data: 0.00%
+
+[4] Exposure (Attacker Path Inclusion)
+------------------------------------------------------------
+E1 (via attacker 3): 20.19% (UDP to root)
+E3 (parent=attacker): 2.08% (14/672)
+Attacker drop ratio: 54.62% (71/130)
+
+============================================================

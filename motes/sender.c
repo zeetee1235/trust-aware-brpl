@@ -74,6 +74,24 @@ log_preferred_parent(void)
   printf("\n");
 }
 
+static void
+log_routing_status(void)
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+  unsigned node_id = (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
+  unsigned joined = NETSTACK_ROUTING.node_has_joined() ? 1 : 0;
+  printf("CSV,ROUTING,%u,%u,", node_id, joined);
+  if(dag != NULL && dag->preferred_parent != NULL) {
+    const uip_ipaddr_t *paddr = rpl_parent_get_ipaddr(dag->preferred_parent);
+    if(paddr != NULL) {
+      uiplib_ipaddr_print(paddr);
+      printf("\n");
+      return;
+    }
+  }
+  printf("none\n");
+}
+
 static int
 parse_payload(const uint8_t *data, uint16_t len, uint32_t *seq_out, uint32_t *t0_out)
 {
@@ -252,6 +270,7 @@ PROCESS_THREAD(sender_process, ev, data)
       LOG_INFO_("\n");
     }
     log_preferred_parent();
+    log_routing_status();
 
     if(etimer_expired(&dis_timer) && !NETSTACK_ROUTING.node_has_joined()) {
       LOG_INFO("send DIS (not joined)\n");

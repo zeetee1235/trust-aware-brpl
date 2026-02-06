@@ -31,18 +31,28 @@ def parse_args():
 
 
 def motetype_commands(send_interval, warmup, attack_drop):
-    root_cmd = "make -C ../motes -f Makefile.receiver -j receiver_root.cooja TARGET=cooja DEFINES=BRPL_MODE=1"
+    root_cmd = (
+        "make -C ../motes -f Makefile.receiver -j receiver_root.cooja TARGET=cooja WERROR=0 "
+        "DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,TRUST_PENALTY_GAMMA=1,"
+        "TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,PROJECT_CONF_PATH=../project-conf.h"
+    )
     sender_cmd = (
-        "make -C ../motes -f Makefile.sender -j sender.cooja TARGET=cooja "
-        f"DEFINES=BRPL_MODE=1,TRUST_ENABLED=0,TRUST_LAMBDA=0,SEND_INTERVAL_SECONDS={send_interval},WARMUP_SECONDS={warmup}"
+        "make -C ../motes -f Makefile.sender -j sender.cooja TARGET=cooja WERROR=0 "
+        f"DEFINES=BRPL_MODE=1,TRUST_ENABLED=0,TRUST_LAMBDA=0,TRUST_PENALTY_GAMMA=1,"
+        f"TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,"
+        f"SEND_INTERVAL_SECONDS={send_interval},WARMUP_SECONDS={warmup}"
     )
     attacker_cmd = (
-        "make -C ../motes -f Makefile.attacker -j attacker.cooja TARGET=cooja "
-        f"DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,ATTACK_DROP_PCT={attack_drop},WARMUP_SECONDS={warmup}"
+        "make -C ../motes -f Makefile.attacker -j attacker.cooja TARGET=cooja WERROR=0 "
+        f"DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,TRUST_PENALTY_GAMMA=1,"
+        f"TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,"
+        f"ATTACK_DROP_PCT={attack_drop},WARMUP_SECONDS={warmup}"
     )
     relay_cmd = (
-        "make -C ../motes -f Makefile.attacker -j attacker.cooja TARGET=cooja "
-        "DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,ATTACK_DROP_PCT=0,WARMUP_SECONDS=0,ATTACK_WARMUP_SECONDS=0"
+        "make -C ../motes -f Makefile.attacker -j attacker.cooja TARGET=cooja WERROR=0 "
+        "DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,TRUST_PENALTY_GAMMA=1,"
+        "TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,"
+        "ATTACK_DROP_PCT=0,WARMUP_SECONDS=0,ATTACK_WARMUP_SECONDS=0"
     )
     return root_cmd, sender_cmd, attacker_cmd, relay_cmd
 

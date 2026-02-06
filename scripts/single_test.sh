@@ -45,9 +45,17 @@ export COOJA_PATH="/home/dev/contiki-ng"
 export SERIAL_SOCKET_DISABLE=1
 export JAVA_OPTS="-Xmx4G -Xms2G"
 
+# Generate a temporary project-conf.h with trust parameters
+TEMP_PROJECT_CONF="configs/project-conf_${TIMESTAMP}.h"
+cp "$PROJECT_DIR/project-conf.h" "$TEMP_PROJECT_CONF"
+echo "#undef TRUST_LAMBDA_CONF" >> "$TEMP_PROJECT_CONF"
+echo "#define TRUST_LAMBDA_CONF ${TRUST_LAMBDA:-0}" >> "$TEMP_PROJECT_CONF"
+echo "#undef TRUST_PENALTY_GAMMA_CONF" >> "$TEMP_PROJECT_CONF"
+echo "#define TRUST_PENALTY_GAMMA_CONF ${TRUST_PENALTY_GAMMA:-1}" >> "$TEMP_PROJECT_CONF"
+
 # Create temp config IN CONFIGS DIRECTORY (so ../motes path works)
 TEMP_CONFIG="configs/temp_quick_$TIMESTAMP.csc"
-SIM_TIME=600  # 600 seconds for chain topology multi-hop
+SIM_TIME=${SIM_TIME:-600}  # 600 seconds for chain topology multi-hop
 SIM_TIME_MS=$((SIM_TIME * 1000))
 TRUST_FEEDBACK_FILE="$PROJECT_DIR/$RUN_DIR/trust_feedback.txt"
 
@@ -59,6 +67,11 @@ sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$SEED<\/randomseed>/g" \
     -e "s/BRPL_MODE=[0-9]/BRPL_MODE=$BRPL_MODE/g" \
     -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=$TRUST_ENABLED/g" \
     -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA:-0}/g" \
+    -e "s/TRUST_PENALTY_GAMMA=[0-9][0-9]*/TRUST_PENALTY_GAMMA=${TRUST_PENALTY_GAMMA:-1}/g" \
+    -e "s/TRUST_LAMBDA_CONF=[0-9][0-9]*/TRUST_LAMBDA_CONF=${TRUST_LAMBDA:-0}/g" \
+    -e "s/TRUST_PENALTY_GAMMA_CONF=[0-9][0-9]*/TRUST_PENALTY_GAMMA_CONF=${TRUST_PENALTY_GAMMA:-1}/g" \
+    -e "s/,PROJECT_CONF_PATH=[^,< ]*//g" \
+    -e "s/,PROJECT_CONF_PATH=\\\"[^\\\"]*\\\"//g" \
     -e "s/TRUST_GAMMA=[0-9][0-9]*/TRUST_GAMMA=${TRUST_GAMMA:-1}/g" \
     -e "/TRUST_GAMMA=/! s/TRUST_LAMBDA=${TRUST_LAMBDA:-0}/TRUST_LAMBDA=${TRUST_LAMBDA:-0},TRUST_GAMMA=${TRUST_GAMMA:-1}/g" \
     -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=$ATTACK_RATE/g" \
@@ -92,17 +105,18 @@ TRUST_ENGINE_PID=""
 echo "[2/3] Starting trust_engine..."
 touch "$TRUST_FEEDBACK_FILE"
 touch "$LOG_DIR/COOJA.testlog"
-tools/trust_engine/target/release/trust_engine \
-    --input "$LOG_DIR/COOJA.testlog" \
-    --output "$TRUST_FEEDBACK_FILE" \
-    --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
-    --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
-    --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
-    --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
-    --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
-    --stats-interval 200 \
-    --metric ewma \
-    --alpha 0.2 \
+    tools/trust_engine/target/release/trust_engine \
+        --input "$LOG_DIR/COOJA.testlog" \
+        --output "$TRUST_FEEDBACK_FILE" \
+        --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
+        --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
+        --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
+        --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
+        --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
+        --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
+        --stats-interval 200 \
+        --metric ewma \
+        --alpha 0.2 \
     --ewma-min 0.7 \
     --miss-threshold 5 \
     --forwarders-only \
@@ -122,6 +136,7 @@ timeout 800 java --enable-preview ${JAVA_OPTS} \
 
 COOJA_EXIT=$?
 rm -f "$TEMP_CONFIG"
+rm -f "$TEMP_PROJECT_CONF"
 
 if [ -n "$TRUST_ENGINE_PID" ]; then
     sleep 2

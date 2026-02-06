@@ -15,6 +15,10 @@ SEEDS=(123456 234567 345678 456789 567890)  # default: 5 seeds
 INCLUDE_OPTIONAL_SCENARIOS=0  # set to 1 to include 7/8 (Trust ON, no attack)
 SEND_INTERVAL_SECONDS=30
 WARMUP_SECONDS=120
+PAUSE_BETWEEN_RUNS=0  # set to 1 to confirm each run interactively
+CHECKPOINT_TAIL_LINES=20  # number of log lines to show after each run
+LAMBDA_SET=(0 1 3 10)
+GAMMA_SET=(1 2 4)
 
 # Topology list (override with TOPOLOGIES env var)
 # Example: TOPOLOGIES="configs/topologies/T1_S.csc configs/topologies/T3.csc" ./scripts/run_experiments.sh
@@ -63,6 +67,45 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+summarize_run() {
+    local run_dir="$1"
+    local log_dir="$run_dir/logs"
+    local testlog="$log_dir/COOJA.testlog"
+    local exposure="$run_dir/exposure.csv"
+    local parent="$run_dir/parent_switch.csv"
+    local stats="$run_dir/stats.csv"
+    local grep_cmd="grep -n"
+    if command -v rg >/dev/null 2>&1; then
+        grep_cmd="rg -n"
+    fi
+
+    echo ""
+    log_info "Run summary checkpoint:"
+    if [ -f "$testlog" ]; then
+        $grep_cmd "BRPL_PARAMS" "$testlog" | tail -n 3 || true
+        $grep_cmd "PARENT_CANDIDATE" "$testlog" | tail -n 2 || true
+        echo ""
+        echo "Last ${CHECKPOINT_TAIL_LINES} lines of COOJA.testlog:"
+        tail -n "$CHECKPOINT_TAIL_LINES" "$testlog" || true
+    else
+        log_warn "Missing COOJA.testlog in $log_dir"
+    fi
+
+    if [ -f "$exposure" ]; then
+        echo ""
+        echo "Exposure (last row):"
+        tail -n 1 "$exposure" || true
+    fi
+    if [ -f "$parent" ]; then
+        echo ""
+        echo "Parent switch (last row):"
+        tail -n 1 "$parent" || true
+    elif [ -f "$stats" ]; then
+        echo ""
+        echo "Stats (last row):"
+        tail -n 1 "$stats" || true
+    fi
+}
 
 # Progress tracking (account for skipped combos)
 count_runs() {
@@ -78,7 +121,11 @@ count_runs() {
                 if [ "$attack" == "NO_ATTACK" ] && [ "$attack_rate" -gt 0 ]; then
                     continue
                 fi
-                total=$((total + ${#SEEDS[@]}))
+                if [ "$trust" -eq 1 ] && [ "$attack" == "ATTACK" ]; then
+                    total=$((total + ${#SEEDS[@]} * ${#LAMBDA_SET[@]} * ${#GAMMA_SET[@]}))
+                else
+                    total=$((total + ${#SEEDS[@]}))
+                fi
             done
         done
     done
@@ -110,6 +157,145 @@ render_progress() {
     for ((i=0; i<filled; i++)); do bar+="#"; done
     for ((i=0; i<empty; i++)); do bar+="-"; done
     printf "\r[%s] %3d%% (%d/%d)" "$bar" "$percent" "$current" "$total"
+}
+
+run_one() {
+            # Set environment - Use submodule for build, system Cooja for simulation
+            export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
+            export COOJA_PATH="/home/dev/contiki-ng"
+            export SERIAL_SOCKET_DISABLE=1
+            export JAVA_OPTS="-Xmx4G -Xms2G"
+            
+            # Prepare simulation config
+            if [ "$routing" == "BRPL" ]; then
+                BRPL_MODE=1
+            else
+                BRPL_MODE=0
+            fi
+            
+            # Select config file (use topologies/*.csc as base)
+            BASE_CONFIG="$topo"
+            
+            # Determine BRPL_MODE (BRPL-only)
+            BRPL_MODE=1
+            
+            # Create temporary config with all modifications
+            TEMP_CONFIG="$PROJECT_DIR/configs/temp_${RUN_NAME}.csc"
+            SIM_TIME_MS=$((SIM_TIME * 1000))
+            TRUST_FEEDBACK_FILE="$PROJECT_DIR/$RUN_DIR/trust_feedback.txt"
+
+            # Replace all parameters
+            TRUST_LAMBDA=${TRUST_LAMBDA:-0}
+            TRUST_GAMMA=${TRUST_GAMMA:-1}
+            sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$seed<\/randomseed>/g" \
+                -e "s/@SIM_TIME_MS@/${SIM_TIME_MS}/g" \
+                -e "s/@SIM_TIME_SEC@/${SIM_TIME}/g" \
+                -e "s|@TRUST_FEEDBACK_PATH@|${TRUST_FEEDBACK_FILE}|g" \
+                -e "s/BRPL_MODE=[0-9]/BRPL_MODE=${BRPL_MODE}/g" \
+                -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=${trust}/g" \
+                -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA}/g" \
+                -e "s/TRUST_PENALTY_GAMMA=[0-9][0-9]*/TRUST_PENALTY_GAMMA=${TRUST_PENALTY_GAMMA:-1}/g" \
+                -e "s/TRUST_LAMBDA_CONF=[0-9][0-9]*/TRUST_LAMBDA_CONF=${TRUST_LAMBDA}/g" \
+                -e "s/TRUST_PENALTY_GAMMA_CONF=[0-9][0-9]*/TRUST_PENALTY_GAMMA_CONF=${TRUST_PENALTY_GAMMA:-1}/g" \
+                -e "s/,PROJECT_CONF_PATH=[^,< ]*//g" \
+                -e "s/,PROJECT_CONF_PATH=\\\"[^\\\"]*\\\"//g" \
+                -e "s/TRUST_GAMMA=[0-9][0-9]*/TRUST_GAMMA=${TRUST_GAMMA}/g" \
+                -e "/TRUST_GAMMA=/! s/TRUST_LAMBDA=${TRUST_LAMBDA}/TRUST_LAMBDA=${TRUST_LAMBDA},TRUST_GAMMA=${TRUST_GAMMA}/g" \
+                -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=${attack_rate}/g" \
+                -e "s/SEND_INTERVAL_SECONDS=[0-9][0-9]*/SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS}/g" \
+                -e "s/WARMUP_SECONDS=[0-9][0-9]*/WARMUP_SECONDS=${WARMUP_SECONDS}/g" \
+                "$PROJECT_DIR/$BASE_CONFIG" > "$TEMP_CONFIG"
+
+            # Disable SerialSocketServer for headless runs (sandbox/network restrictions)
+            awk '
+              $0 ~ /<plugin>/ { in_plugin = 1; plugin_buf = $0; next }
+              in_plugin && $0 ~ /org.contikios.cooja.serialsocket.SerialSocketServer/ { skip = 1 }
+              in_plugin {
+                plugin_buf = plugin_buf "\n" $0
+                if($0 ~ /<\/plugin>/) {
+                  if(!skip) { print plugin_buf }
+                  in_plugin = 0; skip = 0; plugin_buf = ""
+                }
+                next
+              }
+              { print }
+            ' "$TEMP_CONFIG" > "${TEMP_CONFIG}.tmp" && mv "${TEMP_CONFIG}.tmp" "$TEMP_CONFIG"
+            
+            # CRITICAL: Delete entire build directory to force full recompilation
+            log_info "  Deleting build directory for clean slate..."
+            rm -rf motes/build 2>/dev/null || true
+            
+            # Run simulation
+            LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
+            mkdir -p "$LOG_DIR"
+            
+            # Start trust_engine in background for all runs (trust ON/OFF)
+            TRUST_ENGINE_PID=""
+            log_info "  Starting trust_engine in real-time mode..."
+            touch "$TRUST_FEEDBACK_FILE"
+            touch "$LOG_DIR/COOJA.testlog"  # Pre-create log file for --follow mode
+                tools/trust_engine/target/release/trust_engine \
+                    --input "$LOG_DIR/COOJA.testlog" \
+                    --output "$TRUST_FEEDBACK_FILE" \
+                    --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
+                    --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
+                    --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
+                    --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
+                    --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
+                    --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
+                    --stats-interval 200 \
+                    --metric ewma \
+                    --alpha 0.2 \
+                    --ewma-min 0.7 \
+                --miss-threshold 5 \
+                --forwarders-only \
+                --fwd-drop-threshold 0.2 \
+                --attacker-id 2 \
+                --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
+            TRUST_ENGINE_PID=$!
+            sleep 2
+            
+            timeout 800 java --enable-preview ${JAVA_OPTS} \
+                -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
+                --no-gui \
+                --autostart \
+                --contiki="$CONTIKI_NG_PATH" \
+                --logdir="$LOG_DIR" \
+                "$TEMP_CONFIG" > "$PROJECT_DIR/$RUN_DIR/cooja_output.log" 2>&1
+            COOJA_EXIT=$?
+            
+            if [ $COOJA_EXIT -ne 0 ]; then
+                log_error "Simulation failed for $RUN_NAME (exit code: $COOJA_EXIT)"
+                [ -n "$TRUST_ENGINE_PID" ] && kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+                rm -f "$TEMP_CONFIG"
+                return
+            fi
+            
+            # Stop trust_engine
+            if [ -n "$TRUST_ENGINE_PID" ]; then
+                sleep 2
+                kill $TRUST_ENGINE_PID 2>/dev/null || true
+                sleep 1
+                kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+                wait $TRUST_ENGINE_PID 2>/dev/null || true
+                log_info "  Trust engine stopped"
+            fi
+            
+            # Clean up temp config
+            rm -f "$TEMP_CONFIG"
+            
+            # Parse results is handled by trust_engine outputs only
+            if [ -f "$LOG_DIR/COOJA.testlog" ]; then
+                log_info "  Logs captured: $LOG_DIR/COOJA.testlog"
+            fi
+            
+            log_info "  Completed: $RUN_NAME"
+            summarize_run "$RUN_DIR"
+            if [ "$PAUSE_BETWEEN_RUNS" -eq 1 ]; then
+                echo ""
+                read -r -p "Press Enter to continue..." _
+            fi
+            echo ""
 }
 
 # Build if needed
@@ -149,147 +335,46 @@ for topo in $TOPOLOGIES; do
                 continue
             fi
             
-            for seed in "${SEEDS[@]}"; do
-                CURRENT_RUN=$((CURRENT_RUN + 1))
-                PROGRESS=$((CURRENT_RUN * 100 / TOTAL_RUNS))
-                render_progress "$CURRENT_RUN" "$TOTAL_RUNS"
-                
-                RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_s${seed}"
-                RUN_DIR="$RESULTS_BASE/$RUN_NAME"
-                mkdir -p "$RUN_DIR"
-                
-                log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
-                log_info "  Topology: $TOPO_NAME | Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Seed: $seed"
-            
-            # Set environment - Use submodule for build, system Cooja for simulation
-            export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
-            export COOJA_PATH="/home/dev/contiki-ng"
-            export SERIAL_SOCKET_DISABLE=1
-            export JAVA_OPTS="-Xmx4G -Xms2G"
-            
-            # Prepare simulation config
-            if [ "$routing" == "BRPL" ]; then
-                BRPL_MODE=1
+            if [ "$trust" -eq 1 ] && [ "$attack" == "ATTACK" ]; then
+                for TRUST_LAMBDA in "${LAMBDA_SET[@]}"; do
+                    for TRUST_PENALTY_GAMMA in "${GAMMA_SET[@]}"; do
+                        for seed in "${SEEDS[@]}"; do
+                            CURRENT_RUN=$((CURRENT_RUN + 1))
+                            PROGRESS=$((CURRENT_RUN * 100 / TOTAL_RUNS))
+                            render_progress "$CURRENT_RUN" "$TOTAL_RUNS"
+                            
+                            RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_lam${TRUST_LAMBDA}_gam${TRUST_PENALTY_GAMMA}_s${seed}"
+                            RUN_DIR="$RESULTS_BASE/$RUN_NAME"
+                            mkdir -p "$RUN_DIR"
+                            
+                            log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
+                            log_info "  Topology: $TOPO_NAME | Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Lambda: ${TRUST_LAMBDA} | Gamma: ${TRUST_PENALTY_GAMMA} | Seed: $seed"
+                            
+                            run_one
+                        done
+                    done
+                done
             else
-                BRPL_MODE=0
+                for seed in "${SEEDS[@]}"; do
+                    CURRENT_RUN=$((CURRENT_RUN + 1))
+                    PROGRESS=$((CURRENT_RUN * 100 / TOTAL_RUNS))
+                    render_progress "$CURRENT_RUN" "$TOTAL_RUNS"
+                    
+                    RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_s${seed}"
+                    RUN_DIR="$RESULTS_BASE/$RUN_NAME"
+                    mkdir -p "$RUN_DIR"
+                    
+                    log_info "[$CURRENT_RUN/$TOTAL_RUNS] ${PROGRESS}% - Running: $RUN_NAME"
+                    log_info "  Topology: $TOPO_NAME | Routing: $routing | Attack: ${attack_rate}% | Trust: $trust | Seed: $seed"
+                    
+                    TRUST_LAMBDA=0
+                    TRUST_PENALTY_GAMMA=1
+                    run_one
+                done
             fi
-            
-            # Select config file (use topologies/*.csc as base)
-            BASE_CONFIG="$topo"
-            
-            # Determine BRPL_MODE (BRPL-only)
-            BRPL_MODE=1
-            
-            # Create temporary config with all modifications
-            TEMP_CONFIG="$PROJECT_DIR/configs/temp_${RUN_NAME}.csc"
-            SIM_TIME_MS=$((SIM_TIME * 1000))
-            TRUST_FEEDBACK_FILE="$PROJECT_DIR/$RUN_DIR/trust_feedback.txt"
-            
-            # Replace all parameters
-            TRUST_LAMBDA=${TRUST_LAMBDA:-0}
-            TRUST_GAMMA=${TRUST_GAMMA:-1}
-            sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$seed<\/randomseed>/g" \
-                -e "s/@SIM_TIME_MS@/${SIM_TIME_MS}/g" \
-                -e "s/@SIM_TIME_SEC@/${SIM_TIME}/g" \
-                -e "s|@TRUST_FEEDBACK_PATH@|${TRUST_FEEDBACK_FILE}|g" \
-                -e "s/BRPL_MODE=[0-9]/BRPL_MODE=${BRPL_MODE}/g" \
-                -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=${trust}/g" \
-                -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA}/g" \
-                -e "s/TRUST_GAMMA=[0-9][0-9]*/TRUST_GAMMA=${TRUST_GAMMA}/g" \
-                -e "/TRUST_GAMMA=/! s/TRUST_LAMBDA=${TRUST_LAMBDA}/TRUST_LAMBDA=${TRUST_LAMBDA},TRUST_GAMMA=${TRUST_GAMMA}/g" \
-                -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=${attack_rate}/g" \
-                -e "s/SEND_INTERVAL_SECONDS=[0-9][0-9]*/SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS}/g" \
-                -e "s/WARMUP_SECONDS=[0-9][0-9]*/WARMUP_SECONDS=${WARMUP_SECONDS}/g" \
-                "$PROJECT_DIR/$BASE_CONFIG" > "$TEMP_CONFIG"
-
-            # Disable SerialSocketServer for headless runs (sandbox/network restrictions)
-            awk '
-              $0 ~ /<plugin>/ { in_plugin = 1; plugin_buf = $0; next }
-              in_plugin && $0 ~ /org.contikios.cooja.serialsocket.SerialSocketServer/ { skip = 1 }
-              in_plugin {
-                plugin_buf = plugin_buf "\n" $0
-                if($0 ~ /<\/plugin>/) {
-                  if(!skip) { print plugin_buf }
-                  in_plugin = 0; skip = 0; plugin_buf = ""
-                }
-                next
-              }
-              { print }
-            ' "$TEMP_CONFIG" > "${TEMP_CONFIG}.tmp" && mv "${TEMP_CONFIG}.tmp" "$TEMP_CONFIG"
-            
-            # CRITICAL: Delete entire build directory to force full recompilation
-            log_info "  Deleting build directory for clean slate..."
-            rm -rf motes/build 2>/dev/null || true
-            
-            # Run simulation
-            LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
-            mkdir -p "$LOG_DIR"
-            
-            # Start trust_engine in background for all runs (trust ON/OFF)
-            TRUST_ENGINE_PID=""
-            log_info "  Starting trust_engine in real-time mode..."
-            touch "$TRUST_FEEDBACK_FILE"
-            touch "$LOG_DIR/COOJA.testlog"  # Pre-create log file for --follow mode
-            tools/trust_engine/target/release/trust_engine \
-                --input "$LOG_DIR/COOJA.testlog" \
-                --output "$TRUST_FEEDBACK_FILE" \
-                --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
-                --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
-                --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
-                --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
-                --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
-                --stats-interval 200 \
-                --metric ewma \
-                --alpha 0.2 \
-                --ewma-min 0.7 \
-                --miss-threshold 5 \
-                --forwarders-only \
-                --fwd-drop-threshold 0.2 \
-                --attacker-id 2 \
-                --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
-            TRUST_ENGINE_PID=$!
-            sleep 2
-            
-            timeout 800 java --enable-preview ${JAVA_OPTS} \
-                -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
-                --no-gui \
-                --autostart \
-                --contiki="$CONTIKI_NG_PATH" \
-                --logdir="$LOG_DIR" \
-                "$TEMP_CONFIG" > "$PROJECT_DIR/$RUN_DIR/cooja_output.log" 2>&1
-            COOJA_EXIT=$?
-            
-            if [ $COOJA_EXIT -ne 0 ]; then
-                log_error "Simulation failed for $RUN_NAME (exit code: $COOJA_EXIT)"
-                [ -n "$TRUST_ENGINE_PID" ] && kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
-                rm -f "$TEMP_CONFIG"
-                continue
-            fi
-            
-            # Stop trust_engine
-            if [ -n "$TRUST_ENGINE_PID" ]; then
-                sleep 2
-                kill $TRUST_ENGINE_PID 2>/dev/null || true
-                sleep 1
-                kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
-                wait $TRUST_ENGINE_PID 2>/dev/null || true
-                log_info "  Trust engine stopped"
-            fi
-            
-            # Clean up temp config
-            rm -f "$TEMP_CONFIG"
-            
-            # Parse results is handled by trust_engine outputs only
-            if [ -f "$LOG_DIR/COOJA.testlog" ]; then
-                log_info "  Logs captured: $LOG_DIR/COOJA.testlog"
-            fi
-            
-            log_info "  Completed: $RUN_NAME"
-            echo ""
-            done
-        done
-    done
-done
+        done  # attack rate loop
+    done  # scenario loop
+done  # topology loop
 
 log_info "============================================"
 log_info "All experiments completed!"

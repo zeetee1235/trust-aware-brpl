@@ -1,0 +1,11 @@
+{
+  "run": "T3_attack_atk50_trust0_lamNA_gamNA_s999888",
+  "topology": "T3",
+  "scenario": "attack",
+  "attack_rate": 50,
+  "trust": 0,
+  "lambda": null,
+  "gamma": null,
+  "seed": 999888,
+  "timestamp": "2026-02-07T05:06:08"
+}
