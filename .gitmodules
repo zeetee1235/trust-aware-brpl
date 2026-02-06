@@ -1,0 +1,3 @@
+[submodule "contiki-ng-brpl"]
+	path = contiki-ng-brpl
+	url = https://github.com/zeetee1235/contiki-ng-brpl.git
