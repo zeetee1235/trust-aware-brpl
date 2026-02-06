@@ -56,6 +56,14 @@ extern rpl_of_t rpl_brpl;
 #define TRUST_PARENT_MIN 700
 #endif
 
+#ifndef TRUST_LAMBDA
+#define TRUST_LAMBDA 0
+#endif
+
+#ifndef TRUST_GAMMA
+#define TRUST_GAMMA 1
+#endif
+
 /* CSV logging control (reduce RS232 buffer overflow) */
 #ifndef CSV_LOG_SAMPLE_RATE
 #define CSV_LOG_SAMPLE_RATE 10  /* Only log 1 out of every N events */

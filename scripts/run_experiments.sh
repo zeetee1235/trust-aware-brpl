@@ -187,6 +187,7 @@ for topo in $TOPOLOGIES; do
             
             # Replace all parameters
             TRUST_LAMBDA=${TRUST_LAMBDA:-0}
+            TRUST_GAMMA=${TRUST_GAMMA:-1}
             sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$seed<\/randomseed>/g" \
                 -e "s/@SIM_TIME_MS@/${SIM_TIME_MS}/g" \
                 -e "s/@SIM_TIME_SEC@/${SIM_TIME}/g" \
@@ -194,6 +195,8 @@ for topo in $TOPOLOGIES; do
                 -e "s/BRPL_MODE=[0-9]/BRPL_MODE=${BRPL_MODE}/g" \
                 -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=${trust}/g" \
                 -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA}/g" \
+                -e "s/TRUST_GAMMA=[0-9][0-9]*/TRUST_GAMMA=${TRUST_GAMMA}/g" \
+                -e "/TRUST_GAMMA=/! s/TRUST_LAMBDA=${TRUST_LAMBDA}/TRUST_LAMBDA=${TRUST_LAMBDA},TRUST_GAMMA=${TRUST_GAMMA}/g" \
                 -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=${attack_rate}/g" \
                 -e "s/SEND_INTERVAL_SECONDS=[0-9][0-9]*/SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS}/g" \
                 -e "s/WARMUP_SECONDS=[0-9][0-9]*/WARMUP_SECONDS=${WARMUP_SECONDS}/g" \
