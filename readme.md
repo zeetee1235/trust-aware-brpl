@@ -2,7 +2,8 @@
 
 상세 내용은 보고서에 정리되어 있습니다.
 
-- 보고서(한글): `docs/report/report_kr.pdf`
+- 최신 보고서(Markdown): `docs/report/report.md`
+- 보고서(한글, 구버전): `docs/report/report_kr.pdf`
 - 결과 그래프: `docs/report/figure*.png`
 
 ## 빠른 실행(예비 실험)

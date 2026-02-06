@@ -23,6 +23,12 @@ def parse_cooja_log(filename):
     
     # 제어 패킷 카운터
     rpl_packets = 0
+    attacker_id = 3
+    parent_samples = 0
+    parent_attacker = 0
+    last_fwd_totals = defaultdict(lambda: {"udp": 0, "dropped": 0})
+    attacker_udp_total = 0
+    attacker_udp_dropped = 0
     
     try:
         with open(filename, 'r') as f:
@@ -76,6 +82,36 @@ def parse_cooja_log(filename):
                         seq = int(parts[1])
                         tx_packets[node_id].append(seq)
 
+                elif 'CSV,FWD,' in line:
+                    # CSV,FWD,<node_id>,<fwd_total>,<udp_to_root>,<dropped>
+                    parts = line.split('CSV,FWD,')[1].split(',')
+                    if len(parts) >= 4:
+                        node_id = int(parts[0])
+                        udp_to_root = int(parts[2])
+                        dropped = int(parts[3])
+                        last = last_fwd_totals[node_id]
+                        delta_udp = max(udp_to_root - last["udp"], 0)
+                        delta_dropped = max(dropped - last["dropped"], 0)
+                        last["udp"] = udp_to_root
+                        last["dropped"] = dropped
+                        if node_id == attacker_id:
+                            attacker_udp_total += delta_udp
+                            attacker_udp_dropped += delta_dropped
+
+                elif 'CSV,PARENT,' in line:
+                    # CSV,PARENT,<node_id>,<parent_ip|none|unknown>
+                    parts = line.split('CSV,PARENT,')[1].split(',')
+                    if len(parts) >= 2:
+                        parent_samples += 1
+                        parent_ip = parts[1]
+                        try:
+                            ip_obj = ipaddress.ip_address(parent_ip)
+                            parent_id = int(ip_obj) & 0xffff
+                            if parent_id == attacker_id:
+                                parent_attacker += 1
+                        except ValueError:
+                            pass
+
                 elif 'TX seq=' in line:
                     # [INFO: SENDER   ] TX id=<n> seq=<n> ...
                     match = re.search(r'TX seq=(\d+)', line)
@@ -101,10 +137,18 @@ def parse_cooja_log(filename):
     if inferred_sender_id is not None and pending_tx_seqs:
         tx_packets[inferred_sender_id].extend(pending_tx_seqs)
 
-    return tx_packets, rx_packets, delays, rpl_packets
+    exposure = {
+        "attacker_udp_total": attacker_udp_total,
+        "attacker_udp_dropped": attacker_udp_dropped,
+        "parent_samples": parent_samples,
+        "parent_attacker": parent_attacker,
+        "attacker_id": attacker_id,
+    }
+
+    return tx_packets, rx_packets, delays, rpl_packets, exposure
 
 
-def calculate_metrics(tx_packets, rx_packets, delays, rpl_packets):
+def calculate_metrics(tx_packets, rx_packets, delays, rpl_packets, exposure):
     """성능 지표 계산"""
     
     print("\n" + "="*60)
@@ -162,7 +206,32 @@ def calculate_metrics(tx_packets, rx_packets, delays, rpl_packets):
     if total_tx > 0:
         overhead_ratio = (rpl_packets / total_tx) * 100
         print(f"Control/Data: {overhead_ratio:.2f}%")
-    
+
+    # 4. Exposure (Attacker path inclusion)
+    print("\n[4] Exposure (Attacker Path Inclusion)")
+    print("-" * 60)
+    attacker_id = exposure["attacker_id"]
+    attacker_udp_total = exposure["attacker_udp_total"]
+    attacker_udp_dropped = exposure["attacker_udp_dropped"]
+    parent_samples = exposure["parent_samples"]
+    parent_attacker = exposure["parent_attacker"]
+
+    if total_tx > 0:
+        exposure_ratio = (attacker_udp_total / total_tx) * 100
+        print(f"E1 (via attacker {attacker_id}): {exposure_ratio:.2f}% (UDP to root)")
+    else:
+        print(f"E1 (via attacker {attacker_id}): N/A (no TX packets)")
+
+    if parent_samples > 0:
+        parent_ratio = (parent_attacker / parent_samples) * 100
+        print(f"E3 (parent=attacker): {parent_ratio:.2f}% ({parent_attacker}/{parent_samples})")
+    else:
+        print("E3 (parent=attacker): N/A (no parent samples)")
+
+    if attacker_udp_total > 0:
+        drop_ratio = (attacker_udp_dropped / attacker_udp_total) * 100
+        print(f"Attacker drop ratio: {drop_ratio:.2f}% ({attacker_udp_dropped}/{attacker_udp_total})")
+
     print("\n" + "="*60)
 
 
@@ -176,9 +245,9 @@ def main():
     
     print(f"Parsing log file: {log_file}")
     
-    tx_packets, rx_packets, delays, rpl_packets = parse_cooja_log(log_file)
+    tx_packets, rx_packets, delays, rpl_packets, exposure = parse_cooja_log(log_file)
     
-    calculate_metrics(tx_packets, rx_packets, delays, rpl_packets)
+    calculate_metrics(tx_packets, rx_packets, delays, rpl_packets, exposure)
 
 
 if __name__ == '__main__':

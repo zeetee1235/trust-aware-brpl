@@ -116,7 +116,7 @@ def analyze_blacklist_behavior(log_file):
     
     # Check correlation between trust and blacklist
     print(f"\n[5] Trust-Blacklist Correlation:")
-    low_trust_threshold = 300
+    low_trust_threshold = 700
     low_trust_nodes = set()
     for evt in events['trust_updates']:
         if evt['trust'] < low_trust_threshold:

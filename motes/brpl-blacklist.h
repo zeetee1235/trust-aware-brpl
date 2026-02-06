@@ -17,7 +17,7 @@
 
 /* Blacklist threshold - nodes below this trust are blacklisted */
 #ifndef BLACKLIST_TRUST_THRESHOLD
-#define BLACKLIST_TRUST_THRESHOLD 300
+#define BLACKLIST_TRUST_THRESHOLD 700
 #endif
 
 /**

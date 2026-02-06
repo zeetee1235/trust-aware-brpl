@@ -219,7 +219,7 @@ for scenario_name in $(echo "${!SCENARIOS[@]}" | tr ' ' '\n' | sort); do
                     --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
                     --metric ewma \
                     --alpha 0.2 \
-                    --ewma-min 700 \
+                    --ewma-min 0.7 \
                     --miss-threshold 5 \
                     --forwarders-only \
                     --fwd-drop-threshold 0.2 \
