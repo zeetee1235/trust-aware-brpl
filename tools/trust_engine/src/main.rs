@@ -214,6 +214,9 @@ fn process_reader<R: BufRead>(
         }
         line_idx += 1;
         let trimmed = line.trim();
+        if trimmed.starts_with("SIMULATION_FINISHED") || trimmed.starts_with("TEST OK") {
+            break;
+        }
 
         if trimmed.starts_with("CSV,TX,") {
             let parts: Vec<&str> = trimmed.split(',').collect();
@@ -510,6 +513,7 @@ fn process_reader<R: BufRead>(
     }
 
     if let Some(file) = parent_out.as_mut() {
+        eprintln!("parent_states size={}", parent_states.len());
         for (node_id, st) in parent_states.iter() {
             let rate = if st.samples > 1 {
                 (st.changes as f64) / ((st.samples - 1) as f64)

@@ -139,10 +139,20 @@ rm -f "$TEMP_CONFIG"
 rm -f "$TEMP_PROJECT_CONF"
 
 if [ -n "$TRUST_ENGINE_PID" ]; then
-    sleep 2
-    kill $TRUST_ENGINE_PID 2>/dev/null || true
-    sleep 1
-    kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+    # Allow trust_engine to exit after SIMULATION_FINISHED
+    for _ in {1..10}; do
+        if ! kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+            break
+        fi
+        sleep 0.5
+    done
+    if kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+        kill $TRUST_ENGINE_PID 2>/dev/null || true
+        sleep 1
+        if kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+            kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+        fi
+    fi
     wait $TRUST_ENGINE_PID 2>/dev/null || true
 fi
 

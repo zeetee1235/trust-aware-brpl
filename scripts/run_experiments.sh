@@ -271,12 +271,21 @@ run_one() {
                 return
             fi
             
-            # Stop trust_engine
+            # Stop trust_engine (allow graceful exit after SIMULATION_FINISHED)
             if [ -n "$TRUST_ENGINE_PID" ]; then
-                sleep 2
-                kill $TRUST_ENGINE_PID 2>/dev/null || true
-                sleep 1
-                kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+                for _ in {1..10}; do
+                    if ! kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+                        break
+                    fi
+                    sleep 0.5
+                done
+                if kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+                    kill $TRUST_ENGINE_PID 2>/dev/null || true
+                    sleep 1
+                    if kill -0 $TRUST_ENGINE_PID 2>/dev/null; then
+                        kill -9 $TRUST_ENGINE_PID 2>/dev/null || true
+                    fi
+                fi
                 wait $TRUST_ENGINE_PID 2>/dev/null || true
                 log_info "  Trust engine stopped"
             fi

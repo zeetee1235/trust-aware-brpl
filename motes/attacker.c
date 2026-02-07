@@ -163,6 +163,12 @@ parse_payload(const uint8_t *data, uint16_t len, uint32_t *seq_out)
   unsigned long seq = 0;
   unsigned long t0 = 0;
   int matched = sscanf(buf, "seq=%lu t0=%lu", &seq, &t0);
+  if(matched != 2) {
+    char *needle = strstr(buf, "seq=");
+    if(needle != NULL) {
+      matched = sscanf(needle, "seq=%lu t0=%lu", &seq, &t0);
+    }
+  }
   if(matched == 2) {
     *seq_out = (uint32_t)seq;
     return 1;
@@ -241,6 +247,25 @@ ip_output(const linkaddr_t *localdest)
   }
 
   if(is_forwarded_udp_to_root()) {
+    uint32_t seq = 0;
+    uint16_t sender_id = uip_ntohs(UIP_IP_BUF->srcipaddr.u16[7]);
+    uint8_t proto = 0;
+    uint8_t *last_hdr = uipbuf_get_last_header(uip_buf, uip_len, &proto);
+    uint8_t *payload = (last_hdr != NULL) ? (last_hdr + UIP_UDPH_LEN) : NULL;
+    uint16_t payload_len = 0;
+    if(proto == UIP_PROTO_UDP && payload != NULL && payload >= uip_buf) {
+      payload_len = uip_len - (uint16_t)(payload - uip_buf);
+    }
+    if(payload_len > 0 && parse_payload((const uint8_t *)payload, payload_len, &seq)) {
+      printf("CSV,FWD_PKT,%u,%u,%lu\n",
+             (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+             (unsigned)sender_id,
+             (unsigned long)seq);
+    } else {
+      printf("CSV,FWD_PKT_FAIL,%u,%u\n",
+             (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+             (unsigned)payload_len);
+    }
     fwd_udp_root++;
   }
 
