@@ -1,0 +1,68 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.c text
+*.h text
+*.py text
+*.R text
+*.sh text eol=lf
+*.js text
+
+# Documentation
+*.md text
+*.txt text
+
+# Configuration files
+*.json text
+*.yaml text
+*.yml text
+*.toml text
+*.ini text
+*.conf text
+
+# Nix files
+*.nix text
+
+# Makefiles
+Makefile text
+*.mk text
+
+# Scripts should always use LF
+*.bash text eol=lf
+*.fish text eol=lf
+*.zsh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.7z binary
+
+# Compiled files
+*.o binary
+*.a binary
+*.so binary
+*.dylib binary
+*.dll binary
+*.exe binary
+
+# Data files
+*.csv text
+*.tsv text
+*.log text
+
+# Cooja simulation files
+*.csc text
+*.testlog text
+
+# Export diff for notebooks
+*.ipynb linguist-documentation
