@@ -296,7 +296,10 @@ Attacker count & 1 (default) \\
 
 \section{Results}
 \label{sec:results}
-본 절은 데이터 수집 이후 최종화한다. 분석은 (i) 붕괴 임계값(collapse threshold) 거동과 (ii) trust penalty로 유발되는 trade-off를 강조하도록 구성한다.
+
+\noindent\textbf{본 절은 데이터 수집 이후 최종화한다.}
+
+분석은 (i) 붕괴 임계값(collapse threshold) 거동과 (ii) trust penalty로 유발되는 trade-off를 강조하도록 구성한다.
 
 \begin{figure}[t]
   \centering
@@ -335,11 +338,28 @@ Attacker count & 1 (default) \\
 
 \section{Discussion}
 \label{sec:discussion}
-본 절에서는 topology-dependent path diversity와 attacker placement가 collapse threshold에 미치는 영향, 그리고 trust penalty가 임계값을 어떻게 이동시키는지 논의한다. 또한 (i) 무선 손실(wireless loss) 및 transient dynamics에서의 false positive 가능성, (ii) $(\lambda,\gamma,\alpha)$에 대한 민감도(sensitivity), (iii) churn 및 overhead에 반영되는 안정성(stability) 영향을 분석한다. 제안 메커니즘은 암호 기반 보호(cryptographic protection) 및 secure bootstrapping을 \emph{대체}하는 것이 아니라 \emph{보완}하기 위한 것으로, full authentication이 불가능하거나 비실용적인 환경에서도 복원력(resilience) 향상을 목표로 한다.
+
+\noindent\textbf{본 절은 데이터 수집 이후 최종화한다.}
+
+논의 예정 내용:
+\begin{itemize}[leftmargin=*]
+  \item Topology-dependent path diversity와 attacker placement가 collapse threshold에 미치는 영향
+  \item Trust penalty가 임계값을 어떻게 이동시키는지에 대한 분석
+  \item 무선 손실(wireless loss) 및 transient dynamics에서의 false positive 가능성
+  \item $(\lambda,\gamma,\alpha)$에 대한 민감도(sensitivity) 분석
+  \item Churn 및 overhead에 반영되는 안정성(stability) 영향
+\end{itemize}
+
+제안 메커니즘은 암호 기반 보호(cryptographic protection) 및 secure bootstrapping을 \emph{대체}하는 것이 아니라 \emph{보완}하기 위한 것으로, full authentication이 불가능하거나 비실용적인 환경에서도 복원력(resilience) 향상을 목표로 한다.
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
-본 문서는 데이터 평면 전달 신뢰(data-plane reliability)와 제어 평면 이상 신호(control-plane anomaly signal)를 함께 활용하여 BRPL 라우팅 결정에 경량 trust penalty를 통합하는 Trust-Aware BRPL을 정리하였다. 평가 설계는 selective forwarding 및 sinkhole 공격 하에서 trust parameter가 성능 붕괴(performance collapse)를 얼마나 지연시키는지 정량화하고, topology 및 scale 전반에서 resilience--overhead trade-off를 특성화하도록 구성된다. 향후 과제로는 colluding multiple attacker, trust penalty parameter의 adaptive tuning, real testbed 검증(validation)을 포함한다.
+
+\noindent\textbf{본 절은 데이터 수집 이후 최종화한다.}
+
+본 문서는 데이터 평면 전달 신뢰(data-plane reliability)와 제어 평면 이상 신호(control-plane anomaly signal)를 함께 활용하여 BRPL 라우팅 결정에 경량 trust penalty를 통합하는 Trust-Aware BRPL을 정리하였다. 평가 설계는 selective forwarding 및 sinkhole 공격 하에서 trust parameter가 성능 붕괴(performance collapse)를 얼마나 지연시키는지 정량화하고, topology 및 scale 전반에서 resilience--overhead trade-off를 특성화하도록 구성된다.
+
+향후 과제로는 colluding multiple attacker, trust penalty parameter의 adaptive tuning, real testbed 검증(validation)을 포함한다.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

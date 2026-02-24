@@ -41,6 +41,9 @@
             rPackages.scales
             rPackages.gridExtra
             
+            # LaTeX for documentation
+            texlive.combined.scheme-full
+            
             # Additional utilities
             which
             coreutils
