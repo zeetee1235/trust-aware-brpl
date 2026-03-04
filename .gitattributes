@@ -1,6 +1,22 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Exclude only generated/temporary files from language statistics
+archive/** linguist-generated
+results/** linguist-generated
+**/build/** linguist-generated
+**/target/** linguist-generated
+configs/temp_*.csc linguist-generated
+
+# Mark main project languages explicitly
+*.c linguist-language=C linguist-detectable
+*.h linguist-language=C linguist-detectable
+*.py linguist-language=Python linguist-detectable
+*.R linguist-language=R linguist-detectable
+*.sh linguist-language=Shell linguist-detectable
+*.js linguist-language=JavaScript linguist-detectable
+*.rs linguist-language=Rust linguist-detectable
+
 # Source code
 *.c text
 *.h text
@@ -10,8 +26,10 @@
 *.js text
 
 # Documentation
-*.md text
-*.txt text
+*.md text linguist-documentation
+*.txt text linguist-documentation
+*.pdf binary linguist-documentation
+*.svg binary linguist-documentation
 
 # Configuration files
 *.json text
@@ -22,11 +40,11 @@
 *.conf text
 
 # Nix files
-*.nix text
+*.nix text linguist-language=Nix linguist-detectable
 
 # Makefiles
-Makefile text
-*.mk text
+Makefile text linguist-language=Makefile linguist-detectable
+*.mk text linguist-language=Makefile linguist-detectable
 
 # Scripts should always use LF
 *.bash text eol=lf
@@ -39,13 +57,15 @@ Makefile text
 *.jpeg binary
 *.gif binary
 *.ico binary
-*.svg binary
-*.pdf binary
+*.pdf binary linguist-documentation
 *.zip binary
 *.tar binary
 *.gz binary
 *.bz2 binary
 *.7z binary
+
+# SVG is text-based
+*.svg text linguist-documentation
 
 # Compiled files
 *.o binary
@@ -55,14 +75,19 @@ Makefile text
 *.dll binary
 *.exe binary
 
-# Data files
-*.csv text
-*.tsv text
-*.log text
+# Data files (exclude from statistics)
+*.csv linguist-generated
+*.tsv linguist-generated
+*.log linguist-generated
 
 # Cooja simulation files
-*.csc text
-*.testlog text
+*.csc text linguist-documentation
+*.testlog linguist-generated
+
+# Rust specific
+*.rs text
+Cargo.toml text
+Cargo.lock linguist-generated
 
 # Export diff for notebooks
 *.ipynb linguist-documentation
