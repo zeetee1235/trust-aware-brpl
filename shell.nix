@@ -11,6 +11,9 @@ pkgs.mkShell {
     
     # Java for Cooja
     openjdk17
+    rustc
+    cargo
+    ant
     
     # Python with common packages
     python3
