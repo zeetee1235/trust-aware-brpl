@@ -53,9 +53,10 @@ sudo apt install -y \
     pkg-config \
     libssl-dev
 
-# 3. Install Java (OpenJDK 17 for Cooja)
-log_info "Step 3/10: Installing Java OpenJDK 17..."
-sudo apt install -y openjdk-17-jdk openjdk-17-jre ant
+# 3. Install Java (OpenJDK 21 for Cooja)
+log_info "Step 3/10: Installing Java OpenJDK 21..."
+sudo apt install -y openjdk-21-jdk openjdk-21-jre ant
+sudo update-alternatives --set java /usr/lib/jvm/java-21-openjdk-amd64/bin/java || true
 
 # 4. Install Python and packages
 log_info "Step 4/10: Installing Python and packages..."
