@@ -39,15 +39,18 @@ cleanup_on_exit() {
 trap cleanup_on_exit EXIT INT TERM
 
 # Configuration
-QUICK_PREVIEW=1  # set to 0 for full run
-SIM_TIME=600  # default: 10 minutes per simulation
+QUICK_PREVIEW=${QUICK_PREVIEW:-1}  # set to 0 for full run
+SIM_TIME=${SIM_TIME:-600}  # default: 10 minutes per simulation
 ATTACK_RATES=(0 30 50 70)  # Drop percentages (0 for normal scenarios)
 SEEDS=(123456 234567 345678 456789 567890)  # default: 5 seeds
 INCLUDE_OPTIONAL_SCENARIOS=1  # include 8_brpl_normal_trust for normal + trust
-SEND_INTERVAL_SECONDS=30
-WARMUP_SECONDS=120
-PAUSE_BETWEEN_RUNS=0  # set to 1 to confirm each run interactively
-CHECKPOINT_TAIL_LINES=20  # number of log lines to show after each run
+SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS:-30}
+WARMUP_SECONDS=${WARMUP_SECONDS:-120}
+PAUSE_BETWEEN_RUNS=${PAUSE_BETWEEN_RUNS:-0}  # set to 1 to confirm each run interactively
+CHECKPOINT_TAIL_LINES=${CHECKPOINT_TAIL_LINES:-20}  # number of log lines to show after each run
+ENABLE_CHECKPOINT_SUMMARY=${ENABLE_CHECKPOINT_SUMMARY:-0}
+COOJA_TIMEOUT=${COOJA_TIMEOUT:-800}
+TRUST_ENGINE_STARTUP_WAIT=${TRUST_ENGINE_STARTUP_WAIT:-1}
 LAMBDA_SET=(0 1 3 10)
 GAMMA_SET=(1 2 4)
 ATTACK_MODE=${ATTACK_MODE:-0}
@@ -206,6 +209,7 @@ log_info "Topologies: ${TOPOLOGIES[*]}"
 log_info "Attack rates: ${ATTACK_RATES[@]}"
 log_info "Seeds: ${#SEEDS[@]}"
 log_info "Total runs: $TOTAL_RUNS"
+log_info "Checkpoint summary: $ENABLE_CHECKPOINT_SUMMARY"
 log_info "Results directory: $RESULTS_BASE"
 log_info ""
 
@@ -357,9 +361,9 @@ PY
                 --attacker-id "$ATTACKER_NODE_ID" \
                 --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
             TRUST_ENGINE_PID=$!
-            sleep 2
+            sleep "$TRUST_ENGINE_STARTUP_WAIT"
             
-            timeout 800 java --enable-preview ${JAVA_OPTS} \
+            timeout "$COOJA_TIMEOUT" java --enable-preview ${JAVA_OPTS} \
                 -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
                 --no-gui \
                 --autostart \
@@ -403,7 +407,9 @@ PY
             fi
             
             log_info "  Completed: $RUN_NAME"
-            summarize_run "$RUN_DIR"
+            if [ "$ENABLE_CHECKPOINT_SUMMARY" -eq 1 ]; then
+                summarize_run "$RUN_DIR"
+            fi
             if [ "$PAUSE_BETWEEN_RUNS" -eq 1 ]; then
                 echo ""
                 read -r -p "Press Enter to continue..." _
