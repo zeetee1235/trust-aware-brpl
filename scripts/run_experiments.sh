@@ -7,6 +7,18 @@ set -e
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$PROJECT_DIR"
 
+# Cleanup on exit (Ctrl+C, kill, or normal exit)
+cleanup_on_exit() {
+    log_warn "Cleaning up before exit..."
+    # Kill any running trust_engine processes
+    pkill trust_engine 2>/dev/null || true
+    # Remove temp config files
+    rm -f "$PROJECT_DIR/configs/temp_*.csc" 2>/dev/null || true
+    log_info "Cleanup done"
+}
+
+trap cleanup_on_exit EXIT INT TERM
+
 # Configuration
 QUICK_PREVIEW=1  # set to 0 for full run
 SIM_TIME=600  # default: 10 minutes per simulation
@@ -56,6 +68,25 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RESULTS_BASE="results/experiments-$TIMESTAMP"
 
 mkdir -p "$RESULTS_BASE"
+
+# Cleanup function - remove old temp files and orphaned processes
+cleanup_previous_run() {
+    log_info "Cleaning up previous run artifacts..."
+    
+    # Kill any orphaned trust_engine processes
+    pkill -9 trust_engine 2>/dev/null || true
+    
+    # Remove temporary config files
+    rm -f "$PROJECT_DIR/configs/temp_*.csc" 2>/dev/null || true
+    
+    # Clean build directory (will be rebuilt)
+    rm -rf "$PROJECT_DIR/motes/build" 2>/dev/null || true
+    
+    log_info "Cleanup complete"
+}
+
+# Run cleanup before starting
+cleanup_previous_run
 
 # Scenarios definition: routing,has_attack,trust_enabled
 # BRPL-only scenarios
