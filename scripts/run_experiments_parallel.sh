@@ -1,5 +1,5 @@
 #!/bin/bash
-# Parallel experiment runner - launches 8 workers to run experiments concurrently
+# Parallel experiment runner - launches workers to run experiments via dynamic queue
 # Each worker runs an independent Cooja instance
 
 set -e
@@ -32,16 +32,21 @@ NUM_WORKERS=${NUM_WORKERS:-8}
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RESULTS_BASE="results/experiments-$TIMESTAMP"
 WORKER_LOG_DIR="$RESULTS_BASE/worker_logs"
+QUEUE_FILE="$RESULTS_BASE/queue_all.txt"
+QUEUE_CURSOR_FILE="$QUEUE_FILE.cursor"
+QUEUE_TOTAL_FILE="$QUEUE_FILE.total"
+QUEUE_LOCK_FILE="$QUEUE_FILE.lock"
 
 mkdir -p "$RESULTS_BASE"
 mkdir -p "$WORKER_LOG_DIR"
 
 log_info "============================================"
-log_info "Parallel Experiment Runner (8 Workers)"
+log_info "Parallel Experiment Runner (Dynamic Queue)"
 log_info "============================================"
 log_info "Workers: $NUM_WORKERS"
 log_info "Results directory: $RESULTS_BASE"
 log_info "Worker logs: $WORKER_LOG_DIR"
+log_info "Queue file: $QUEUE_FILE"
 log_info ""
 
 # Build dependencies first
@@ -96,6 +101,15 @@ log_info "============================================"
 log_info "Launching $NUM_WORKERS parallel workers..."
 log_info "============================================"
 
+# Build dynamic queue once from worker's experiment builder
+log_info "Building dynamic queue..."
+bash "$PROJECT_DIR/scripts/run_experiments_worker.sh" --print-experiments > "$QUEUE_FILE"
+TOTAL_QUEUE=$(wc -l < "$QUEUE_FILE")
+echo "0" > "$QUEUE_CURSOR_FILE"
+echo "$TOTAL_QUEUE" > "$QUEUE_TOTAL_FILE"
+touch "$QUEUE_LOCK_FILE"
+log_info "Queue ready: $TOTAL_QUEUE experiments"
+
 # Array to store worker PIDs
 declare -a WORKER_PIDS=()
 
@@ -109,6 +123,7 @@ for worker_id in $(seq 1 $NUM_WORKERS); do
         "$worker_id" \
         "$NUM_WORKERS" \
         "$RESULTS_BASE" \
+        "$QUEUE_FILE" \
         > "$WORKER_LOG" 2>&1 &
     
     WORKER_PID=$!
@@ -179,7 +194,14 @@ while [ $ACTIVE_WORKERS -gt 0 ]; do
     done
     
     if [ $ACTIVE_WORKERS -gt 0 ]; then
-        echo -ne "\r${CYAN}[MAIN]${NC} Active workers: $ACTIVE_WORKERS/$NUM_WORKERS | Elapsed: $(( $(date +%s) - $(stat -c %Y "$RESULTS_BASE") ))s    "
+        CURSOR=$(cat "$QUEUE_CURSOR_FILE" 2>/dev/null || echo 0)
+        TOTAL=$(cat "$QUEUE_TOTAL_FILE" 2>/dev/null || echo 0)
+        if [ "$TOTAL" -gt 0 ]; then
+            PCT=$(( CURSOR * 100 / TOTAL ))
+        else
+            PCT=0
+        fi
+        echo -ne "\r${CYAN}[MAIN]${NC} Active workers: $ACTIVE_WORKERS/$NUM_WORKERS | Queue: $CURSOR/$TOTAL (${PCT}%) | Elapsed: $(( $(date +%s) - $(stat -c %Y "$RESULTS_BASE") ))s    "
     fi
 done
 

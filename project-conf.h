@@ -74,6 +74,12 @@ extern rpl_of_t rpl_brpl;
 #define TRUST_GAMMA 1
 #endif
 
+/* Map scenario-level trust toggle to BRPL trust engine switch. */
+#ifdef TRUST_ENABLED
+#undef BRPL_CONF_TRUST_ENABLE
+#define BRPL_CONF_TRUST_ENABLE TRUST_ENABLED
+#endif
+
 /* Attack mode (0: selective forwarding, 1: sinkhole rank manipulation) */
 #ifndef ATTACK_MODE
 #define ATTACK_MODE 0

@@ -41,7 +41,7 @@ trap cleanup_on_exit EXIT INT TERM
 # Configuration
 QUICK_PREVIEW=${QUICK_PREVIEW:-1}  # set to 0 for full run
 SIM_TIME=${SIM_TIME:-600}  # default: 10 minutes per simulation
-ATTACK_RATES=(0 30 50 70)  # Drop percentages (0 for normal scenarios)
+ATTACK_RATES=($(seq 0 5 100))  # Drop percentages (0 for normal scenarios)
 SEEDS=(123456 234567 345678 456789 567890)  # default: 5 seeds
 INCLUDE_OPTIONAL_SCENARIOS=1  # include 8_brpl_normal_trust for normal + trust
 SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS:-30}
@@ -51,8 +51,8 @@ CHECKPOINT_TAIL_LINES=${CHECKPOINT_TAIL_LINES:-20}  # number of log lines to sho
 ENABLE_CHECKPOINT_SUMMARY=${ENABLE_CHECKPOINT_SUMMARY:-0}
 COOJA_TIMEOUT=${COOJA_TIMEOUT:-800}
 TRUST_ENGINE_STARTUP_WAIT=${TRUST_ENGINE_STARTUP_WAIT:-1}
-LAMBDA_SET=(0 1 3 10)
-GAMMA_SET=(1 2 4)
+LAMBDA_SET=(6)
+GAMMA_SET=(4)
 ATTACK_MODE=${ATTACK_MODE:-0}
 ATTACKER_NODE_ID=${ATTACKER_NODE_ID:-2}
 SINKHOLE_RANK_DELTA=${SINKHOLE_RANK_DELTA:-1}
@@ -69,10 +69,25 @@ SINK_KAPPA=${SINK_KAPPA:-0}
 SINK_W1=${SINK_W1:-0.5}
 SINK_W2=${SINK_W2:-0.5}
 TRUST_ALPHA=${TRUST_ALPHA:-0.5}
+TRUST_ENGINE_ALPHA=${TRUST_ENGINE_ALPHA:-0.4}
+TRUST_ENGINE_MISS_THRESHOLD=${TRUST_ENGINE_MISS_THRESHOLD:-2}
+TRUST_ENGINE_FWD_DROP_THRESHOLD=${TRUST_ENGINE_FWD_DROP_THRESHOLD:-0.12}
+BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM:-0.90}
+BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM:-0.95}
 
 # Topology list (override with TOPOLOGIES env var)
 # Example: TOPOLOGIES="configs/topologies/T1_S.csc configs/topologies/T3.csc" ./scripts/run_experiments.sh
-TOPOLOGIES_DEFAULT=(configs/topologies/*.csc)
+TOPOLOGIES_DEFAULT=(
+    configs/topologies/CLUSTER_S.csc
+    configs/topologies/CLUSTER_M.csc
+    configs/topologies/CLUSTER_L.csc
+    configs/topologies/GRID_S.csc
+    configs/topologies/GRID_M.csc
+    configs/topologies/GRID_L.csc
+    configs/topologies/RING_S.csc
+    configs/topologies/RING_M.csc
+    configs/topologies/RING_L.csc
+)
 if [ -n "${TOPOLOGIES:-}" ]; then
     # shellcheck disable=SC2206
     TOPOLOGIES=($TOPOLOGIES)
@@ -278,6 +293,8 @@ run_one() {
                 -e "s/SINKHOLE_RANK_DELTA=[0-9][0-9]*/SINKHOLE_RANK_DELTA=${SINKHOLE_RANK_DELTA}/g" \
                 -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=${attack_rate}/g" \
                 -e "/ATTACK_MODE=/! s/ATTACK_DROP_PCT=${attack_rate}/ATTACK_DROP_PCT=${attack_rate},ATTACK_MODE=${ATTACK_MODE}/g" \
+                -e "s/BLACKLIST_TRUST_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}/g" \
+                -e "s/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}/g" \
                 -e "s/SEND_INTERVAL_SECONDS=[0-9][0-9]*/SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS}/g" \
                 -e "s/WARMUP_SECONDS=[0-9][0-9]*/WARMUP_SECONDS=${WARMUP_SECONDS}/g" \
                 "$PROJECT_DIR/$BASE_CONFIG" > "$TEMP_CONFIG"
@@ -294,6 +311,12 @@ def fix_defines(match):
         defines += f",ATTACK_MODE=${ATTACK_MODE}"
     if "ATTACKER_NODE_ID=" not in defines:
         defines += f",ATTACKER_NODE_ID=${ATTACKER_NODE_ID}"
+    if "TRUST_ENABLED=" not in defines:
+        defines += f",TRUST_ENABLED=${trust}"
+    if "BLACKLIST_TRUST_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}"
+    if "BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}"
     return match.group(1) + defines
 
 pattern = re.compile(r'(DEFINES=)([^"<]*)')
@@ -328,11 +351,12 @@ PY
             LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
             mkdir -p "$LOG_DIR"
             
-            # Start trust_engine in background for all runs (trust ON/OFF)
+            # Start trust_engine only for trust-enabled runs
             TRUST_ENGINE_PID=""
-            log_info "  Starting trust_engine in real-time mode..."
             touch "$TRUST_FEEDBACK_FILE"
             touch "$LOG_DIR/COOJA.testlog"  # Pre-create log file for --follow mode
+            if [ "$trust" -eq 1 ]; then
+                log_info "  Starting trust_engine in real-time mode..."
                 tools/trust_engine/target/release/trust_engine \
                     --input "$LOG_DIR/COOJA.testlog" \
                     --output "$TRUST_FEEDBACK_FILE" \
@@ -344,7 +368,7 @@ PY
                     --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
                     --stats-interval 200 \
                     --metric ewma \
-                    --alpha 0.2 \
+                    --alpha "$TRUST_ENGINE_ALPHA" \
                     --ewma-min 0.7 \
                     --sink-min-hop "$SINK_MIN_HOP" \
                     --sink-tau "$SINK_TAU" \
@@ -355,13 +379,14 @@ PY
                     --sink-w1 "$SINK_W1" \
                     --sink-w2 "$SINK_W2" \
                     --trust-alpha "$TRUST_ALPHA" \
-                --miss-threshold 5 \
+                --miss-threshold "$TRUST_ENGINE_MISS_THRESHOLD" \
                 --forwarders-only \
-                --fwd-drop-threshold 0.2 \
+                --fwd-drop-threshold "$TRUST_ENGINE_FWD_DROP_THRESHOLD" \
                 --attacker-id "$ATTACKER_NODE_ID" \
                 --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
-            TRUST_ENGINE_PID=$!
-            sleep "$TRUST_ENGINE_STARTUP_WAIT"
+                TRUST_ENGINE_PID=$!
+                sleep "$TRUST_ENGINE_STARTUP_WAIT"
+            fi
             
             timeout "$COOJA_TIMEOUT" java --enable-preview ${JAVA_OPTS} \
                 -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \

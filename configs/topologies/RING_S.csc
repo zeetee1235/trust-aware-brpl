@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>RING Topology S</title>
+    <title>RING S (N=20)</title>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
-      <transmitting_range>50.0</transmitting_range>
-      <interference_range>60.0</interference_range>
+      <transmitting_range>21.0</transmitting_range>
+      <interference_range>42.0</interference_range>
       <success_ratio_tx>1.0</success_ratio_tx>
       <success_ratio_rx>1.0</success_ratio_rx>
     </radiomedium>
@@ -90,8 +90,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>100.00</x>
-        <y>100.00</y>
+        <x>85.00</x>
+        <y>50.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -104,12 +104,12 @@
       </interface_config>
       <motetype_identifier>root_type</motetype_identifier>
     </mote>
-    <!-- Node 2: Sender -->
+    <!-- Node 2: Attacker -->
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>160.00</x>
-        <y>100.00</y>
+        <x>15.00</x>
+        <y>50.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -120,14 +120,14 @@
         org.contikios.cooja.contikimote.interfaces.ContikiRadio
         <bitrate>250.0</bitrate>
       </interface_config>
-      <motetype_identifier>sender_type</motetype_identifier>
+      <motetype_identifier>attacker_type</motetype_identifier>
     </mote>
     <!-- Node 3: Sender -->
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>155.00</x>
-        <y>133.00</y>
+        <x>82.00</x>
+        <y>63.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -144,8 +144,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>141.00</x>
-        <y>152.00</y>
+        <x>75.00</x>
+        <y>75.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -162,8 +162,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>118.00</x>
-        <y>163.00</y>
+        <x>63.00</x>
+        <y>82.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -180,8 +180,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>90.00</x>
-        <y>163.00</y>
+        <x>50.00</x>
+        <y>85.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -198,8 +198,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>67.00</x>
-        <y>152.00</y>
+        <x>37.00</x>
+        <y>82.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -216,8 +216,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>53.00</x>
-        <y>133.00</y>
+        <x>25.00</x>
+        <y>75.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -234,8 +234,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>45.00</x>
-        <y>109.00</y>
+        <x>18.00</x>
+        <y>63.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -252,8 +252,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>45.00</x>
-        <y>91.00</y>
+        <x>18.00</x>
+        <y>37.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -270,8 +270,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>53.00</x>
-        <y>67.00</y>
+        <x>25.00</x>
+        <y>25.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -288,8 +288,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>67.00</x>
-        <y>48.00</y>
+        <x>37.00</x>
+        <y>18.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -306,8 +306,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>90.00</x>
-        <y>37.00</y>
+        <x>50.00</x>
+        <y>15.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -324,8 +324,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>118.00</x>
-        <y>37.00</y>
+        <x>63.00</x>
+        <y>18.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -342,8 +342,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>141.00</x>
-        <y>48.00</y>
+        <x>75.00</x>
+        <y>25.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -360,8 +360,8 @@
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>155.00</x>
-        <y>67.00</y>
+        <x>82.00</x>
+        <y>37.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -374,12 +374,12 @@
       </interface_config>
       <motetype_identifier>sender_type</motetype_identifier>
     </mote>
-    <!-- Node 17: Attacker -->
+    <!-- Node 17: Sender -->
     <mote>
       <interface_config>
         org.contikios.cooja.interfaces.Position
-        <x>100.00</x>
-        <y>120.00</y>
+        <x>67.00</x>
+        <y>50.00</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -390,7 +390,61 @@
         org.contikios.cooja.contikimote.interfaces.ContikiRadio
         <bitrate>250.0</bitrate>
       </interface_config>
-      <motetype_identifier>attacker_type</motetype_identifier>
+      <motetype_identifier>sender_type</motetype_identifier>
+    </mote>
+    <!-- Node 18: Sender -->
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>50.00</x>
+        <y>50.00</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>18</id>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiRadio
+        <bitrate>250.0</bitrate>
+      </interface_config>
+      <motetype_identifier>sender_type</motetype_identifier>
+    </mote>
+    <!-- Node 19: Sender -->
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>45.00</x>
+        <y>55.00</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>19</id>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiRadio
+        <bitrate>250.0</bitrate>
+      </interface_config>
+      <motetype_identifier>sender_type</motetype_identifier>
+    </mote>
+    <!-- Node 20: Sender -->
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>55.00</x>
+        <y>45.00</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>20</id>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiRadio
+        <bitrate>250.0</bitrate>
+      </interface_config>
+      <motetype_identifier>sender_type</motetype_identifier>
     </mote>
   </simulation>
   <plugin>
@@ -457,6 +511,7 @@ function pollTrust() {
         } catch (e) {
         }
       }
+      log.log("INJECT " + cmd);
     }
     lastPos = raf.getFilePointer();
     raf.close();
@@ -469,7 +524,7 @@ while(true) {
     log.log(msg + "\n");
   }
   var now = java.lang.System.currentTimeMillis();
-  if(now - lastCheckMs > @TRUST_POLL_MS@) {
+  if(now - lastCheckMs > 200) {
     pollTrust();
     lastCheckMs = now;
   }

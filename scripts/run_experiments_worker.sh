@@ -1,12 +1,19 @@
 #!/bin/bash
 # Worker script for parallel experiment execution
-# Usage: ./run_experiments_worker.sh WORKER_ID TOTAL_WORKERS RESULTS_BASE
+# Usage: ./run_experiments_worker.sh WORKER_ID TOTAL_WORKERS RESULTS_BASE [QUEUE_FILE]
+#        ./run_experiments_worker.sh --print-experiments
 
 set -e
+
+PRINT_ONLY=0
+if [ "${1:-}" = "--print-experiments" ]; then
+    PRINT_ONLY=1
+fi
 
 WORKER_ID=${1:-1}
 TOTAL_WORKERS=${2:-8}
 RESULTS_BASE=${3:-"results/experiments-$(date +%Y%m%d-%H%M%S)"}
+QUEUE_FILE=${4:-""}
 
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$PROJECT_DIR"
@@ -41,12 +48,14 @@ cleanup_on_exit() {
     rm -rf "$WORKER_ENV_DIR" 2>/dev/null || true
 }
 
-trap cleanup_on_exit EXIT INT TERM
+if [ "$PRINT_ONLY" -eq 0 ]; then
+    trap cleanup_on_exit EXIT INT TERM
+fi
 
 # Configuration (same as original script)
 QUICK_PREVIEW=${QUICK_PREVIEW:-1}
 SIM_TIME=${SIM_TIME:-600}
-ATTACK_RATES=(0 30 50 70)
+ATTACK_RATES=($(seq 0 5 100))
 SEEDS=(123456 234567 345678 456789 567890)
 INCLUDE_OPTIONAL_SCENARIOS=1
 SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS:-30}
@@ -55,11 +64,12 @@ CHECKPOINT_TAIL_LINES=${CHECKPOINT_TAIL_LINES:-20}
 ENABLE_CHECKPOINT_SUMMARY=${ENABLE_CHECKPOINT_SUMMARY:-0}
 COOJA_TIMEOUT=${COOJA_TIMEOUT:-800}
 TRUST_ENGINE_STARTUP_WAIT=${TRUST_ENGINE_STARTUP_WAIT:-1}
-LAMBDA_SET=(0 1 3 10)
-GAMMA_SET=(1 2 4)
-ATTACK_MODE_SET=(0 1 2)
-SINK_DELTA_SET=(1 2 4)
-TRUST_ALPHA_SET=(1.0 0.5)
+# Fixed parameter set for this campaign
+LAMBDA_SET=(6)
+GAMMA_SET=(4)
+ATTACK_MODE_SET=(2)  # combined only
+SINK_DELTA_SET=(1)
+TRUST_ALPHA_SET=(1.0)
 TRUST_POLL_MS=${TRUST_POLL_MS:-1000}
 SINK_MIN_HOP=${SINK_MIN_HOP:-256}
 SINK_TAU=${SINK_TAU:-0}
@@ -69,8 +79,31 @@ SINK_BETA=${SINK_BETA:-0.1}
 SINK_KAPPA=${SINK_KAPPA:-0}
 SINK_W1=${SINK_W1:-0.5}
 SINK_W2=${SINK_W2:-0.5}
+TRUST_ENGINE_ALPHA=${TRUST_ENGINE_ALPHA:-0.4}
+TRUST_ENGINE_MISS_THRESHOLD=${TRUST_ENGINE_MISS_THRESHOLD:-2}
+TRUST_ENGINE_FWD_DROP_THRESHOLD=${TRUST_ENGINE_FWD_DROP_THRESHOLD:-0.12}
+if [ -n "${BLACKLIST_TRUST_THRESHOLD_NORM_SET:-}" ]; then
+    BLACKLIST_TRUST_THRESHOLD_NORM_SET=($BLACKLIST_TRUST_THRESHOLD_NORM_SET)
+else
+    BLACKLIST_TRUST_THRESHOLD_NORM_SET=(0.90)
+fi
+if [ -n "${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET:-}" ]; then
+    BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET=($BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET)
+else
+    BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET=(0.95)
+fi
 
-TOPOLOGIES_DEFAULT=(configs/topologies/*.csc)
+TOPOLOGIES_DEFAULT=(
+    configs/topologies/CLUSTER_S.csc
+    configs/topologies/CLUSTER_M.csc
+    configs/topologies/CLUSTER_L.csc
+    configs/topologies/GRID_S.csc
+    configs/topologies/GRID_M.csc
+    configs/topologies/GRID_L.csc
+    configs/topologies/RING_S.csc
+    configs/topologies/RING_M.csc
+    configs/topologies/RING_L.csc
+)
 if [ -n "${TOPOLOGIES:-}" ]; then
     TOPOLOGIES=($TOPOLOGIES)
 else
@@ -131,8 +164,12 @@ build_experiment_list() {
                             for TRUST_ALPHA in "${TRUST_ALPHA_SET[@]}"; do
                                 for TRUST_LAMBDA in "${LAMBDA_SET[@]}"; do
                                     for TRUST_PENALTY_GAMMA in "${GAMMA_SET[@]}"; do
-                                        for seed in "${SEEDS[@]}"; do
-                                            experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$ATTACK_MODE|$SINKHOLE_RANK_DELTA|$TRUST_ALPHA|$TRUST_LAMBDA|$TRUST_PENALTY_GAMMA|$seed|$ATTACKER_NODE_ID")
+                                        for BLACKLIST_TRUST_THRESHOLD_NORM in "${BLACKLIST_TRUST_THRESHOLD_NORM_SET[@]}"; do
+                                            for BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM in "${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET[@]}"; do
+                                                for seed in "${SEEDS[@]}"; do
+                                                    experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$ATTACK_MODE|$SINKHOLE_RANK_DELTA|$TRUST_ALPHA|$TRUST_LAMBDA|$TRUST_PENALTY_GAMMA|$seed|$ATTACKER_NODE_ID|$BLACKLIST_TRUST_THRESHOLD_NORM|$BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM")
+                                                done
+                                            done
                                         done
                                     done
                                 done
@@ -142,7 +179,7 @@ build_experiment_list() {
                 else
                     for ATTACK_MODE in "${ATTACK_MODE_SET[@]}"; do
                         for seed in "${SEEDS[@]}"; do
-                            experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$ATTACK_MODE|0|1.0|0|1|$seed|$ATTACKER_NODE_ID")
+                            experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$ATTACK_MODE|0|1.0|0|1|$seed|$ATTACKER_NODE_ID|0.90|0.95")
                         done
                     done
                 fi
@@ -151,6 +188,11 @@ build_experiment_list() {
     done
     printf '%s\n' "${experiments[@]}"
 }
+
+if [ "$PRINT_ONLY" -eq 1 ]; then
+    build_experiment_list
+    exit 0
+fi
 
 prepare_worker_env() {
     log_info "Preparing isolated worker environment: $WORKER_ENV_DIR"
@@ -162,10 +204,10 @@ prepare_worker_env() {
 
 run_one_experiment() {
     local exp_data="$1"
-    IFS='|' read -r topo TOPO_NAME scenario_name routing attack trust attack_rate ATTACK_MODE SINKHOLE_RANK_DELTA TRUST_ALPHA TRUST_LAMBDA TRUST_PENALTY_GAMMA seed ATTACKER_NODE_ID <<< "$exp_data"
+    IFS='|' read -r topo TOPO_NAME scenario_name routing attack trust attack_rate ATTACK_MODE SINKHOLE_RANK_DELTA TRUST_ALPHA TRUST_LAMBDA TRUST_PENALTY_GAMMA seed ATTACKER_NODE_ID BLACKLIST_TRUST_THRESHOLD_NORM BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM <<< "$exp_data"
     
     if [ "$trust" -eq 1 ] && [ "$attack" == "ATTACK" ]; then
-        RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_mode${ATTACK_MODE}_d${SINKHOLE_RANK_DELTA}_a${TRUST_ALPHA}_lam${TRUST_LAMBDA}_gam${TRUST_PENALTY_GAMMA}_s${seed}"
+        RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_mode${ATTACK_MODE}_d${SINKHOLE_RANK_DELTA}_a${TRUST_ALPHA}_lam${TRUST_LAMBDA}_gam${TRUST_PENALTY_GAMMA}_bl${BLACKLIST_TRUST_THRESHOLD_NORM}_blc${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}_s${seed}"
     else
         RUN_NAME="${TOPO_NAME}_${scenario_name}_p${attack_rate}_mode${ATTACK_MODE}_s${seed}"
     fi
@@ -208,6 +250,8 @@ run_one_experiment() {
         -e "s/SINKHOLE_RANK_DELTA=[0-9][0-9]*/SINKHOLE_RANK_DELTA=${SINKHOLE_RANK_DELTA}/g" \
         -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=${attack_rate}/g" \
         -e "/ATTACK_MODE=/! s/ATTACK_DROP_PCT=${attack_rate}/ATTACK_DROP_PCT=${attack_rate},ATTACK_MODE=${ATTACK_MODE}/g" \
+        -e "s/BLACKLIST_TRUST_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}/g" \
+        -e "s/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}/g" \
         -e "s/SEND_INTERVAL_SECONDS=[0-9][0-9]*/SEND_INTERVAL_SECONDS=${SEND_INTERVAL_SECONDS}/g" \
         -e "s/WARMUP_SECONDS=[0-9][0-9]*/WARMUP_SECONDS=${WARMUP_SECONDS}/g" \
         "$PROJECT_DIR/$BASE_CONFIG" > "$TEMP_CONFIG"
@@ -225,6 +269,12 @@ def fix_defines(match):
         defines += f",ATTACK_MODE=${ATTACK_MODE}"
     if "ATTACKER_NODE_ID=" not in defines:
         defines += f",ATTACKER_NODE_ID=${ATTACKER_NODE_ID}"
+    if "TRUST_ENABLED=" not in defines:
+        defines += f",TRUST_ENABLED=${trust}"
+    if "BLACKLIST_TRUST_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}"
+    if "BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}"
     return match.group(1) + defines
 
 pattern = re.compile(r'(DEFINES=)([^"<]*)')
@@ -261,38 +311,41 @@ PY
     LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
     mkdir -p "$LOG_DIR"
     
-    # Start trust_engine
+    # Start trust_engine only for trust-enabled runs
+    TRUST_ENGINE_PID=""
     touch "$TRUST_FEEDBACK_FILE"
     touch "$LOG_DIR/COOJA.testlog"
-    tools/trust_engine/target/release/trust_engine \
-        --input "$LOG_DIR/COOJA.testlog" \
-        --output "$TRUST_FEEDBACK_FILE" \
-        --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
-        --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
-        --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
-        --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
-        --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
-        --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
-        --stats-interval 200 \
-        --metric ewma \
-        --alpha 0.2 \
-        --ewma-min 0.7 \
-        --sink-min-hop "$SINK_MIN_HOP" \
-        --sink-tau "$SINK_TAU" \
-        --sink-lambda-adv "$SINK_LAMBDA_ADV" \
-        --sink-lambda-stab "$SINK_LAMBDA_STAB" \
-        --sink-beta "$SINK_BETA" \
-        --sink-kappa "$SINK_KAPPA" \
-        --sink-w1 "$SINK_W1" \
-        --sink-w2 "$SINK_W2" \
-        --trust-alpha "$TRUST_ALPHA" \
-        --miss-threshold 5 \
-        --forwarders-only \
-        --fwd-drop-threshold 0.2 \
-        --attacker-id "$ATTACKER_NODE_ID" \
-        --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
-    TRUST_ENGINE_PID=$!
-    sleep "$TRUST_ENGINE_STARTUP_WAIT"
+    if [ "$trust" -eq 1 ]; then
+      tools/trust_engine/target/release/trust_engine \
+          --input "$LOG_DIR/COOJA.testlog" \
+          --output "$TRUST_FEEDBACK_FILE" \
+          --metrics-out "$PROJECT_DIR/$RUN_DIR/trust_metrics.csv" \
+          --blacklist-out "$PROJECT_DIR/$RUN_DIR/blacklist.csv" \
+          --exposure-out "$PROJECT_DIR/$RUN_DIR/exposure.csv" \
+          --parent-out "$PROJECT_DIR/$RUN_DIR/parent_switch.csv" \
+          --stats-out "$PROJECT_DIR/$RUN_DIR/stats.csv" \
+          --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
+          --stats-interval 200 \
+          --metric ewma \
+          --alpha "$TRUST_ENGINE_ALPHA" \
+          --ewma-min 0.7 \
+          --sink-min-hop "$SINK_MIN_HOP" \
+          --sink-tau "$SINK_TAU" \
+          --sink-lambda-adv "$SINK_LAMBDA_ADV" \
+          --sink-lambda-stab "$SINK_LAMBDA_STAB" \
+          --sink-beta "$SINK_BETA" \
+          --sink-kappa "$SINK_KAPPA" \
+          --sink-w1 "$SINK_W1" \
+          --sink-w2 "$SINK_W2" \
+          --trust-alpha "$TRUST_ALPHA" \
+          --miss-threshold "$TRUST_ENGINE_MISS_THRESHOLD" \
+          --forwarders-only \
+          --fwd-drop-threshold "$TRUST_ENGINE_FWD_DROP_THRESHOLD" \
+          --attacker-id "$ATTACKER_NODE_ID" \
+          --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
+      TRUST_ENGINE_PID=$!
+      sleep "$TRUST_ENGINE_STARTUP_WAIT"
+    fi
     
     # Run Cooja
     timeout "$COOJA_TIMEOUT" java --enable-preview ${JAVA_OPTS} \
@@ -339,31 +392,58 @@ TOTAL_EXPERIMENTS=${#ALL_EXPERIMENTS[@]}
 
 log_info "Total experiments in dataset: $TOTAL_EXPERIMENTS"
 
-# Calculate this worker's range
-EXPERIMENTS_PER_WORKER=$(( (TOTAL_EXPERIMENTS + TOTAL_WORKERS - 1) / TOTAL_WORKERS ))
-START_IDX=$(( (WORKER_ID - 1) * EXPERIMENTS_PER_WORKER ))
-END_IDX=$(( START_IDX + EXPERIMENTS_PER_WORKER ))
-
-if [ $END_IDX -gt $TOTAL_EXPERIMENTS ]; then
-    END_IDX=$TOTAL_EXPERIMENTS
-fi
-
-WORKER_COUNT=$(( END_IDX - START_IDX ))
-
-log_info "Assigned experiments: $WORKER_COUNT (indices $START_IDX to $((END_IDX-1)))"
-
-# Execute assigned experiments
+# Execute experiments from dynamic queue
 COMPLETED=0
 FAILED=0
 
-for (( i=START_IDX; i<END_IDX; i++ )); do
-    if run_one_experiment "${ALL_EXPERIMENTS[$i]}"; then
+if [ -z "$QUEUE_FILE" ]; then
+    log_error "QUEUE_FILE is required for dynamic queue mode"
+    exit 1
+fi
+
+QUEUE_CURSOR_FILE="${QUEUE_FILE}.cursor"
+QUEUE_TOTAL_FILE="${QUEUE_FILE}.total"
+QUEUE_LOCK_FILE="${QUEUE_FILE}.lock"
+
+if [ ! -f "$QUEUE_FILE" ] || [ ! -f "$QUEUE_CURSOR_FILE" ] || [ ! -f "$QUEUE_TOTAL_FILE" ]; then
+    log_error "Queue files missing: $QUEUE_FILE(.cursor/.total)"
+    exit 1
+fi
+
+pop_next_experiment() {
+    local next_idx total line_no exp
+    exp=""
+
+    exec 9>>"$QUEUE_LOCK_FILE"
+    flock -x 9
+
+    next_idx=$(cat "$QUEUE_CURSOR_FILE" 2>/dev/null || echo 0)
+    total=$(cat "$QUEUE_TOTAL_FILE" 2>/dev/null || echo 0)
+
+    if [ "$next_idx" -lt "$total" ]; then
+        line_no=$((next_idx + 1))
+        exp=$(sed -n "${line_no}p" "$QUEUE_FILE")
+        echo $((next_idx + 1)) > "$QUEUE_CURSOR_FILE"
+    fi
+
+    flock -u 9
+    exec 9>&-
+
+    printf '%s' "$exp"
+}
+
+while true; do
+    EXP_DATA="$(pop_next_experiment)"
+    if [ -z "$EXP_DATA" ]; then
+        break
+    fi
+
+    if run_one_experiment "$EXP_DATA"; then
         COMPLETED=$((COMPLETED + 1))
     else
         FAILED=$((FAILED + 1))
     fi
-    PROGRESS=$(( (COMPLETED + FAILED) * 100 / WORKER_COUNT ))
-    log_info "Progress: ${PROGRESS}% ($((COMPLETED + FAILED))/${WORKER_COUNT}) | Success: $COMPLETED | Failed: $FAILED"
+    log_info "Progress: done=$((COMPLETED + FAILED)) | Success: $COMPLETED | Failed: $FAILED"
 done
 
 log_info "============================================"

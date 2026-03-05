@@ -15,9 +15,29 @@
 #define BLACKLIST_MAX_NODES 32
 #endif
 
-/* Blacklist threshold - nodes below this trust are blacklisted */
+/* Trust normalization base (trust_engine outputs 0..1000 by default). */
+#ifndef BLACKLIST_TRUST_SCALE
+#define BLACKLIST_TRUST_SCALE 1000.0f
+#endif
+
+/* Normalized blacklist thresholds (0.0 .. 1.0). */
+#ifndef BLACKLIST_TRUST_THRESHOLD_NORM
+#define BLACKLIST_TRUST_THRESHOLD_NORM 0.900f
+#endif
+
+#ifndef BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM
+#define BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM 0.950f
+#endif
+
+/* Backward-compatible integer thresholds derived from normalized values. */
 #ifndef BLACKLIST_TRUST_THRESHOLD
-#define BLACKLIST_TRUST_THRESHOLD 700
+#define BLACKLIST_TRUST_THRESHOLD \
+  ((uint16_t)(BLACKLIST_TRUST_THRESHOLD_NORM * BLACKLIST_TRUST_SCALE + 0.5f))
+#endif
+
+#ifndef BLACKLIST_TRUST_CLEAR_THRESHOLD
+#define BLACKLIST_TRUST_CLEAR_THRESHOLD \
+  ((uint16_t)(BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM * BLACKLIST_TRUST_SCALE + 0.5f))
 #endif
 
 /**

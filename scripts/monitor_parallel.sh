@@ -4,6 +4,7 @@
 RESULTS_PATTERN=${1:-"results/experiments-*"}
 REFRESH_SEC=${REFRESH_SEC:-3}
 MAX_RECENT=${MAX_RECENT:-5}
+FORCE_COMPACT=${COMPACT:-0}
 
 # Color output
 RED='\033[0;31m'
@@ -31,7 +32,20 @@ shorten() {
 }
 
 find_latest_dir() {
+  if [ -d "$RESULTS_PATTERN" ]; then
+    echo "$RESULTS_PATTERN"
+    return
+  fi
   ls -td ${RESULTS_PATTERN} 2>/dev/null | head -1
+}
+
+term_width() {
+  local cols
+  cols=$(tput cols 2>/dev/null || echo 120)
+  if [ -z "$cols" ] || [ "$cols" -le 0 ]; then
+    cols=120
+  fi
+  echo "$cols"
 }
 
 get_worker_usage() {
@@ -69,6 +83,12 @@ trap 'echo; echo "monitor stopped"; exit 0' INT TERM
 
 while true; do
   LATEST_DIR="$(find_latest_dir)"
+  WIDTH="$(term_width)"
+  if [ "$FORCE_COMPACT" = "1" ] || [ "$WIDTH" -lt 130 ]; then
+    COMPACT_MODE=1
+  else
+    COMPACT_MODE=0
+  fi
 
   clear
 
@@ -80,6 +100,9 @@ while true; do
   fi
 
   WORKER_LOG_DIR="$LATEST_DIR/worker_logs"
+  QUEUE_FILE="$LATEST_DIR/queue_all.txt"
+  QUEUE_CURSOR_FILE="$QUEUE_FILE.cursor"
+  QUEUE_TOTAL_FILE="$QUEUE_FILE.total"
   RUN_DIR_COUNT=$(find "$LATEST_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "worker_logs" 2>/dev/null | wc -l)
   RUNNING_WORKERS=0
   FINISHED_WORKERS=0
@@ -100,9 +123,15 @@ while true; do
     continue
   fi
 
-  printf "%b\n" "${BLUE}┌────────┬──────────┬──────────────┬───────────┬────────┬─────────┬──────────────────────────────────────┐${NC}"
-  printf "%b\n" "${BLUE}│ Worker │ State    │ Progress     │ Result    │ CPU(%) │ MEM(MB) │ Current / Last                       │${NC}"
-  printf "%b\n" "${BLUE}├────────┼──────────┼──────────────┼───────────┼────────┼─────────┼──────────────────────────────────────┤${NC}"
+  if [ "$COMPACT_MODE" -eq 1 ]; then
+    printf "%b\n" "${BLUE}┌────┬────────┬──────────┬─────────┬───────┬──────────────────────────┐${NC}"
+    printf "%b\n" "${BLUE}│ W  │ State  │ Done     │ Result  │ CPU%  │ Current / Last           │${NC}"
+    printf "%b\n" "${BLUE}├────┼────────┼──────────┼─────────┼───────┼──────────────────────────┤${NC}"
+  else
+    printf "%b\n" "${BLUE}┌────────┬──────────┬──────────────┬───────────┬────────┬─────────┬──────────────────────────────────────┐${NC}"
+    printf "%b\n" "${BLUE}│ Worker │ State    │ Progress     │ Result    │ CPU(%) │ MEM(MB) │ Current / Last                       │${NC}"
+    printf "%b\n" "${BLUE}├────────┼──────────┼──────────────┼───────────┼────────┼─────────┼──────────────────────────────────────┤${NC}"
+  fi
 
   for worker_log in $(ls "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | sort -V); do
     [ -f "$worker_log" ] || continue
@@ -110,14 +139,10 @@ while true; do
     worker_num="$(basename "$worker_log" .log | sed 's/worker_//')"
     worker_pid="$(pgrep -f "run_experiments_worker.sh $worker_num " 2>/dev/null | head -1)"
 
-    assigned=$(grep -m1 "Assigned experiments:" "$worker_log" | strip_ansi | sed -E 's/.*Assigned experiments: ([0-9]+).*/\1/' )
-    [ -n "$assigned" ] || assigned=0
-
     success=$(grep -E "Completed: .*_s[0-9]+" "$worker_log" 2>/dev/null | wc -l)
     fail=$(grep -c "Simulation failed:" "$worker_log" 2>/dev/null || true)
     done=$((success + fail))
 
-    TOTAL_ASSIGNED=$((TOTAL_ASSIGNED + assigned))
     TOTAL_DONE=$((TOTAL_DONE + done))
     TOTAL_SUCCESS=$((TOTAL_SUCCESS + success))
     TOTAL_FAIL=$((TOTAL_FAIL + fail))
@@ -126,21 +151,24 @@ while true; do
       state="${GREEN}RUNNING${NC}"
       RUNNING_WORKERS=$((RUNNING_WORKERS + 1))
       current_task=$(grep "Running:" "$worker_log" | tail -1 | strip_ansi | sed -E 's/.*Running: //')
-      current_task="$(shorten "$current_task" 36)"
+      if [ "$COMPACT_MODE" -eq 1 ]; then
+        current_task="$(shorten "$current_task" 24)"
+      else
+        current_task="$(shorten "$current_task" 36)"
+      fi
       current_display="${CYAN}${current_task}${NC}"
     else
       state="${YELLOW}FINISHED${NC}"
       FINISHED_WORKERS=$((FINISHED_WORKERS + 1))
       last_line=$(tail -1 "$worker_log" | strip_ansi)
-      current_display="$(shorten "$last_line" 36)"
+      if [ "$COMPACT_MODE" -eq 1 ]; then
+        current_display="$(shorten "$last_line" 24)"
+      else
+        current_display="$(shorten "$last_line" 36)"
+      fi
     fi
 
-    if [ "$assigned" -gt 0 ]; then
-      pct=$((done * 100 / assigned))
-      progress="${done}/${assigned} (${pct}%)"
-    else
-      progress="${done}/? (-)"
-    fi
+    progress="${done} done"
 
     result="${GREEN}✓${success}${NC} ${RED}✗${fail}${NC}"
 
@@ -148,13 +176,26 @@ while true; do
     TOTAL_CPU="$(awk -v a="$TOTAL_CPU" -v b="$cpu" 'BEGIN{printf "%.1f", a+b}')"
     TOTAL_MEM_MB=$((TOTAL_MEM_MB + mem_mb))
 
-    printf "│ %6s │ %-26b │ %-12s │ %-15b │ %6s │ %7s │ %-36b │\n" \
-      "$worker_num" "$state" "$progress" "$result" "$cpu" "$mem_mb" "$current_display"
+    if [ "$COMPACT_MODE" -eq 1 ]; then
+      printf "│ %2s │ %-22b │ %-8s │ %-13b │ %5s │ %-24b │\n" \
+        "$worker_num" "$state" "$progress" "$result" "$cpu" "$current_display"
+    else
+      printf "│ %6s │ %-26b │ %-12s │ %-15b │ %6s │ %7s │ %-36b │\n" \
+        "$worker_num" "$state" "$progress" "$result" "$cpu" "$mem_mb" "$current_display"
+    fi
   done
 
-  printf "%b\n" "${BLUE}└────────┴──────────┴──────────────┴───────────┴────────┴─────────┴──────────────────────────────────────┘${NC}"
+  if [ "$COMPACT_MODE" -eq 1 ]; then
+    printf "%b\n" "${BLUE}└────┴────────┴──────────┴─────────┴───────┴──────────────────────────┘${NC}"
+  else
+    printf "%b\n" "${BLUE}└────────┴──────────┴──────────────┴───────────┴────────┴─────────┴──────────────────────────────────────┘${NC}"
+  fi
   echo ""
 
+  if [ -f "$QUEUE_TOTAL_FILE" ] && [ -f "$QUEUE_CURSOR_FILE" ]; then
+    TOTAL_ASSIGNED=$(cat "$QUEUE_TOTAL_FILE" 2>/dev/null || echo 0)
+    TOTAL_DONE=$(cat "$QUEUE_CURSOR_FILE" 2>/dev/null || echo 0)
+  fi
   if [ "$TOTAL_ASSIGNED" -gt 0 ]; then
     overall_pct=$((TOTAL_DONE * 100 / TOTAL_ASSIGNED))
   else
@@ -165,13 +206,22 @@ while true; do
   echo -e "  Workers   : ${GREEN}${RUNNING_WORKERS}${NC} running / ${YELLOW}${FINISHED_WORKERS}${NC} finished"
   echo -e "  Progress  : ${BOLD}${TOTAL_DONE}/${TOTAL_ASSIGNED}${NC} (${overall_pct}%)"
   echo -e "  Results   : ${GREEN}✓ ${TOTAL_SUCCESS}${NC}   ${RED}✗ ${TOTAL_FAIL}${NC}"
-  echo -e "  Worker Res: CPU ${BOLD}${TOTAL_CPU}%${NC} / MEM ${BOLD}${TOTAL_MEM_MB} MB${NC}"
+  if [ "$COMPACT_MODE" -eq 1 ]; then
+    echo -e "  Worker Res: CPU ${BOLD}${TOTAL_CPU}%${NC}"
+  else
+    echo -e "  Worker Res: CPU ${BOLD}${TOTAL_CPU}%${NC} / MEM ${BOLD}${TOTAL_MEM_MB} MB${NC}"
+  fi
   echo -e "  System    : Load ${BOLD}$(get_system_load)${NC} | Mem ${BOLD}$(get_system_mem)${NC}"
   echo -e "  Run dirs  : ${RUN_DIR_COUNT}"
   echo ""
 
-  echo -e "${BLUE}${BOLD}Recent Completed${NC}"
-  recent_done=$(grep -hE "Completed: .*_s[0-9]+" "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | tail -n "$MAX_RECENT")
+  if [ "$COMPACT_MODE" -eq 1 ]; then
+    echo -e "${BLUE}${BOLD}Recent${NC}"
+    recent_done=$(grep -hE "Completed: .*_s[0-9]+" "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | tail -n 2)
+  else
+    echo -e "${BLUE}${BOLD}Recent Completed${NC}"
+    recent_done=$(grep -hE "Completed: .*_s[0-9]+" "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | tail -n "$MAX_RECENT")
+  fi
   if [ -n "$recent_done" ]; then
     while IFS= read -r line; do
       run_name=$(echo "$line" | strip_ansi | sed -E 's/.*Completed: //')
@@ -181,18 +231,19 @@ while true; do
   else
     echo -e "  ${DIM}No completed runs yet${NC}"
   fi
-  echo ""
-
-  echo -e "${RED}${BOLD}Recent Errors${NC}"
-  recent_fail=$(grep -h "Simulation failed:" "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | tail -n "$MAX_RECENT")
-  if [ -n "$recent_fail" ]; then
-    while IFS= read -r line; do
-      run_name=$(echo "$line" | strip_ansi | sed -E 's/.*Simulation failed: ([^ ]+).*/\1/')
-      worker=$(echo "$line" | strip_ansi | grep -oE "WORKER-[0-9]+" | sed 's/WORKER-//')
-      echo -e "  ${RED}✗${NC} W${worker}: $(shorten "$run_name" 90)"
-    done <<< "$recent_fail"
-  else
-    echo -e "  ${DIM}No failures logged${NC}"
+  if [ "$COMPACT_MODE" -eq 0 ]; then
+    echo ""
+    echo -e "${RED}${BOLD}Recent Errors${NC}"
+    recent_fail=$(grep -h "Simulation failed:" "$WORKER_LOG_DIR"/worker_*.log 2>/dev/null | tail -n "$MAX_RECENT")
+    if [ -n "$recent_fail" ]; then
+      while IFS= read -r line; do
+        run_name=$(echo "$line" | strip_ansi | sed -E 's/.*Simulation failed: ([^ ]+).*/\1/')
+        worker=$(echo "$line" | strip_ansi | grep -oE "WORKER-[0-9]+" | sed 's/WORKER-//')
+        echo -e "  ${RED}✗${NC} W${worker}: $(shorten "$run_name" 90)"
+      done <<< "$recent_fail"
+    else
+      echo -e "  ${DIM}No failures logged${NC}"
+    fi
   fi
   echo ""
 

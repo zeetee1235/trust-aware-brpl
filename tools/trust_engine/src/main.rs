@@ -42,6 +42,9 @@ struct Config {
     sink_w1: f64,
     sink_w2: f64,
     trust_alpha: f64,
+    blacklist_penalty: f64,
+    blacklist_recover_margin: f64,
+    blacklist_recover_windows: u64,
 }
 
 #[derive(Debug, Default)]
@@ -52,6 +55,7 @@ struct TrustState {
     fail: u64,
     last_udp_to_root: u64,
     last_dropped: u64,
+    recover_streak: u64,
 }
 
 #[derive(Debug, Default)]
@@ -77,6 +81,7 @@ fn usage() {
     eprintln!("                  [--attacker-id <id>] [--exposure-out <csv>] [--parent-out <csv>] [--stats-out <csv>] [--stats-interval <n>]");
     eprintln!("                  [--sink-min-hop <v>] [--sink-tau <v>] [--sink-lambda-adv <v>] [--sink-lambda-stab <v>]");
     eprintln!("                  [--sink-beta <v>] [--sink-kappa <v>] [--sink-w1 <v>] [--sink-w2 <v>] [--trust-alpha <v>]");
+    eprintln!("                  [--blacklist-penalty <0..1>] [--blacklist-recover-margin <0..1>] [--blacklist-recover-windows <n>]");
 }
 
 fn parse_args() -> Config {
@@ -114,6 +119,9 @@ fn parse_args() -> Config {
         sink_w1: 0.5,
         sink_w2: 0.5,
         trust_alpha: 0.5,
+        blacklist_penalty: 0.35,
+        blacklist_recover_margin: 0.05,
+        blacklist_recover_windows: 2,
     };
 
     let mut args = env::args().skip(1);
@@ -211,6 +219,15 @@ fn parse_args() -> Config {
             }
             "--trust-alpha" => {
                 if let Some(v) = args.next() { cfg.trust_alpha = v.parse().unwrap_or(cfg.trust_alpha); }
+            }
+            "--blacklist-penalty" => {
+                if let Some(v) = args.next() { cfg.blacklist_penalty = v.parse().unwrap_or(cfg.blacklist_penalty); }
+            }
+            "--blacklist-recover-margin" => {
+                if let Some(v) = args.next() { cfg.blacklist_recover_margin = v.parse().unwrap_or(cfg.blacklist_recover_margin); }
+            }
+            "--blacklist-recover-windows" => {
+                if let Some(v) = args.next() { cfg.blacklist_recover_windows = v.parse().unwrap_or(cfg.blacklist_recover_windows); }
             }
             "-h" | "--help" => {
                 usage();
@@ -387,27 +404,45 @@ fn process_reader<R: BufRead>(
             }
 
             let mut is_blacklisted = *blacklist.get(&node_id).unwrap_or(&false);
-            let mut blacklisted_now = false;
-            if !is_blacklisted {
-                if beta_est <= (1.0 - cfg.fwd_drop_threshold)
-                    || st.ewma < cfg.ewma_min
-                    || bayes < cfg.bayes_min
-                    || beta < cfg.beta_min
-                {
-                    is_blacklisted = true;
-                    blacklisted_now = true;
-                    blacklist.insert(node_id, true);
+            let mut blacklist_event: Option<&str> = None;
+            let bad_now = beta_est <= (1.0 - cfg.fwd_drop_threshold)
+                || st.ewma < cfg.ewma_min
+                || bayes < cfg.bayes_min
+                || beta < cfg.beta_min;
+            let rec_margin = cfg.blacklist_recover_margin;
+            let good_now = beta_est > (1.0 - cfg.fwd_drop_threshold + rec_margin).min(1.0)
+                && st.ewma >= (cfg.ewma_min + rec_margin).min(1.0)
+                && bayes >= (cfg.bayes_min + rec_margin).min(1.0)
+                && beta >= (cfg.beta_min + rec_margin).min(1.0);
+
+            if is_blacklisted {
+                if good_now {
+                    st.recover_streak = st.recover_streak.saturating_add(1);
+                    if st.recover_streak >= cfg.blacklist_recover_windows {
+                        is_blacklisted = false;
+                        blacklist.insert(node_id, false);
+                        st.recover_streak = 0;
+                        blacklist_event = Some("remove");
+                    }
+                } else {
+                    st.recover_streak = 0;
                 }
+            } else if bad_now {
+                is_blacklisted = true;
+                blacklist.insert(node_id, true);
+                st.recover_streak = 0;
+                blacklist_event = Some("add");
             }
 
+            let base_gray_trust = match cfg.metric.as_str() {
+                "bayes" => bayes,
+                "beta" => beta,
+                _ => st.ewma,
+            };
             let gray_trust = if is_blacklisted {
-                0.0
+                (base_gray_trust * cfg.blacklist_penalty).clamp(0.0, 1.0)
             } else {
-                match cfg.metric.as_str() {
-                    "bayes" => bayes,
-                    "beta" => beta,
-                    _ => st.ewma,
-                }
+                base_gray_trust
             };
             let adv = sink_adv.get(&node_id).cloned().unwrap_or(1.0);
             let stab = sink_stab.get(&node_id).cloned().unwrap_or(1.0);
@@ -417,10 +452,10 @@ fn process_reader<R: BufRead>(
             let trust_val = (total_trust * TRUST_SCALE).round() as u16;
             let trust_value = total_trust;
 
-            if blacklisted_now {
+            if let Some(event) = blacklist_event {
                 let _ = writeln!(
                     blacklist_out,
-                    "{},{},{},{:.4},{:.4},{:.4},{:.4},{}",
+                    "{},{},{},{:.4},{:.4},{:.4},{:.4},{},{}",
                     node_id,
                     st.succ,
                     st.fail,
@@ -428,7 +463,8 @@ fn process_reader<R: BufRead>(
                     bayes,
                     beta,
                     trust_value,
-                    trust_val
+                    trust_val,
+                    event
                 );
                 let _ = blacklist_out.flush();
             }
@@ -685,7 +721,7 @@ fn main() -> io::Result<()> {
         .write(true)
         .truncate(true)
         .open(&cfg.blacklist_out)?;
-    writeln!(blacklist_out, "node_id,success,failed,ewma,bayes,beta,trust_value,trust_raw")?;
+    writeln!(blacklist_out, "node_id,success,failed,ewma,bayes,beta,trust_value,trust_raw,event")?;
 
     let mut exposure_out = if cfg.exposure_out.is_empty() {
         None
@@ -854,6 +890,9 @@ mod tests {
             sink_w1: 0.5,
             sink_w2: 0.5,
             trust_alpha: 0.5,
+            blacklist_penalty: 0.35,
+            blacklist_recover_margin: 0.05,
+            blacklist_recover_windows: 2,
         }
     }
 
@@ -898,10 +937,22 @@ SIMULATION_FINISHED
         assert_eq!(blacklist.get(&2), Some(&true));
 
         let trust_text = read_file(&out_path)?;
-        assert!(trust_text.contains("TRUST,2,0"));
+        let trust_line = trust_text
+            .lines()
+            .find(|line| line.starts_with("TRUST,2,"))
+            .unwrap_or_default();
+        let trust_val = trust_line
+            .rsplit(',')
+            .next()
+            .unwrap_or("0")
+            .parse::<u16>()
+            .unwrap_or(0);
+        assert!(trust_val > 0);
+        assert!(trust_val < 400);
 
         let bl_text = read_file(&blacklist_path)?;
         assert!(bl_text.contains("2,2,8"));
+        assert!(bl_text.contains(",add"));
 
         Ok(())
     }

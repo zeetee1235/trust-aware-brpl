@@ -151,10 +151,10 @@ handle_trust_input(const char *line)
     printf("CSV,TRUST_IN,%u,%u,%u\n", self_id, node_id, trust);
 #endif
     
-    /* Auto-blacklist if trust is below threshold */
+    /* Auto-blacklist with hysteresis to reduce frequent toggling. */
     if(trust < BLACKLIST_TRUST_THRESHOLD) {
       brpl_blacklist_add((uint16_t)node_id);
-    } else {
+    } else if(trust >= BLACKLIST_TRUST_CLEAR_THRESHOLD) {
       brpl_blacklist_remove((uint16_t)node_id);
     }
   }

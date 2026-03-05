@@ -150,11 +150,11 @@ handle_trust_input(const char *line)
   unsigned trust = 0;
   if(sscanf(line, "TRUST,%u,%u", &node_id, &trust) == 2) {
     brpl_trust_override((uint16_t)node_id, (uint16_t)trust);
-    /* Auto-blacklist if trust is below threshold */
+    /* Auto-blacklist with hysteresis to reduce flapping. */
     if(trust < BLACKLIST_TRUST_THRESHOLD) {
       brpl_blacklist_add((uint16_t)node_id);
-    } else {
-      /* Remove from blacklist if trust recovers */
+    } else if(trust >= BLACKLIST_TRUST_CLEAR_THRESHOLD) {
+      /* Remove from blacklist only after recovery threshold. */
       brpl_blacklist_remove((uint16_t)node_id);
     }
 

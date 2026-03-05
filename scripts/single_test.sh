@@ -85,6 +85,11 @@ SINK_KAPPA=${SINK_KAPPA:-0}
 SINK_W1=${SINK_W1:-0.5}
 SINK_W2=${SINK_W2:-0.5}
 TRUST_ALPHA=${TRUST_ALPHA:-0.5}
+TRUST_ENGINE_ALPHA=${TRUST_ENGINE_ALPHA:-0.4}
+TRUST_ENGINE_MISS_THRESHOLD=${TRUST_ENGINE_MISS_THRESHOLD:-2}
+TRUST_ENGINE_FWD_DROP_THRESHOLD=${TRUST_ENGINE_FWD_DROP_THRESHOLD:-0.12}
+BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM:-0.90}
+BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM:-0.95}
 
 # Replace all placeholders like run_experiments.sh does
 sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$SEED<\/randomseed>/g" \
@@ -106,6 +111,8 @@ sed -e "s/<randomseed>[0-9]*<\/randomseed>/<randomseed>$SEED<\/randomseed>/g" \
     -e "s/SINKHOLE_RANK_DELTA=[0-9][0-9]*/SINKHOLE_RANK_DELTA=${SINKHOLE_RANK_DELTA}/g" \
     -e "s/ATTACK_DROP_PCT=[0-9][0-9]*/ATTACK_DROP_PCT=$ATTACK_RATE/g" \
     -e "/ATTACK_MODE=/! s/ATTACK_DROP_PCT=$ATTACK_RATE/ATTACK_DROP_PCT=$ATTACK_RATE,ATTACK_MODE=${ATTACK_MODE}/g" \
+    -e "s/BLACKLIST_TRUST_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}/g" \
+    -e "s/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=[0-9.]\\+/BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}/g" \
     "$TOPOLOGY" > "$TEMP_CONFIG"
 python3 - <<PY
 import re
@@ -120,6 +127,12 @@ def fix_defines(match):
         defines += f",ATTACK_MODE=${ATTACK_MODE}"
     if "ATTACKER_NODE_ID=" not in defines:
         defines += f",ATTACKER_NODE_ID=${ATTACKER_NODE_ID}"
+    if "TRUST_ENABLED=" not in defines:
+        defines += f",TRUST_ENABLED=${TRUST_ENABLED}"
+    if "BLACKLIST_TRUST_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}"
+    if "BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=" not in defines:
+        defines += f",BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}"
     return match.group(1) + defines
 
 pattern = re.compile(r'(DEFINES=)([^"<]*)')
@@ -156,9 +169,10 @@ LOG_DIR="$PROJECT_DIR/$RUN_DIR/logs"
 mkdir -p "$LOG_DIR"
 
 TRUST_ENGINE_PID=""
-echo "[2/3] Starting trust_engine..."
 touch "$TRUST_FEEDBACK_FILE"
 touch "$LOG_DIR/COOJA.testlog"
+if [ "$TRUST_ENABLED" -eq 1 ]; then
+    echo "[2/3] Starting trust_engine..."
     tools/trust_engine/target/release/trust_engine \
         --input "$LOG_DIR/COOJA.testlog" \
         --output "$TRUST_FEEDBACK_FILE" \
@@ -170,7 +184,7 @@ touch "$LOG_DIR/COOJA.testlog"
         --final-out "$PROJECT_DIR/$RUN_DIR/trust_final.log" \
         --stats-interval 200 \
         --metric ewma \
-        --alpha 0.2 \
+        --alpha "$TRUST_ENGINE_ALPHA" \
         --ewma-min 0.7 \
         --sink-min-hop "$SINK_MIN_HOP" \
         --sink-tau "$SINK_TAU" \
@@ -181,13 +195,16 @@ touch "$LOG_DIR/COOJA.testlog"
         --sink-w1 "$SINK_W1" \
         --sink-w2 "$SINK_W2" \
         --trust-alpha "$TRUST_ALPHA" \
-        --miss-threshold 5 \
+        --miss-threshold "$TRUST_ENGINE_MISS_THRESHOLD" \
         --forwarders-only \
-        --fwd-drop-threshold 0.2 \
+        --fwd-drop-threshold "$TRUST_ENGINE_FWD_DROP_THRESHOLD" \
         --attacker-id "$ATTACKER_NODE_ID" \
         --follow > "$PROJECT_DIR/$RUN_DIR/trust_engine.log" 2>&1 &
-TRUST_ENGINE_PID=$!
-sleep 2
+    TRUST_ENGINE_PID=$!
+    sleep 2
+else
+    echo "[2/3] trust_engine skipped (TRUST_ENABLED=0)"
+fi
 
 timeout 800 java --enable-preview ${JAVA_OPTS} \
     -jar "$COOJA_PATH/tools/cooja/build/libs/cooja.jar" \
