@@ -26,6 +26,18 @@ extern rpl_of_t rpl_brpl;
 #define RPL_CONF_OF_OCP RPL_OCP_BRPL
 #endif
 
+/* Pure RPL baseline: MRHOF + ETX Metric Container */
+#ifdef RPL_BASELINE_MODE
+#undef RPL_CONF_OF_OCP
+#define RPL_CONF_OF_OCP RPL_OCP_MRHOF
+#undef RPL_CONF_WITH_MC
+#define RPL_CONF_WITH_MC 1
+#undef RPL_CONF_DAG_MC
+#define RPL_CONF_DAG_MC RPL_DAG_MC_ETX
+#undef BRPL_CONF_TRUST_ENABLE
+#define BRPL_CONF_TRUST_ENABLE 0
+#endif
+
 /* Force RPL-Classic routing for BRPL support. */
 #undef NETSTACK_CONF_ROUTING
 #define NETSTACK_CONF_ROUTING rpl_classic_driver
@@ -57,7 +69,7 @@ extern rpl_of_t rpl_brpl;
 #define TRUST_SCALE 1000
 #endif
 #ifndef TRUST_ALPHA_NUM
-#define TRUST_ALPHA_NUM 2
+#define TRUST_ALPHA_NUM 7
 #endif
 #ifndef TRUST_ALPHA_DEN
 #define TRUST_ALPHA_DEN 10

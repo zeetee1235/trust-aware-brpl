@@ -29,6 +29,7 @@ log_error() {
 
 # Configuration
 NUM_WORKERS=${NUM_WORKERS:-8}
+PURE_RPL_CONTIKI_PATH=${PURE_RPL_CONTIKI_PATH:-/home/dev/contiki-ng}
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RESULTS_BASE="results/experiments-$TIMESTAMP"
 WORKER_LOG_DIR="$RESULTS_BASE/worker_logs"
@@ -44,6 +45,7 @@ log_info "============================================"
 log_info "Parallel Experiment Runner (Dynamic Queue)"
 log_info "============================================"
 log_info "Workers: $NUM_WORKERS"
+log_info "Pure RPL path: $PURE_RPL_CONTIKI_PATH"
 log_info "Results directory: $RESULTS_BASE"
 log_info "Worker logs: $WORKER_LOG_DIR"
 log_info "Queue file: $QUEUE_FILE"
@@ -51,6 +53,10 @@ log_info ""
 
 # Build dependencies first
 log_info "Checking dependencies..."
+if [ ! -d "$PURE_RPL_CONTIKI_PATH" ]; then
+    log_error "PURE_RPL_CONTIKI_PATH not found: $PURE_RPL_CONTIKI_PATH"
+    exit 1
+fi
 
 # Build motes if needed
 if [ ! -f "motes/build/cooja/receiver_root.cooja" ]; then

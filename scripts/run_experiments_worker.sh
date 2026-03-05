@@ -64,6 +64,7 @@ CHECKPOINT_TAIL_LINES=${CHECKPOINT_TAIL_LINES:-20}
 ENABLE_CHECKPOINT_SUMMARY=${ENABLE_CHECKPOINT_SUMMARY:-0}
 COOJA_TIMEOUT=${COOJA_TIMEOUT:-800}
 TRUST_ENGINE_STARTUP_WAIT=${TRUST_ENGINE_STARTUP_WAIT:-1}
+PURE_RPL_CONTIKI_PATH=${PURE_RPL_CONTIKI_PATH:-/home/dev/contiki-ng}
 # Fixed parameter set for this campaign
 LAMBDA_SET=(6)
 GAMMA_SET=(4)
@@ -85,7 +86,7 @@ TRUST_ENGINE_FWD_DROP_THRESHOLD=${TRUST_ENGINE_FWD_DROP_THRESHOLD:-0.12}
 if [ -n "${BLACKLIST_TRUST_THRESHOLD_NORM_SET:-}" ]; then
     BLACKLIST_TRUST_THRESHOLD_NORM_SET=($BLACKLIST_TRUST_THRESHOLD_NORM_SET)
 else
-    BLACKLIST_TRUST_THRESHOLD_NORM_SET=(0.90)
+    BLACKLIST_TRUST_THRESHOLD_NORM_SET=(0.80 0.90 0.95)
 fi
 if [ -n "${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET:-}" ]; then
     BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET=($BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM_SET)
@@ -118,7 +119,9 @@ if [ "$QUICK_PREVIEW" -eq 1 ]; then
 fi
 
 declare -A SCENARIOS=(
+    ["1_rpl_mrhof_normal"]="RPL,NO_ATTACK,0"
     ["2_brpl_normal_notrust"]="BRPL,NO_ATTACK,0"
+    ["3_rpl_mrhof_attack"]="RPL,ATTACK,0"
     ["4_brpl_attack_notrust"]="BRPL,ATTACK,0"
     ["6_brpl_attack_trust"]="BRPL,ATTACK,1"
 )
@@ -218,12 +221,25 @@ run_one_experiment() {
     log_info "Running: $RUN_NAME"
     
     # Set environment
-    export CONTIKI_NG_PATH="$PROJECT_DIR/contiki-ng-brpl"
     export COOJA_PATH="/home/dev/contiki-ng"
     export SERIAL_SOCKET_DISABLE=1
     export JAVA_OPTS="-Xmx4G -Xms2G"
-    
-    BRPL_MODE=1
+
+    local BRPL_MODE=0
+    local RPL_BASELINE_MODE=0
+    local CONTIKI_RUNTIME_PATH="$PROJECT_DIR/contiki-ng-brpl"
+    if [ "$routing" = "BRPL" ]; then
+        BRPL_MODE=1
+        CONTIKI_RUNTIME_PATH="$PROJECT_DIR/contiki-ng-brpl"
+    else
+        RPL_BASELINE_MODE=1
+        CONTIKI_RUNTIME_PATH="$PURE_RPL_CONTIKI_PATH"
+        if [ ! -d "$CONTIKI_RUNTIME_PATH" ]; then
+            log_error "PURE_RPL_CONTIKI_PATH not found: $CONTIKI_RUNTIME_PATH"
+            return 1
+        fi
+    fi
+    export CONTIKI_NG_PATH="$CONTIKI_RUNTIME_PATH"
     BASE_CONFIG="$topo"
     TEMP_CONFIG="$WORKER_CONFIG_DIR/temp_${RUN_NAME}.csc"
     SIM_TIME_MS=$((SIM_TIME * 1000))
@@ -236,6 +252,7 @@ run_one_experiment() {
         -e "s/@TRUST_POLL_MS@/${TRUST_POLL_MS}/g" \
         -e "s|@TRUST_FEEDBACK_PATH@|${TRUST_FEEDBACK_FILE}|g" \
         -e "s/BRPL_MODE=[0-9]/BRPL_MODE=${BRPL_MODE}/g" \
+        -e "s/RPL_BASELINE_MODE=[0-9]/RPL_BASELINE_MODE=${RPL_BASELINE_MODE}/g" \
         -e "s/TRUST_ENABLED=[0-9]/TRUST_ENABLED=${trust}/g" \
         -e "s/TRUST_LAMBDA=[0-9][0-9]*/TRUST_LAMBDA=${TRUST_LAMBDA}/g" \
         -e "s/TRUST_PENALTY_GAMMA=[0-9][0-9]*/TRUST_PENALTY_GAMMA=${TRUST_PENALTY_GAMMA}/g" \
@@ -275,11 +292,15 @@ def fix_defines(match):
         defines += f",BLACKLIST_TRUST_THRESHOLD_NORM=${BLACKLIST_TRUST_THRESHOLD_NORM}"
     if "BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=" not in defines:
         defines += f",BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM=${BLACKLIST_TRUST_CLEAR_THRESHOLD_NORM}"
+    if "RPL_BASELINE_MODE=" not in defines:
+        defines += f",RPL_BASELINE_MODE=${RPL_BASELINE_MODE}"
     return match.group(1) + defines
 
 pattern = re.compile(r'(DEFINES=)([^"<]*)')
 lines = []
 for line in text.splitlines():
+    if "<commands>" in line and "/usr/bin/make -C ../motes" in line and " CONTIKI=" not in line:
+        line = line.replace("/usr/bin/make -C ../motes", "/usr/bin/make -C ../motes CONTIKI=$CONTIKI_RUNTIME_PATH")
     if "DEFINES=" in line:
         line = pattern.sub(fix_defines, line, count=1)
     lines.append(line)
