@@ -19,7 +19,7 @@
       <identifier>root_type</identifier>
       <description>Root Node</description>
       <source>[CONFIG_DIR]/../motes/receiver_root.c</source>
-      <commands>/usr/bin/make -C ../motes -f Makefile.receiver -j receiver_root.cooja TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,ATTACK_MODE=1,ATTACKER_NODE_ID=2</commands>
+      <commands>/usr/bin/make -C ../motes -f Makefile.receiver -j receiver_root.cooja BUILD_DIR_BOARD=build_worker1 TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_LAMBDA=1,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=1,TRUST_PENALTY_GAMMA_CONF=1,ATTACK_MODE=0,ATTACKER_NODE_ID=2</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>
@@ -43,7 +43,7 @@
       <identifier>sender_type</identifier>
       <description>Sender Node</description>
       <source>[CONFIG_DIR]/../motes/sender.c</source>
-      <commands>/usr/bin/make -C ../motes -f Makefile.sender -j sender.cooja TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_ENABLED=0,TRUST_LAMBDA=0,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,SEND_INTERVAL_SECONDS=10,WARMUP_SECONDS=10,ATTACK_MODE=1,ATTACKER_NODE_ID=2</commands>
+      <commands>/usr/bin/make -C ../motes -f Makefile.sender -j sender.cooja BUILD_DIR_BOARD=build_worker1 TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_ENABLED=1,TRUST_LAMBDA=1,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=1,TRUST_PENALTY_GAMMA_CONF=1,SEND_INTERVAL_SECONDS=10,WARMUP_SECONDS=10,ATTACK_MODE=0,ATTACKER_NODE_ID=2</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>
@@ -67,7 +67,7 @@
       <identifier>attacker_type</identifier>
       <description>Selective Forwarding Attacker</description>
       <source>[CONFIG_DIR]/../motes/attacker.c</source>
-      <commands>/usr/bin/make -C ../motes -f Makefile.attacker -j attacker.cooja TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_LAMBDA=0,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=0,TRUST_PENALTY_GAMMA_CONF=1,ATTACK_DROP_PCT=0,ATTACK_MODE=1,WARMUP_SECONDS=10,ATTACKER_NODE_ID=2</commands>
+      <commands>/usr/bin/make -C ../motes -f Makefile.attacker -j attacker.cooja BUILD_DIR_BOARD=build_worker1 TARGET=cooja WERROR=0 DEFINES=BRPL_MODE=1,TRUST_LAMBDA=1,TRUST_GAMMA=1,TRUST_PENALTY_GAMMA=1,TRUST_LAMBDA_CONF=1,TRUST_PENALTY_GAMMA_CONF=1,ATTACK_DROP_PCT=30,ATTACK_MODE=0,WARMUP_SECONDS=10,ATTACKER_NODE_ID=2</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>
@@ -1886,7 +1886,7 @@ TIMEOUT(240000, log.log("SIMULATION_FINISHED\n"); log.testOK(); );
 log.log("Headless simulation started\n");
 log.log("Duration: 240s\n");
 log.log("Nodes: " + sim.getMotesCount() + "\n");
-var trustFile = "/home/research/TA-BRPL/results/experiments-20260304-192008/CLUSTER_L_2_brpl_normal_notrust_p0_mode1_s123456/trust_feedback.txt";
+var trustFile = "/home/research/TA-BRPL/results/experiments-20260305-103418/CLUSTER_L_6_brpl_attack_trust_p30_mode0_d2_a1.0_lam1_gam1_s123456/trust_feedback.txt";
 var lastCheckMs = 0;
 var lastPos = 0;
 function pollTrust() {
