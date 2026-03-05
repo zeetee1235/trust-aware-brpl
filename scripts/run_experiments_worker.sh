@@ -17,6 +17,7 @@ QUEUE_FILE=${4:-""}
 
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$PROJECT_DIR"
+MAIN_BASHPID=${BASHPID:-$$}
 WORKER_ENV_ROOT="$PROJECT_DIR/.parallel_worker_env"
 WORKER_ENV_DIR="$WORKER_ENV_ROOT/worker${WORKER_ID}"
 WORKER_CONFIG_DIR="$WORKER_ENV_DIR/configs"
@@ -43,6 +44,10 @@ log_error() {
 
 # Cleanup on exit
 cleanup_on_exit() {
+    # Ignore EXIT traps from command-substitution subshells.
+    if [ "${BASHPID:-$$}" != "$MAIN_BASHPID" ]; then
+        return
+    fi
     log_warn "Cleaning up worker ${WORKER_ID}..."
     pkill -P $$ trust_engine 2>/dev/null || true
     rm -rf "$WORKER_ENV_DIR" 2>/dev/null || true
@@ -161,7 +166,14 @@ build_experiment_list() {
                     continue
                 fi
                 
-                if [ "$trust" -eq 1 ] && [ "$attack" == "ATTACK" ]; then
+                if [ "$attack" == "NO_ATTACK" ]; then
+                    # Non-attack scenarios must never enable sinkhole/combined behavior.
+                    # Force ATTACK_MODE=0 and ATTACK_DROP_PCT=0 via attack_rate=0 path.
+                    local NO_ATTACK_MODE=0
+                    for seed in "${SEEDS[@]}"; do
+                        experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$NO_ATTACK_MODE|0|1.0|0|1|$seed|$ATTACKER_NODE_ID|0.90|0.95")
+                    done
+                elif [ "$trust" -eq 1 ] && [ "$attack" == "ATTACK" ]; then
                     for ATTACK_MODE in "${ATTACK_MODE_SET[@]}"; do
                         for SINKHOLE_RANK_DELTA in "${SINK_DELTA_SET[@]}"; do
                             for TRUST_ALPHA in "${TRUST_ALPHA_SET[@]}"; do
@@ -180,6 +192,7 @@ build_experiment_list() {
                         done
                     done
                 else
+                    # Attack scenarios without trust sweep still keep selected attack mode(s).
                     for ATTACK_MODE in "${ATTACK_MODE_SET[@]}"; do
                         for seed in "${SEEDS[@]}"; do
                             experiments+=("$topo|$TOPO_NAME|$scenario_name|$routing|$attack|$trust|$attack_rate|$ATTACK_MODE|0|1.0|0|1|$seed|$ATTACKER_NODE_ID|0.90|0.95")
@@ -202,6 +215,7 @@ prepare_worker_env() {
     rm -rf "$WORKER_ENV_DIR"
     mkdir -p "$WORKER_CONFIG_DIR"
     cp -a "$PROJECT_DIR/motes" "$WORKER_MOTES_DIR"
+    cp -a "$PROJECT_DIR/project-conf.h" "$WORKER_ENV_DIR/project-conf.h"
     ln -s "$PROJECT_DIR/contiki-ng-brpl" "$WORKER_ENV_DIR/contiki-ng-brpl"
 }
 
