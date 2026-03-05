@@ -47,3 +47,15 @@ docs/paper/scripts/build_all.sh \
 
 - 학술 그림 톤을 위해 serif 기반 테마, 저채도 배경, 강한 대비의 핵심 색상을 사용.
 - 시스템/공격도는 단순 박스열이 아니라 pipeline/branch/annotation이 있는 도식으로 구성.
+
+## LaTeX 초안
+
+- 메인 원고: `docs/paper/paper_draft.tex`
+- 참고문헌: `docs/paper/references.bib`
+- 빌드 스크립트: `docs/paper/build_latex.sh`
+
+빌드:
+
+```bash
+docs/paper/build_latex.sh
+```
