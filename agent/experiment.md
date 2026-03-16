@@ -203,6 +203,8 @@ Recovery Time 정의
 |TA-BRPL lambda_decrease / lambda_normal|0.50 / 0.70|
 |TABRPL trust penalty lambda|0.45|
 |TABRPL current-parent penalty scale|0.70|
+|TABRPL direct attacker exclusion|enabled when direct parent ∈ {2,3,4,18} and trust < tau_join|
+|TABRPL BRPL trust floor|removed in current scoring path|
 
 신뢰 갱신 식
 
@@ -224,7 +226,15 @@ TA-BRPL 튜닝 메모
 - recovery 보정을 위해 blacklist 해제 직후에는 trust를 `0.45`로 복구하되, routing penalty는 즉시 풀지 않고 `120초` 동안 `1.60 → 1.00`으로 단계적으로 완화한다.
 - 추가로 attacker parent(`18`, `2`, `3`, `4`)에 대해서는 direct-parent base penalty를 주고, 같은 공격자 parent에 오래 붙을수록 penalty를 누적 증가시키는 persistence-aware penalty를 적용한다.
 - attacker parent가 `180초` 이상 유지되고 trust가 `0.70` 미만이면 `escape mode`에 들어가며, 이때는 preferred-parent hysteresis를 끄고 임시 강패널티와 `DIS + DIO reset`으로 alternate parent scan을 유도한다.
+- 2026-03-17 기준 최종 라우팅 통합에서는 BRPL scoring의 `TRUST_MIN` 하한을 제거했고, direct attacker parent가 `tau_join(0.45)` 아래로 떨어지면 후보 집합에서 직접 제외한다.
 - 목적은 공격자를 놓치는 것이 아니라, 경계 상황에서 불필요한 parent switching을 줄이고 route quality와 trust의 균형을 맞추는 것이다.
+
+현재 전체 30-seed 결과 요약:
+
+- `RPL`: during `0.8759`, recovery `0.8754`
+- `BRPL`: during `0.8510`, recovery `0.8399`
+- `SMTRUST`: during `0.8701`, recovery `0.8649`
+- `TABRPL`: during `0.9078`, recovery `0.9594`
 
 ---
 

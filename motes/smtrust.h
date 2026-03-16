@@ -14,8 +14,10 @@
  *   TMRT       — recommended trust (1-hop neighbours' opinion)
  *
  * Parent selection:
- *   Phase 1: filter candidates below TRUST_THRESHOLD (0.46)
- *   Phase 2: Algorithm 1 from paper (rank + trust ordering)
+ *   Phase 1: reject t1/t2 (below 0.46)
+ *   Phase 2: prefer t4/t5 whenever available
+ *   Phase 3: fall back to t3 only when no t4/t5 candidate wins
+ *   Phase 4: use MRHOF metric ordering inside the same trust tier
  *
  * Attack detection:
  *   Rank attack   — DIO rank change without seq increment
@@ -42,7 +44,9 @@
 /* Parameters                                                          */
 /* ------------------------------------------------------------------ */
 
-/* Trust threshold for parent candidacy (t3 boundary = 0.46) */
+/* Trust threshold for parent candidacy (t3 boundary = 0.46).
+ * This is the boundary between "Poor Trust" (t2) and "Fair Trust" (t3),
+ * not a signal that all values >= 0.46 should be treated equally. */
 #ifndef SMTRUST_THRESHOLD
 #define SMTRUST_THRESHOLD       0.46
 #endif
@@ -183,8 +187,9 @@ double smtrust_get(uint16_t node_id);
 smtrust_level_t smtrust_level(uint16_t node_id);
 
 /**
- * Returns 1 if node_id is acceptable as a parent candidate
- * (TrustIndex >= SMTRUST_THRESHOLD and not suspicious).
+ * Returns 1 if node_id is admissible as a parent candidate.
+ * Current policy rejects t1/t2 and suspicious nodes; t3/t4/t5 remain
+ * admissible, with final preference decided by smtrust_compare_parents().
  */
 int smtrust_is_parent_candidate(uint16_t node_id);
 
@@ -206,6 +211,10 @@ int smtrust_append_dio_options(uint8_t *buffer, int pos, int max_len);
 
 /*
  * Optional parent ordering hook used by MRHOF when SMTRUST_MODE is enabled.
+ * Policy:
+ *   - prefer t4/t5 over t3 regardless of metric gap
+ *   - compare within the same trust tier using trust-first only for
+ *     near-tie metrics, otherwise defer to MRHOF
  * Returns -1 to prefer p1, 1 to prefer p2, 0 for no override.
  */
 int smtrust_compare_parents(uint16_t p1_id, uint16_t p2_id,

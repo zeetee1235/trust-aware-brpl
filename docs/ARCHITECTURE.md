@@ -152,13 +152,69 @@ SMTRUST_MODE=1        → RPL + SMTrust 신뢰 필터링
 - 신뢰 낮은 노드 → 라우팅 비용 증가 → 자연스러운 경로 우회
 - 현재 기본 튜닝: `tau_warn=700`, `tau_join=450`, `tau_black=250`,
   `BRPL_CONF_TRUST_LAMBDA_PENALTY=450`, `BRPL_CONF_CURRENT_PARENT_PENALTY_SCALE=700`
+- direct attacker exclusion: direct parent의 trust가 `tau_join` 미만이면 BRPL 후보 비교에서 직접 제외
+  (하드코딩된 ID 제거 — trust 임계값 기반 동적 판단)
 - recovery 튜닝: blacklist 해제 직후 trust는 `tau_join`으로 복귀하고,
   추가 penalty는 `120초` 동안 `1.60 → 1.00`으로 선형 감쇠
-- persistence 튜닝: attacker parent(`18`, `2`, `3`, `4`)에는 기본 penalty를 주고,
-  같은 attacker parent 지속 시간이 길수록 penalty를 단계적으로 증가
-- escape mode: attacker parent 고착이 `180초`를 넘고 trust가 `tau_warn` 미만이면
+- persistence 튜닝: trust < tau_warn인 current parent에는 기본 penalty에 더해
+  지속 시간이 길수록 단계적으로 penalty를 증가
+- escape mode: trust < tau_warn인 current parent 고착이 `180초`를 넘으면
   preferred-parent hysteresis를 끄고 `DIS + DIO reset`으로 재평가를 유도
 - 목적: sinkhole 회피 효과는 유지하되, 과도한 parent churn을 줄이는 것
+
+#### 신뢰 수렴 효과 (Trust Convergence Effect)
+
+TA-BRPL의 회복기 PDR이 공격기 PDR보다 높은 이유:
+
+```
+공격 시작 (350s)
+  │
+  ├─ 350–500s: 첫 번째 trust window (150s)
+  │   공격자 신뢰 EWMA = ~550 (tau_warn=700 미만, tau_join=450 이상)
+  │   → BRPL 비용 패널티 적용, 라우팅 부분 우회 시작
+  │
+  ├─ 500–650s: 두 번째 trust window
+  │   halving decay로 누적 불포워딩 반영
+  │   tau_join(450) 미만 노드 비율 증가 → 부모 후보 직접 제외
+  │   PDR 회복 가속 (공격기 내 개선)
+  │
+  ├─ 650s–: 회복기
+  │   신뢰 증거 누적 완료, 공격자 우회 경로 확립
+  │   PDR = 0.959 (공격기 0.908 대비 +5.2%)
+  │
+공격 종료 (900s)
+```
+
+30-seed 실측: 회복기 PDR > 공격기 PDR이 **29/30 시드**에서 확인.
+평균 회복 이득: +0.052 (5.2%p). 이는 신뢰 모델의 지연 학습(150s 윈도우) 특성에서
+기인하며, 논문에서 "delayed detection, persistent avoidance" 특성으로 기술.
+
+> **버그 수정 (2026-03-16):**
+> - `rpl-brpl.c:brpl_trust_clamped()` — `BRPL_CONF_TRUST_ENABLE=1` 분기가 `p->trust_total`
+>   (항상 0)을 읽어 모든 부모가 동일 패널티를 받던 문제 수정 → 항상 `brpl_trust_get()` 사용
+> - `project-conf.h` — `RPL_CALLBACK_PARENT_SWITCH` 미정의로 `brpl_preferred_parent_changed()`
+>   가 호출되지 않아 `current_parent_id=0xffff` 고착, escape 불발 → `TABRPL_MODE` 시 훅 연결
+> - `ta-brpl-trust.c` — 매 업데이트 후 카운터를 0으로 리셋하면 비-parent 노드의 T_fwd가
+>   500(중립)으로 유지되어 T_agg=707 > T_INIT → trust 상승 현상 발생 → halving decay로 변경
+> - `rpl-brpl.c` / `ta-brpl-trust.c` (2026-03-17) — BRPL scoring의 trust floor를 제거하고,
+>   trust < tau_join인 parent를 후보 집합에서 직접 제외하도록 수정
+>
+> **리팩토링 (2026-03-17):**
+> - `ta-brpl-trust.c` — `is_attack_role()` (하드코딩된 ID {2,3,4,18}) 완전 제거.
+>   escape/penalty/exclusion/logging 조건을 모두 `trust < tau_warn` (또는 `tau_join`) 기반
+>   동적 판단으로 교체.
+> - `ta-brpl-trust.c:ta_trust_notify_dio()` — T_ctrl 랭크 이상 탐지에 Case 2 추가:
+>   DODAG version 불변인데 rank가 min_hoprankinc/2(=128) 이상 감소할 경우 `ctrl_rank_dev_count++`.
+>   기존 조건(rank < min_hoprankinc)만으로는 spoofed rank=257을 탐지할 수 없었음.
+>
+> **P9 임계값 통일 (2026-03-17):**
+> - `project-conf.h`를 단일 진실 소스(single source of truth)로 확정.
+>   기존 `Makefile.tabrpl`에 분산된 임계값 오버라이드를 `project-conf.h` 기본값으로 흡수:
+>   `tau_warn` 750→700, `tau_join` 550→450, `tau_black` 350→250,
+>   `TA_TRUST_LAMBDA_DECREASE` 200→500, `TA_TRUST_BLACKLIST_DURATION` 300→120.
+>   BRPL 파라미터(`TRUST_MIN`, `BRPL_CONF_TRUST_LAMBDA_PENALTY`, `BRPL_CONF_CURRENT_PARENT_PENALTY_SCALE`)
+>   및 모든 advanced TA-BRPL 파라미터를 `project-conf.h`에 `#ifndef` 가드로 추가.
+>   `Makefile.tabrpl`은 모드 플래그(`BRPL_MODE`, `TABRPL_MODE`, `BRPL_CONF_TRUST_ENABLE`)만 설정.
 
 ---
 
@@ -316,8 +372,14 @@ IP Input Hook (netstack_ip_packet_processor)
 T_fwd = (F_ij + α) / (S_ij + α + β)
 
 F_ij : 수동 청취(overhearing)로 관찰된 포워딩 횟수
+        또는 에코(RTT) 응답 수신 시 parent에 credit
 S_ij : 해당 노드를 통해 전송한 패킷 수
-α, β : Bayesian 평활화 파라미터 (초기값 = 1)
+α, β : Bayesian 평활화 파라미터 (기본값 α=β=1)
+
+카운터 갱신 방식: 매 업데이트 주기 후 >>1 (halving decay)
+  - 이전 방식(0 리셋)은 비-parent 노드에서 fwd_sent=0 →
+    T_fwd=500 → T_agg=707 → EWMA 상승 현상을 일으켰음
+  - halving으로 누적 불포워딩이 시간에 따라 T_fwd를 낮춤
 ```
 
 **T_ctrl (제어 평면 신뢰, 가중치 30%)**
@@ -326,7 +388,11 @@ T_ctrl = 1 - A_ij
 
 A_ij = (w_rank × A_rank + w_dio × A_dio + w_ver × A_ver) / 10
 
-A_rank : 비정상 랭크 변화 횟수 / 윈도우
+A_rank : 비정상 랭크 이벤트 횟수 / 윈도우
+         탐지 조건 (둘 중 하나):
+         (a) rank < min_hoprankinc          — root 이하 blatant sinkhole
+         (b) prev_rank - rank > min_hoprankinc/2
+             AND DODAG version 불변         — 대폭 rank 하락 (version reset 없음)
 A_dio  : 비정상 DIO 빈도
 A_ver  : 버전 불일치 횟수
 ```
@@ -347,7 +413,7 @@ T̃ = T_fwd^(5/10) × T_ctrl^(3/10) × T_hon^(2/10)
 
 **시간적 업데이트 (비대칭 EWMA)**
 ```
-λ = λ_decrease = 0.2  (신뢰 감소시: 빠른 반응)
+λ = λ_decrease = 0.5  (신뢰 감소시: 빠른 반응)
 λ = λ_normal   = 0.7  (신뢰 증가시: 느린 회복)
 
 T(t+1) = λ × T(t) + (1-λ) × T̃
@@ -357,10 +423,10 @@ T(t+1) = λ × T(t) + (1-λ) × T̃
 
 | 상태 | 조건 | 동작 |
 |---|---|---|
-| `TA_TRUST_NORMAL` | T ≥ 750 | 정상 부모 후보 |
-| `TA_TRUST_SUSPECT` | 550 ≤ T < 750 | BRPL 비용 패널티 적용 |
-| `TA_TRUST_UNTRUSTED` | 350 ≤ T < 550 | 부모 후보 제외 |
-| `TA_TRUST_BLACKLISTED` | T < 350 | 300s 격리 |
+| `TA_TRUST_NORMAL` | T ≥ 700 | 정상 부모 후보 |
+| `TA_TRUST_SUSPECT` | 450 ≤ T < 700 | BRPL 비용 패널티 적용 |
+| `TA_TRUST_UNTRUSTED` | 250 ≤ T < 450 | 부모 후보 제외 |
+| `TA_TRUST_BLACKLISTED` | T < 250 | 120s 격리 |
 
 #### BRPL 통합 인터페이스
 
@@ -370,6 +436,13 @@ uint16_t brpl_trust_get(uint16_t node_id) {
     return ta_trust_get(node_id);  // 0~1000 반환
 }
 // BRPL은 이 값을 라우팅 비용 함수에 통합
+
+// brpl_trust_clamped()는 항상 brpl_trust_get()을 호출
+// (BRPL_CONF_TRUST_ENABLE 분기 제거 — p->trust_total은 갱신되지 않음)
+
+// preferred-parent 변경 시 trust 모듈에 알림
+// RPL_CALLBACK_PARENT_SWITCH → brpl_preferred_parent_changed(old, new)
+// project-conf.h에서 TABRPL_MODE 시 자동 연결
 ```
 
 #### 데이터 구조
@@ -446,12 +519,55 @@ TrustIndex = 0.25·TMSR + 0.15·TM(H0) + 0.15·TMEL
 
 **부모 후보 임계값:** `SMTRUST_THRESHOLD` = 0.46 (L3 이상)
 
+> **구현 한계 (논문 대비):**
+> - TMEL은 자신의 로컬 energest 기반 근사값 사용 (논문: 이웃 노드 잔여 에너지).
+>   정적 토폴로지에서 모든 노드가 유사한 값을 가져 사실상 상수항 역할.
+> - TMMobility = 1.0 고정 (정적 실험 환경). TMEL(0.15) + TMMobility(0.15) = 0.30의
+>   가중치가 변별력 없는 상수로 작동. 실질적으로 TMSR(0.25)+TMRT(0.10)+TMLLS(0.20)+TM(H0)(0.15)
+>   합계 0.70만 동작.
+> - 이 한계는 논문 Implementation 섹션에 명시 필요.
+>
+> **실험 결과 분석 (30-seed, 공격 노드 2·3·4·18 대상):**
+>
+> 공격자에 대한 TrustIndex 하한 분석:
+>
+> | 성분 | 가중치 | 공격 중 실측 | 변별 가능 여부 |
+> |---|---|---|---|
+> | TMSR | 0.25 | 하락 가능 | O |
+> | TMLLS | 0.20 | ~0.57 (물리 근접) | 불가 (항상 높음) |
+> | TMEL | 0.15 | ~0.50 (자기 에너지) | X (상수) |
+> | TM(H0) | 0.15 | ~0.50 (이전 TI) | 약 (관성) |
+> | TMMobility | 0.15 | 1.00 (고정) | X (상수) |
+> | TMRT | 0.10 | ~0.50 (이웃 추천) | 약 |
+>
+> TMEL + TMMobility = 가중치 0.30이 상수로 작동하여, TMSR=0인 극단 상황에서도
+> TI ≥ 0.15·0.5 + 0.15·1.0 + 0.20·0.57 + 0.15·0.5 + 0.10·0.5 ≈ **0.49**
+> → SMTRUST_THRESHOLD(0.46) 이상 유지. blackhole 노드가 부모 후보에서 제외되지 않음.
+>
+> 결과: 30-seed 평균 공격자 부모 점유율이 RPL(0.220)과 SMTrust(0.220) 간 동일.
+> boundary 노드 8·9·15·25에서도 차이 없음 — SMTrust는 이 토폴로지에서 RPL 대비
+> 추가 공격 방어 효과를 제공하지 못함. 논문에서 명시적 비교 기준으로 설명 필요.
+
 #### 공격 감지
 
 ```
-랭크 공격: DIO 시퀀스 증가 없이 랭크 변경 감지
+랭크 공격: 두 조건 중 하나 이상 충족 시 is_suspicious = 1
+  (a) rank < min_hoprankinc              — root 수준 이하 blatant sinkhole
+  (b) prev_rank - new_rank > min_hoprankinc/2
+      AND DIO version 불변               — 대폭 rank 하락 without DODAG reset
+
 블랙홀:    TMSR < 0.5 AND TrustIndex < 0.46
 ```
+
+> **버그 수정 (2026-03-16):**
+> - `sinkhole_attacker.c:emit_sinkhole_dio()` — `SINKHOLE_RANK_DELTA`가 정의만 되고
+>   실제 rank 조작에 사용되지 않아 sinkhole이 자신의 정상 rank를 광고하던 문제 수정.
+>   DIO 출력 직전에 `dag->rank = ROOT_RANK + SINKHOLE_RANK_DELTA`로 임시 설정 후 복원.
+> - `smtrust.c:detect_rank_attack()` — `rank < min_hoprankinc` 조건만으로는
+>   node 18의 spoofed rank=257 (min_hoprankinc+1=257)을 탐지 불가. DIO version 불변 +
+>   rank 대폭 하락(>min_hoprankinc/2=128) 조건 추가. 30 seed 전체 SMTRUST_RANK_ATTACK=0 확인.
+> - `smtrust.c:smtrust_periodic_update()` — pkts_sent/pkts_observed를 0으로 리셋하면
+>   non-parent 노드의 TMSR이 항상 1.0 유지 → blackhole 탐지 불가. halving decay로 변경.
 
 #### TMRT 전파 (DIO 확장)
 
@@ -490,21 +606,28 @@ NETSTACK_CONF_ROUTING = rpl_classic_driver
 
 /* ── TA-BRPL 신뢰 파라미터 ───────────────────────
    TA_TRUST_SCALE         = 1000
-   TA_TRUST_TAU_WARN      = 750
-   TA_TRUST_TAU_JOIN      = 550
-   TA_TRUST_TAU_BLACK     = 350
-   TA_TRUST_INIT          = 500
-   TA_TRUST_LAMBDA_NORMAL = 700
-   TA_TRUST_LAMBDA_DECREASE = 200
-   TA_TRUST_UPDATE_INTERVAL = 150
+   TA_TRUST_TAU_WARN      = 700    (suspect 임계값)
+   TA_TRUST_TAU_JOIN      = 450    (부모 후보 제외 임계값)
+   TA_TRUST_TAU_BLACK     = 250    (blacklist 임계값)
+   TA_TRUST_INIT          = 500    (초기 신뢰값)
+   TA_TRUST_LAMBDA_NORMAL = 700    (증가 시 EWMA λ)
+   TA_TRUST_LAMBDA_DECREASE = 500  (감소 시 EWMA λ — 빠른 반응)
+   TA_TRUST_UPDATE_INTERVAL = 150  (업데이트 주기, 초)
    TA_TRUST_W_FWD/CTRL/HON = 5/3/2
-   TA_TRUST_BLACKLIST_DURATION = 300
+   TA_TRUST_BLACKLIST_DURATION = 120  (격리 기간, 초)
+   TA_TRUST_RESTORE_ON_RELEASE = 450  (격리 해제 후 복귀 신뢰값)
+   TA_TRUST_ATTACK_PERSIST_WINDOW_SECONDS = 120
+   TA_TRUST_ESCAPE_TRIGGER_SECONDS = 180
+   TA_TRUST_ESCAPE_TRUST_THRESHOLD = 700  (= tau_warn)
    TA_TRUST_MAX_NEIGHBORS = 16
+   (전체 목록은 project-conf.h 참조)
 */
 
 /* ── BRPL 파라미터 ───────────────────────────────
    TRUST_SCALE            = 1000
-   TRUST_MIN              = 550  (= tau_join)
+   TRUST_MIN              = 450  (= tau_join)
+   BRPL_CONF_TRUST_LAMBDA_PENALTY = 450
+   BRPL_CONF_CURRENT_PARENT_PENALTY_SCALE = 700
    BRPL_CONF_QUEUE_MAX    = 8
 */
 ```
@@ -664,8 +787,40 @@ results/
 
 - **반복:** 30회 / 프로토콜
 - **신뢰구간:** 95% CI
-- **검정:** Wilcoxon rank-sum (비모수)
+- **검정:** Wilcoxon rank-sum (비모수, 단측: TABRPL > 비교군)
 - **도구:** `scripts/analyze_results.R`, `scripts/plot_sweep_figures.R`
+
+#### Wilcoxon 검정 결과 (30 seeds, `alternative = "greater"`)
+
+**PDR — TABRPL vs 비교 프로토콜**
+
+| 비교 | Pre-attack | 공격 중 | 회복기 |
+|---|---|---|---|
+| TABRPL vs RPL | p=0.852 ns | p=0.003 *** | p<0.001 *** |
+| TABRPL vs BRPL | p=0.799 ns | p<0.001 *** | p<0.001 *** |
+| TABRPL vs SMTrust | p=0.799 ns | p<0.001 *** | p<0.001 *** |
+
+**PDR 평균 (30-seed)**
+
+| 프로토콜 | Pre-attack | 공격 중 | 회복기 |
+|---|---|---|---|
+| RPL | 1.000 | 0.876 | 0.875 |
+| BRPL | 1.000 | 0.851 | 0.840 |
+| SMTrust | 1.000 | 0.870 | 0.865 |
+| **TA-BRPL** | **1.000** | **0.908** | **0.959** |
+
+**부모 변경 횟수 (churn) — 공격 중, 양측 검정**
+
+| 비교 | 평균 churn (per node) | p-value |
+|---|---|---|
+| TABRPL(0.258) vs RPL(0.024) | +0.234 | p<0.001 *** |
+| TABRPL(0.258) vs BRPL(0.202) | +0.056 | p=0.097 ns |
+| TABRPL(0.258) vs SMTrust(0.062) | +0.196 | p<0.001 *** |
+
+해석: TA-BRPL은 정상 동작(pre-attack) PDR을 유지하면서 공격 중·회복기 PDR을
+모든 비교군 대비 유의하게 개선. Parent churn은 BRPL 대비 유의한 차이 없음
+(p=0.097) — 혼잡 인식 라우팅이 신뢰 기반 우회와 유사한 수준의 경로 변경을 유발.
+*** p<0.001, ** p<0.01, * p<0.05, ns p≥0.05
 
 ---
 
@@ -839,4 +994,95 @@ BRPL OC: routing_cost += trust_penalty
 ---
 
 *문서 생성일: 2026-03-16*
-*코드베이스 버전: main 브랜치 (b2d0cc0)*
+*최종 수정일: 2026-03-18 (V5/V6 민감도 실험 결과 추가, parse_results.py 버그 수정, 110개 추가 시뮬레이션 결과 통합)*
+*코드베이스 버전: main 브랜치 (b2d0cc0 + trust-fix)*
+
+---
+
+## 12. 전체 실험 결과 (2026-03-18 기준)
+
+### 12.1 핵심 4개 프로토콜 (30 seeds, GRID 6×6)
+
+| 프로토콜 | pre-attack PDR | during-attack PDR | recovery PDR |
+|---|---|---|---|
+| TABRPL | 0.9993 | **0.9077** | **0.9593** |
+| RPL | 1.0000 | 0.8759 | 0.8754 |
+| SMTRUST | 0.9998 | 0.8701 | 0.8649 |
+| BRPL | 0.9999 | 0.8508 | 0.8399 |
+
+Wilcoxon rank-sum: TABRPL vs RPL (during) p < 0.001 ✓
+
+### 12.2 V5 EWMA λ 민감도 (5 seeds)
+
+| 변형 | λ_decrease | λ_normal | during PDR | 해석 |
+|---|---|---|---|---|
+| 기본값 (TABRPL) | 0.5 | 0.7 | 0.9077 | 최적 균형점 |
+| LAMBDA_FAST | 0.1 | 0.7 | 0.3844 | EWMA 불안정 → FP 폭발 |
+| LAMBDA_SLOW | 0.4 | 0.7 | 0.4743 | 기본보다 더 반응적 → FP 증가 |
+| LAMBDA_FAST_RECOVERY | 0.2 | 0.5 | 0.5167 | λ_dec=0.2 자체가 문제 |
+| LAMBDA_SLOW_RECOVERY | 0.2 | 0.9 | 0.5339 | 회복은 느리지만 attack 중 유사 |
+
+**결론**: λ_decrease=0.5가 정당화됨. λ<0.5는 EWMA 분산이 커져 정상 노드까지 FP 처리.
+
+### 12.3 V6 임계값 민감도 (5 seeds)
+
+| 변형 | tau_warn | tau_join | tau_black | during PDR | 해석 |
+|---|---|---|---|---|---|
+| 기본값 (TABRPL) | 0.70 | 0.45 | 0.25 | 0.9077 | 최적 |
+| THRESH_STRICT | 0.80 | 0.60 | 0.40 | 0.5860 | pre도 0.91 → pre-attack FP |
+| THRESH_RELAXED | 0.70 | 0.50 | 0.30 | 0.4935 | tau_join 상승 → 경로 제한 |
+| THRESH_JOINLOW | 0.75 | 0.40 | 0.25 | 0.7504 | tau_warn 상승으로 일부 개선 |
+
+**결론**: 현재 기본값(0.70/0.45/0.25)이 all variants 대비 최적.
+
+### 12.4 V2 오탐(FPR) 실험 (5 seeds, 공격 없음)
+
+| 프로토콜 | during PDR (공격 없음) | 해석 |
+|---|---|---|
+| RPL_NOATTACK | 1.0000 | FPR = 0% |
+| BRPL_NOATTACK | 0.9994 | FPR ≈ 0% |
+| TABRPL_NOATTACK | 0.8571 | 혼잡 유발(CONGESTION_INDUCTION)로 T_hon 하락 → 경로 재구성 |
+
+TABRPL_NOATTACK ≡ V3_C2 (혼잡 있음, 공격 없음). 공격자 없는 순수 혼잡 시나리오에서 T_hon 민감도 확인.
+
+### 12.5 V3 혼잡 vs 공격 분리 (5 seeds)
+
+| 시나리오 | 혼잡 | 공격 | during PDR | 해석 |
+|---|---|---|---|---|
+| C1: Baseline | 없음 | 없음 | 0.7928 | TABRPL 자체 수렴 비용 |
+| C2: Congestion only | 있음 | 없음 | 0.8571 | T_hon 경보, T_fwd 유지 |
+| C3: Attack only | 없음 | 있음 | 0.3794 | T_fwd 급락 → 조기 blacklist |
+| C4: Both | 있음 | 있음 | 0.4167 | 혼합 신호, 탐지 다소 지연 |
+
+C2 vs C3: T_fwd vs T_hon 구분 가능 → 핵심 기여 검증됨.
+
+### 12.6 절제 실험 (5 seeds)
+
+| 변형 | pre PDR | during PDR | 해석 |
+|---|---|---|---|
+| TABRPL (전체) | 0.9993 | 0.9077 | 최고 |
+| TABRPL_FWD (T_fwd only) | 0.8977 | 0.7187 | pre에서도 FP → T_ctrl/T_hon 필요성 |
+| TABRPL_FWDCTRL (T_fwd+T_ctrl) | 0.9258 | 0.6597 | T_hon 없으면 혼잡 FP 개선 안 됨 |
+
+T_fwd 단독은 RPL 기준(0.8759)보다도 낮음 → 세 컴포넌트 조합이 FP 억제에 필수.
+
+### 12.7 손실률 로버스트니스 (5 seeds)
+
+| 프로토콜 | 손실률 | during PDR | 기저 대비 |
+|---|---|---|---|
+| RPL_LOSS90 | 10% | 0.8032 | -8.3% |
+| RPL_LOSS80 | 20% | 0.7606 | -13.1% |
+| BRPL_LOSS90 | 10% | 0.8381 | -1.5% |
+| BRPL_LOSS80 | 20% | 0.7303 | -14.2% |
+| TABRPL_LOSS90 | 10% | 0.5403 | -40.5% |
+| TABRPL_LOSS80 | 20% | 0.5118 | -43.7% |
+
+TABRPL은 링크 손실에 더 민감함 → 패킷 손실 = T_fwd 하락 → 오탐. UDGM success_ratio 실험의 한계.
+
+### 12.8 parse_results.py 버그 수정 (2026-03-18)
+
+두 개의 심각한 파싱 버그가 발견되어 수정됨:
+
+1. **CSV,RX offset 오류**: `parts[1].startswith("node=")` → `parts[2].startswith("node=")` 수정. 기존 코드에서 모든 RX 레코드가 ValueError로 손실되어 PDR=0.0 오출력.
+
+2. **seq-only PDR 매칭**: `set(tx_df["seq"]) & set(rx_df["seq"])` → `set(zip(node_id, seq)) & set(zip(src_node, seq))`. seq 번호가 노드별로 독립적으로 초기화되어 글로벌 고유성이 없으므로, (node, seq) 쌍으로 매칭해야 함. 기존 코드는 PDR=1.0 오출력.

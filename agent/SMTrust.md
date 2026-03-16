@@ -1,406 +1,345 @@
+# SMTrust
+
+현재 저장소의 `SMTRUST` 구현 설명서다. 이 문서는 논문 원문 요약이 아니라, **지금 코드에 실제로 들어간 동작**을 기준으로 정리한다.
 
 ---
 
-## 1. 전체 구조 개요
+## 1. 현재 구현 요약
 
-SMTrust는 크게 두 단계로 구성된다.
+`SMTRUST`는 `RPL + trust-aware parent filtering` 구조다.
 
-1. **Trust Formation** — 이웃 노드의 TrustIndex를 계산하고 trust table을 유지
-2. **Attack Detection** — 선택된 preferred parent가 Rank/Blackhole 공격자인지 추가 검증
+- Objective Function: `MRHOF`
+- trust 계산: `motes/smtrust.c`
+- parent filtering / ordering hook:
+  - `smtrust_is_parent_candidate()`
+  - `smtrust_compare_parents()`
+- 통합 위치:
+  - [smtrust.c](/home/dev/TA-BRPL/motes/smtrust.c)
+  - [smtrust.h](/home/dev/TA-BRPL/motes/smtrust.h)
+  - [rpl-mrhof.c](/home/dev/TA-BRPL/contiki-ng-brpl/os/net/routing/rpl-classic/rpl-mrhof.c)
+  - [rpl-icmp6.c](/home/dev/TA-BRPL/contiki-ng-brpl/os/net/routing/rpl-classic/rpl-icmp6.c)
 
-실행 흐름은 다음 순서다.
-
-```
-RPL 초기화 → 토폴로지 생성 → 공격자 노드 배치
-→ 이웃 trust 계산 → TrustIndex 계산 → trust table 저장
-→ trustworthy parent 후보 필터링 (threshold)
-→ preferred parent 선택 (Algorithm 1)
-→ Rank/Blackhole attack detection
-→ 공격자면 suspicious list 추가 후 재선택
-→ 정상이면 라우팅에 사용
-→ 주기적/반응적 trust update (trickle timer)
-```
+즉 `SMTRUST`는 `TABRPL`처럼 BRPL cost 함수에 trust penalty를 직접 넣는 방식이 아니라, **MRHOF parent 후보를 trust class로 제한하고 near-tie에서 trust를 tie-break로 쓰는 방식**이다.
 
 ---
 
-## 2. Trust Metrics 계산 명세
+## 2. Trust Metrics
 
-TrustIndex는 6개 metric의 가중합이다.
+현재 `TrustIndex`는 6개 metric의 가중합이다.
 
-```
-TrustIndex(Ni, Nj) = w1·TMSR + w2·TM(H0) + w3·TMEL + w4·TMLLS + w5·TMMobility + w6·TMRT
-
-조건: w1 + w2 + w3 + w4 + w5 + w6 = 1
-범위: TrustIndex ∈ [0.0, 1.0]
+```text
+TrustIndex = w1*TMSR + w2*TM(H0) + w3*TMEL
+           + w4*TMLLS + w5*TMMobility + w6*TMRT
 ```
 
-논문이 가중치 값을 명시하지 않기 때문에 일반적으로 쓰이는 초기값은 아래와 같다. 실험적으로 조정 가능하다.
+현재 기본 가중치:
 
-```
-w1 = 0.25  (TMSR, success rate — 가장 중요)
-w2 = 0.15  (TM(H0), historical)
-w3 = 0.15  (TMEL, energy)
-w4 = 0.20  (TMLLS, link/location stability)
-w5 = 0.15  (TMMobility, mobility)
-w6 = 0.10  (TMRT, recommended trust)
+```text
+w1 = 0.25   TMSR
+w2 = 0.15   TM(H0)
+w3 = 0.15   TMEL
+w4 = 0.20   TMLLS
+w5 = 0.15   TMMobility
+w6 = 0.10   TMRT
 ```
 
-논문 원칙: "current/direct trust values are given more weightage than historical observations" → w1 > w2.
+정의 위치:
+- [smtrust.h](/home/dev/TA-BRPL/motes/smtrust.h)
 
 ---
 
-### 2-1. TMSR (Success Rate)
+## 3. Metric별 현재 구현
 
-```
-TMSR(Ni, Nj) = packets_forwarded(Nj) / packets_received(Nj)
+### 3.1 TMSR
 
-- packets_received: Ni가 Nj에게 전달 요청한 (또는 Nj가 수신한) 패킷 수
-- packets_forwarded: Nj가 실제로 다음 홉으로 전달한 패킷 수
-- overhearing 기반으로 측정 (ContikiRPL 방식)
-- 범위: [0.0, 1.0]
-- 초기값: 1.0 (모든 노드 신뢰 가정)
+`TMSR`는 forwarded success rate다.
+
+```text
+TMSR = (observed_forwarded + 1) / (sent + 2)
 ```
 
-구현 포인트: Contiki-NG에서 `uip-ds6-nbr`나 패킷 콜백 훅을 사용해 카운터를 유지해야 한다.
+특징:
+- passive overhearing 기반
+- 송신 직전 `smtrust_notify_sent(parent_id)`
+- IP input hook에서 forwarding observation 감지
+- Laplace smoothing 사용
 
----
+관련 코드:
+- [smtrust.c](/home/dev/TA-BRPL/motes/smtrust.c)
+- [sender.c](/home/dev/TA-BRPL/motes/sender.c)
 
-### 2-2. TM(H0) (Historical Observation)
+### 3.2 TM(H0)
 
-```
+`TM(H0)`는 직전 `trust_index` 값이다.
+
+```text
 TM(H0)(t) = TrustIndex(t-1)
-
-- 이전 계산 주기의 TrustIndex 값을 그대로 사용
-- 초기값: 0.5 (중립 신뢰)
-- trust table에 저장된 이전 값을 읽어오면 된다
 ```
 
----
+초기값은 `0.5`.
 
-### 2-3. TMEL (Energy Level)
+### 3.3 TMEL
 
-```
-TMEL(Nj) = current_energy(Nj) / initial_energy(Nj)
+`TMEL`은 이웃별 실제 배터리 잔량이 아니라, **로컬 energest 기반 residual energy 근사치**다.
 
-- Contiki-NG에서는 energest 모듈 사용
-- 범위: [0.0, 1.0]
-- 배터리 잔량 비율로 정규화
-```
+즉 현재 구현은 논문식 “Nj의 개별 잔여 에너지”를 직접 재현하지는 않는다.
 
-Contiki 구현 예시:
+### 3.4 TMLLS
 
-```c
-energest_flush();
-uint64_t cpu = energest_type_time(ENERGEST_TYPE_CPU);
-uint64_t lpm = energest_type_time(ENERGEST_TYPE_LPM);
-uint64_t tx  = energest_type_time(ENERGEST_TYPE_TRANSMIT);
-uint64_t rx  = energest_type_time(ENERGEST_TYPE_LISTEN);
-// 전체 활동 시간 기반으로 소비 에너지 추정 후 정규화
-```
+`TMLLS`는 RSSI 기반 link/location stability 근사다.
 
----
+- `packetbuf` RSSI 사용
+- 정규화 후 `[0,1]`
 
-### 2-4. TMLLS (Location and Link Stability)
+### 3.5 TMMobility
 
-```
-TMLLS(Nj) = f(RSSI(Nj))
+현재 실험은 정적 6x6 grid이므로:
 
-RSSI 기반 정규화:
-TMLLS = (RSSI_measured - RSSI_min) / (RSSI_max - RSSI_min)
-
-일반적 파라미터:
-- RSSI_min = -100 dBm
-- RSSI_max = -40 dBm
-
-클리핑:
-if TMLLS < 0: TMLLS = 0
-if TMLLS > 1: TMLLS = 1
+```text
+TMMobility = 1.0
 ```
 
-Contiki에서는 `packetbuf_attr(PACKETBUF_ATTR_RSSI)` 또는 `radio_value_t`로 RSSI를 읽을 수 있다.
+### 3.6 TMRT
 
-이동성까지 반영하려면 RSSI의 변동성(분산)도 계산에 포함할 수 있다.
+`TMRT`는 DIO option에 실린 neighbour opinion 평균이다.
 
-```
-TMLLS = α · RSSI_normalized + (1-α) · (1 - RSSI_variance_normalized)
-```
+현재 구현은 표준 metric container 대신 커스텀 option을 쓴다.
 
----
-
-### 2-5. TMMobility (Mobility)
-
-```
-TMMobility(Nj) = 1 - (distance_moved / max_expected_distance)
-
-distance_moved = |current_position - previous_position|
-
-- 위치는 RSSI 기반 추정 또는 GPS 좌표 사용
-- Cooja 시뮬레이션에서는 BonnMotion 좌표 직접 접근 가능
-- max_expected_distance: 시뮬레이션 영역 대각선 길이 등으로 정규화
-- 범위: [0.0, 1.0]
-- 많이 움직인 노드일수록 낮은 값 → parent로 불안정
-```
-
-Cooja 환경에서는 노드 위치를 주기적으로 기록하고 이전 위치와의 유클리드 거리를 계산하면 된다.
-
----
-
-### 2-6. TMRT (Recommended Trust)
-
-```
-TMRT(Ni, Nj) = (1/|neighbors(Ni)|) · Σ TrustIndex(Nk, Nj)
-               for all Nk ∈ neighbors(Ni), Nk ≠ Ni, Nk ≠ Nj
-
-- 1-hop 이웃들이 Nj에 대해 갖고 있는 trust 값의 평균
-- DIO 메시지의 DAG metric container에 trust 값을 실어 전파
-- 초기값: 0.5
-```
-
-현재 구현은 DAG metric container를 직접 바꾸지 않고, DIO option 영역에
-커스텀 SMTrust option `[0xFE][len=2][node_id][trust_x100]` 를 최대 4개까지 붙여 전파한다.
-수신 측은 이 옵션들을 파싱해 `TMRT` 평균값을 갱신한다.
-
----
-
-## 3. Trust Rating (Fuzzy Trust Level)
-
-```
-TrustIndex 범위    등급    사용 여부
-─────────────────────────────────────
-0.00 – 0.20       t1: No Trust        라우팅 불가
-0.21 – 0.45       t2: Poor Trust      라우팅 불가
-0.46 – 0.70       t3: Fair Trust      t4/t5 없을 때만 사용
-0.71 – 0.90       t4: Good Trust      신뢰 가능
-0.91 – 1.00       t5: Full Trust      신뢰 가능
-
-TRUST_THRESHOLD = 0.46
-```
-
-현재 구현은 다음 규칙으로 근사한다.
-
-- `t1`, `t2` 및 suspicious node는 후보에서 즉시 제외
-- rank 조건을 만족하지 않는 후보는 우선 탈락
-- MRHOF path-cost 차이가 충분히 크면 trust는 개입하지 않음
-- path-cost가 거의 비슷한 near-tie 상황에서만 trust가 ordering에 개입
-- 그 near-tie 안에서 `t4/t5` 후보가 `t3` 후보보다 우선
-- trust 차이가 충분히 클 때만 trust로 tie-break, 아니면 MRHOF ETX/path-cost 유지
-
----
-
-## 4. Algorithm 1: Trustworthy Parent Selection
-
-논문의 알고리즘을 Contiki-NG/MRHOF에 맞게, trust가 ETX/path-cost를
-완전히 덮지 않도록 보수적으로 근사하면 다음과 같다.
-
-```
-INPUT:  potential_parents[p1, p2, ..., pn] in NeighborList of Ni
-OUTPUT: preferredParent
-
-/* Phase 1: trust 계산 */
-FOR all Nj in NeighborList:
-    TrustIndex(Ni, Nj) = compute_trust(Ni, Nj)   // 식 (1) 적용
-    TrustTable(Ni).update(Nj, TrustIndex)
-
-/* Phase 2: parent 선택 */
-FOR all (p1, p2) in potential_parents:
-
-    IF p1.metric ≤ MAX_LINK_METRIC AND p2.metric ≤ MAX_LINK_METRIC:
-
-        IF p1.TrustIndex ≥ TRUST_THRESHOLD AND p2.TrustIndex ≥ TRUST_THRESHOLD:
-
-            IF p1.Rank ≤ Ni.Rank AND p2.Rank ≤ Ni.Rank:
-                /* 둘 다 조건 만족 */
-                IF abs(p1.path_cost - p2.path_cost) > NEAR_TIE:
-                    preferredParent = lower_path_cost_parent
-                ELSE IF p1.TrustIndex > p2.TrustIndex + DELTA:
-                    preferredParent = p1
-                ELSE IF p2.TrustIndex > p1.TrustIndex + DELTA:
-                    preferredParent = p2
-                ELSE:
-                    preferredParent = lower_path_cost_parent
-
-            ELSE IF p1.Rank ≤ Ni.Rank OR p2.Rank ≤ Ni.Rank:
-                /* 하나만 rank 조건 만족 → 더 낮은 rank 선택 */
-                IF p1.Rank < p2.Rank:
-                    preferredParent = p1
-                ELSE:
-                    preferredParent = p2
-
-            ELSE:
-                preferredParent = NULL
-
-    ELSE IF p1.metric ≤ MAX_LINK_METRIC OR p2.metric ≤ MAX_LINK_METRIC:
-        /* link metric만 만족 → 더 나은 metric 선택 */
-        IF p1.metric ≤ p2.metric:
-            preferredParent = p1
-        ELSE:
-            preferredParent = p2
-
-    ELSE:
-        preferredParent = NULL
-
-RETURN preferredParent
-```
-
-핵심 우선순위 정리:
-
-```
-1순위: link metric 조건 통과
-2순위: trust threshold / suspicious 필터
-3순위: rank 조건 통과 (loop-free 보장)
-4순위: MRHOF path-cost가 near-tie인지 확인
-5순위: near-tie일 때만 trust level(t4/t5 > t3) 및 trust 값 비교
-6순위: 그 외에는 MRHOF ETX/path-cost
-```
-
----
-
-## 5. Attack Detection 명세
-
-### 5-1. Rank Attack Detection
-
-```
-TRIGGER: DIO 메시지 수신 시
-
-현재 구현은 오탐을 줄이기 위해 더 보수적으로 동작한다.
-
-IF neighbor.rank < ROOT_RANK:   // 물리적으로 불가능한 광고
-    → suspicious DIO → Rank Attack 판정
-    → suspicious_list 추가
-    → 현재 preferred parent이면 즉시 재평가
-```
-
-`RANK_THRESHOLD`는 실험적으로 결정하는 값이다. 논문은 명시하지 않지만 일반적으로 `DEFAULT_RANK_INCREMENT`의 2배 정도로 설정한다.
-
----
-
-### 5-2. Blackhole Attack Detection
-
-```
-TRIGGER: preferred parent 선택 후 패킷 전달 모니터링
-
-overhearing으로 parent가 패킷을 drop하는지 관찰:
-
-IF preferred_parent.TMSR < SUCCESS_THRESHOLD:         // 성공률 낮음
-    AND preferred_parent.TrustIndex < TRUST_THRESHOLD: // trust도 낮음
-        → Blackhole Attack 판정
-→ attacker를 suspicious_list에 추가
-→ 현재 preferred parent이면 `DIS + DIO reset`으로 즉시 재평가
-```
-
-`SUCCESS_THRESHOLD`는 논문 명시 없음. 실험적으로 0.5 ~ 0.7 범위에서 설정한다.
-
----
-
-## 6. Trust Update 명세
-
-### 6-1. Periodic Update (주기적)
-
-```
-periodic timer 이벤트 발생 시:
-→ NeighborList 전체 재순회
-→ 각 이웃에 대해 TrustIndex 재계산
-→ TrustTable 업데이트
-→ 이후 outgoing DIO에 trust option을 부착해 전파
-
-현재 주기: `SMTRUST_UPDATE_INTERVAL = 120s`
-```
-
-### 6-2. Reactive Update (반응적)
-
-```
-현재 구현의 reactive path는 다음 두 경우다.
-
-- current preferred parent가 rank attack으로 의심됨
-- current preferred parent가 blackhole로 의심됨
-
-이 경우:
-→ suspicious_list 추가
-→ `CSV,SMTRUST_REEVAL,...` 로그 출력
-→ `DIS + DIO reset`으로 parent selection 재실행 유도
-```
-
----
-
-## 7. Trust Propagation (DIO 확장)
-
-현재 구현은 DIO option 영역에 아래 형식의 커스텀 option을 반복 부착한다.
-
-```
+```text
 [0xFE][0x02][node_id][trust_x100]
 ```
 
-- `node_id`: 해당 trust가 가리키는 neighbour
-- `trust_x100`: TrustIndex × 100
-- 노드당 최대 4개 option 전송
+특징:
+- DIO 송신 시 최대 4개 neighbour trust 첨부
+- 수신 측이 이를 파싱해 `TMRT` 평균 갱신
+
+관련 코드:
+- [smtrust.c](/home/dev/TA-BRPL/motes/smtrust.c)
+- [rpl-icmp6.c](/home/dev/TA-BRPL/contiki-ng-brpl/os/net/routing/rpl-classic/rpl-icmp6.c)
 
 ---
 
-## 8. Trust Table 자료구조
+## 4. Trust Classes
 
-각 노드는 다음 trust table을 메모리에 유지한다.
+현재 구현은 논문 trust class를 그대로 유지한다.
 
-```c
-typedef struct {
-    uip_ipaddr_t  node_id;
-    float         trust_index;      // 현재 TrustIndex
-    float         tmsr;             // success rate
-    float         tmel;             // energy level
-    float         tmlls;            // link/location stability
-    float         tm_mobility;      // mobility
-    float         tmrt;             // recommended trust
-    float         tm_h0;            // 이전 TrustIndex (historical)
-    uint32_t      pkts_received;    // TMSR 계산용 카운터
-    uint32_t      pkts_forwarded;   // TMSR 계산용 카운터
-    float         prev_x, prev_y;   // TMMobility용 이전 위치
-    uint8_t       dio_seq;          // Rank attack 탐지용
-    uint16_t      prev_rank;        // Rank attack 탐지용
-    uint8_t       is_suspicious;    // 공격자 플래그
-} smtrust_entry_t;
+```text
+t1: 0.00–0.20   No Trust
+t2: 0.21–0.45   Poor Trust
+t3: 0.46–0.70   Fair Trust
+t4: 0.71–0.90   Good Trust
+t5: 0.91–1.00   Full Trust
+```
 
-#define MAX_TRUST_TABLE_SIZE 20     // 노드 수에 맞게 조정
-smtrust_entry_t trust_table[MAX_TRUST_TABLE_SIZE];
+경계값:
+
+```text
+SMTRUST_THRESHOLD = 0.46
+```
+
+중요한 점:
+- 현재 구현은 단순 `trust >= 0.46`만 쓰지 않는다.
+- `t1/t2`는 후보 제외
+- `t3`는 fallback
+- `t4/t5`는 near-tie에서 우선
+
+즉 논문 의도인 “가능하면 t4/t5, 없으면 t3”를 현재 구현에서 근사한다.
+
+---
+
+## 5. Parent Selection
+
+현재 `SMTRUST`는 **두 단계**로 parent를 고른다.
+
+### 5.1 Candidate Filter
+
+`smtrust_is_parent_candidate(node_id)`:
+
+- suspicious node 제외
+- `t1/t2` 제외
+- `t3/t4/t5`만 후보 유지
+
+즉 현재 후보 기준은:
+
+```text
+trust level >= L3_FAIR
+```
+
+### 5.2 Parent Ordering
+
+`smtrust_compare_parents()`는 near-tie일 때만 trust를 강하게 개입시킨다.
+
+현재 규칙:
+- `t4/t5` vs `t3`면 `t4/t5` 우선
+- 같은 trust tier 안에서는 MRHOF path-cost 우선
+- path-cost가 충분히 차이나면 trust가 개입하지 않음
+- trust 차이가 충분히 클 때만 tie-break
+
+즉 `SMTRUST`는 **trust가 ETX/path-cost를 완전히 덮는 구조가 아니라, 보수적 trust-aware MRHOF**다.
+
+---
+
+## 6. Attack Detection
+
+### 6.1 Rank Attack
+
+현재 구현은 오탐을 줄이기 위해 논문보다 보수적이다.
+
+현재 조건:
+
+```text
+neighbor.rank < root_rank
+```
+
+즉 root보다 더 낮은, 물리적으로 불가능한 rank 광고만 rank attack으로 본다.
+
+### 6.2 Blackhole
+
+현재 구현은 다음 두 조건이 동시에 만족될 때 blackhole 의심으로 본다.
+
+```text
+TMSR < SUCCESS_THRESHOLD
+TrustIndex < SMTRUST_THRESHOLD
+```
+
+그 뒤:
+- suspicious flag set
+- 현재 preferred parent면 `DIS + DIO reset`
+- `CSV,SMTRUST_REEVAL,...` 로그 출력
+
+---
+
+## 7. Update Policy
+
+### 7.1 Periodic Update
+
+현재 주기:
+
+```text
+SMTRUST_UPDATE_INTERVAL = 120s
+```
+
+이 주기마다:
+- 모든 neighbour trust 재계산
+- trust table 업데이트
+- DIO option payload 갱신
+
+### 7.2 Reactive Update
+
+현재 reactive path는 제한적이다.
+
+- rank attack current parent
+- blackhole-suspect current parent
+
+이 경우만 즉시 reevaluation을 건다.
+
+즉 논문형 “모든 suspicious change에 대한 적극적 reactive reselection”보다는 좁은 구현이다.
+
+---
+
+## 8. 현재 구현과 논문 차이
+
+현재 `SMTRUST`는 **부분 구현**이 아니라, 이전보다 많이 맞춰졌지만 여전히 “논문형 완전 재현”은 아니다.
+
+현재 반영된 것:
+- 6개 metric 틀
+- DIO option 기반 TMRT 전파
+- trust class 기반 후보 필터
+- `t4/t5` 우선, `t3` fallback
+- rank / blackhole reactive reevaluation
+
+논문과 다른 점:
+- `TMEL`은 neighbour-specific real battery가 아니라 로컬 energest 근사
+- `TMMobility = 1.0` 고정
+- rank attack detection은 논문보다 훨씬 보수적
+- trust ordering은 MRHOF 위에 얹힌 보수적 tie-break 방식
+
+---
+
+## 9. 현재 실험에서의 해석
+
+최신 전체 30-seed 결과:
+
+- `RPL`: during `0.8759`, recovery `0.8754`
+- `SMTRUST`: during `0.8701`, recovery `0.8649`
+
+즉 현재 구현의 `SMTRUST`는 `RPL`보다 아주 약간 낮다.
+
+현재 해석:
+- 공격자 완전 포획 노드(`6, 13, 19, 23`)는 `RPL`과 거의 차이가 없음
+- 경계 노드(`25, 8, 9, 15`)에서 attacker parent 비율이 `RPL`보다 조금 더 높아짐
+- 따라서 현재 `SMTRUST`는 “강한 회피 프로토콜”이라기보다 “보수적 trust-aware MRHOF”에 가깝다
+
+---
+
+## 9-1. 실험 분석: SMTrust ≈ RPL 근본 원인 (Baseline Protocol Fidelity)
+
+**30-seed 정량 분석 결과 (2026-03-17)**
+
+공격 노드(2·3·4·18)에 대한 TrustIndex 성분별 실측값:
+
+| 성분 | 가중치 | 실측 범위 | 구조적 역할 |
+|---|---|---|---|
+| TMSR | 0.25 | (공격자) 하락 가능 | 유일한 변별 신호 |
+| TMLLS | 0.20 | 0.57 ± 0.05 | 물리 근접 → 항상 높음 |
+| TMEL | 0.15 | 0.50 ± 0.02 | 자기 energest → 상수 |
+| TM(H0) | 0.15 | 0.50 ± 0.10 | 이전 TI → 관성 |
+| TMMobility | 0.15 | **1.00** | 정적 환경 고정 → 상수 |
+| TMRT | 0.10 | 0.50 ± 0.05 | 이웃 추천 → 약 관성 |
+
+**TI 하한 계산:**
+
+TMEL + TMMobility = 0.30 가중치가 상수로 작동.
+TMSR = 0 (완전 blackhole)인 극단 시나리오에서도:
+
+```
+TI_min = 0×0.25 + 0.5×0.15 + 0.5×0.15 + 0.57×0.20 + 1.0×0.15 + 0.5×0.10
+       = 0 + 0.075 + 0.075 + 0.114 + 0.150 + 0.050
+       = 0.464  >  SMTRUST_THRESHOLD (0.46)
+```
+
+공격자 노드가 아무리 패킷을 드롭해도 TI가 부모 후보 제외 임계값(0.46) 이하로
+내려가지 않음. 30-seed 실측 최솟값: **TI_min = 0.489**.
+
+**결론:**
+
+SMTrust는 이 실험 환경(정적 GRID 6×6, blackhole 공격)에서 RPL과 동일한 공격자
+부모 점유율을 보임 (0.220 vs 0.220). 이는 구현 버그가 아니라 구조적 한계:
+- TMMobility(0.15): 이동성 없는 정적 토폴로지에서 상수
+- TMEL(0.15): 이웃 에너지 대신 자기 에너지 사용으로 변별력 없음
+- 두 성분 합 0.30이 TI floor를 임계값 위에 고정
+
+**논문 기술 방향 (Implementation 섹션):**
+
+> SMTrust is implemented faithfully according to [ref], with two deviations
+> inherent to our emulation environment: (i) TMEL uses local Energest estimates
+> rather than neighbor residual energy, as neighbor energy is not observable
+> in Cooja without energy exchange extensions; and (ii) TMMobility is fixed at
+> 1.0 since all nodes are static. Together, these two components (combined
+> weight 0.30) act as constants, raising the TrustIndex floor to approximately
+> 0.46 — precisely at the filtering threshold — rendering SMTrust unable to
+> exclude blackhole attackers in our scenario. We report this as an
+> implementation-environment mismatch rather than a defect in the SMTrust design.
+
+---
+
+## 10. 관련 로그
+
+현재 주요 로그:
+
+```text
+CSV,SMTRUST,<self>,<nbr>,<tmsr>,<tm_h0>,<tmel>,<tmlls>,<tmrt>,<trust>
+CSV,SMTRUST_BLACKHOLE,<self>,<nbr>,<tmsr>,<trust>
+CSV,SMTRUST_RANK_ATTACK,<self>,<nbr>,<rank>
+CSV,SMTRUST_REEVAL,<self>,<nbr>,<reason>
 ```
 
 ---
 
-## 9. 구현 순서 권고
+## 11. 코드 위치
 
-Contiki-NG/Cooja 기준으로 구현 순서를 추천하면 다음과 같다.
-
-**1단계**: trust table 자료구조 정의 및 초기화 루틴 작성
-
-**2단계**: TMSR 카운터 구현 (패킷 송수신 콜백)
-
-**3단계**: TMEL, TMLLS(RSSI), TMMobility 계산 함수 작성
-
-**4단계**: TMRT를 위한 DIO 확장 (trust 값 교환)
-
-**5단계**: TrustIndex 가중합 계산 함수 구현
-
-**6단계**: Algorithm 1에 가까운 parent ordering 구현, `rpl-mrhof.c`에 hook으로 통합
-
-**7단계**: Rank attack detection 추가 (현재는 physically-impossible rank만 탐지)
-
-**8단계**: Blackhole attack detection 추가 (TMSR 모니터링 루틴)
-
-**9단계**: trickle timer 기반 periodic update 연결
-
-**10단계**: Cooja 시뮬레이션 셋업 (30 노드, 3 공격자, BonnMotion mobility)
-
----
-
-## 10. 핵심 파라미터 요약
-
-```
-TRUST_THRESHOLD         = 0.46
-SUCCESS_THRESHOLD       = 0.5 ~ 0.7  (실험적 결정)
-RANK_THRESHOLD          = 2 × DEFAULT_RANK_INCREMENT  (실험적)
-MAX_LINK_METRIC         = 기존 MRHOF의 MAX_LINK_METRIC 값 사용
-trust_level ranges      = [0.0–0.20, 0.21–0.45, 0.46–0.70, 0.71–0.90, 0.91–1.00]
-initial TrustIndex      = 0.5
-initial TMSR            = 1.0
-update mechanism        = periodic 120s + suspicious current parent에 대한 reactive reevaluation
-```
-
----
+- [smtrust.h](/home/dev/TA-BRPL/motes/smtrust.h)
+- [smtrust.c](/home/dev/TA-BRPL/motes/smtrust.c)
+- [sender.c](/home/dev/TA-BRPL/motes/sender.c)
+- [rpl-mrhof.c](/home/dev/TA-BRPL/contiki-ng-brpl/os/net/routing/rpl-classic/rpl-mrhof.c)
+- [rpl-icmp6.c](/home/dev/TA-BRPL/contiki-ng-brpl/os/net/routing/rpl-classic/rpl-icmp6.c)

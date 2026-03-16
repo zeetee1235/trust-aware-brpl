@@ -87,6 +87,7 @@ run_one() {
   local WS_SCENARIOS="$WS_ROOT/configs/scenarios"
   local WORKER_LOG="$LOG_DIR/${PROTO}_${SEED}_w${WORKER_ID}.log"
   local GRADLE_CMD="$COOJA_GRADLEW"
+  local JAVA_NET_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"
 
   if [[ -f "$DONE" ]]; then
     mark_status done "$PROTO" "$SEED" "$WORKER_ID"
@@ -122,8 +123,10 @@ with open('${TMP_CSC}', 'w') as f:
   mark_status running "$PROTO" "$SEED" "$WORKER_ID"
   echo "[W${WORKER_ID}] [RUN ] ${PROTO} seed=${SEED}"
 
-  if GRADLE_USER_HOME="$GRADLE_HOME" "$GRADLE_CMD" \
-      --no-watch-fs --parallel --build-cache \
+  if JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${JAVA_NET_OPTS}" \
+      GRADLE_OPTS="${GRADLE_OPTS:-} ${JAVA_NET_OPTS}" \
+      GRADLE_USER_HOME="$GRADLE_HOME" "$GRADLE_CMD" \
+      --no-daemon --no-watch-fs --parallel --build-cache \
       -p "$(dirname "$COOJA_GRADLEW")" \
       run --args="--no-gui --autostart --logdir=${TMP_LOGDIR} ${TMP_CSC}" \
       > "$WORKER_LOG" 2>&1; then

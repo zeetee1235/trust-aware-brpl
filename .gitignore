@@ -1,48 +1,96 @@
-# Contiki-NG build artifacts
+# =============================================================
+# Contiki-NG / Cooja build artifacts
+# =============================================================
 *.cooja
 *.a
 *.o
 *.map
 *.d
+*.elf
+*.sky
+*.native
 obj_cooja/
 symbols.c
 symbols.h
+motes/build/
 
-# Cooja logs
+# Cooja simulation logs & captures
+COOJA.log
 COOJA.testlog
 *.testlog
 *.pcap
 
+# =============================================================
+# LaTeX build artifacts (docs/paper/)
+# =============================================================
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.bbl
+*.blg
+*.idx
+*.ilg
+*.ind
+*.bcf
+*.run.xml
+docs/paper/paper_draft.pdf
+
+# Generated figures (reproducible from SVG/scripts)
+figures/fig0_topology_grid6x6.pdf
+figures/fig0_topology_grid6x6.png
+
+# =============================================================
 # Python
+# =============================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.venv/
+.env
 
-# Results and data
-results/
+# =============================================================
+# Results & simulation data (large, reproducible)
+# =============================================================
+results/*/
 *.csv
-*.log
+*.pcap
 
-# Parallel worker and simulation temp artifacts
+# =============================================================
+# Parallel worker / simulation temp artifacts
+# =============================================================
 .parallel_worker_env/
 configs/temp_*.csc
 configs/scenarios/tmp_*.csc
+configs/scenarios/COOJA.testlog
+configs/scenarios/COOJA.log
 
-# Local build/cache outputs
-motes/build/
+# =============================================================
+# Build / cache
+# =============================================================
 .gradle/
 gradle-home/
 tmp/
 workspace/
 
-# IDE
+# =============================================================
+# IDE / Editor
+# =============================================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
+# =============================================================
 # OS
+# =============================================================
 .DS_Store
 Thumbs.db

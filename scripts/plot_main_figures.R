@@ -50,6 +50,31 @@ results_dir <- file.path(root_dir, "results")
 figures_dir <- file.path(root_dir, "figures")
 dir.create(figures_dir, showWarnings = FALSE, recursive = TRUE)
 
+canonical_figures <- c(
+  "fig1_pdr_phases.pdf",
+  "fig2_resilience_summary.pdf",
+  "fig3_attack_tradeoff.pdf",
+  "fig4_route_exposure_timeseries.pdf",
+  "fig5_trust_trace.pdf",
+  "fig6_churn_hotspots.pdf"
+)
+
+legacy_figures <- c(
+  "fig1_pdr_distribution.pdf",
+  "fig1_pdr_phases.pdf",
+  "fig2_pdr_timeseries.pdf",
+  "fig2_resilience_summary.pdf",
+  "fig3_attack_tradeoff.pdf",
+  "fig3_delay_cdf.pdf",
+  "fig4_route_exposure_timeseries.pdf",
+  "fig4_trust_trace.pdf",
+  "fig5_parent_churn.pdf",
+  "fig5_tabrpl_trust_adversaries.pdf",
+  "fig6_churn_hotspots.pdf"
+)
+
+unlink(file.path(figures_dir, legacy_figures), force = TRUE)
+
 protocol_levels <- c("RPL", "BRPL", "SMTRUST", "TABRPL")
 protocol_colors <- c(
   "RPL" = "#2563eb",
@@ -172,7 +197,7 @@ fig1 <- ggplot(pdr_long, aes(x = protocol, y = pdr, fill = protocol)) +
   ) +
   theme_main()
 
-save_plot("fig1_pdr_distribution.pdf", fig1, width = 11.8, height = 5.1)
+save_plot("fig1_pdr_phases.pdf", fig1, width = 11.8, height = 5.1)
 
 # ------------------------------------------------------------------
 # Figure 2
@@ -357,7 +382,7 @@ fig5 <- ggplot(trust_adv, aes(x = time_bin, y = value, color = component)) +
   theme_main() +
   theme(legend.position = "top")
 
-save_plot("fig5_tabrpl_trust_adversaries.pdf", fig5, width = 11.2, height = 7.8)
+save_plot("fig5_trust_trace.pdf", fig5, width = 11.2, height = 7.8)
 
 # ------------------------------------------------------------------
 # Figure 6

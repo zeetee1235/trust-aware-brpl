@@ -38,7 +38,19 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-PROTOCOLS   = ["RPL", "BRPL", "SMTRUST", "TABRPL"]
+PROTOCOLS   = ["RPL", "BRPL", "SMTRUST", "TABRPL",
+               "TABRPL_FWD", "TABRPL_FWDCTRL",
+               "RPL_LOSS90", "BRPL_LOSS90", "TABRPL_LOSS90",
+               "RPL_LOSS80", "BRPL_LOSS80", "TABRPL_LOSS80",
+               # V5: EWMA lambda sensitivity
+               "TABRPL_LAMBDA_FAST", "TABRPL_LAMBDA_SLOW",
+               "TABRPL_LAMBDA_FAST_RECOVERY", "TABRPL_LAMBDA_SLOW_RECOVERY",
+               # V6: threshold sensitivity
+               "TABRPL_THRESH_STRICT", "TABRPL_THRESH_RELAXED", "TABRPL_THRESH_JOINLOW",
+               # V2: no-attack FPR experiments
+               "RPL_NOATTACK", "BRPL_NOATTACK", "TABRPL_NOATTACK",
+               # V3: congestion vs attack separation
+               "V3_C1_TABRPL", "V3_C2_TABRPL", "V3_C3_TABRPL", "V3_C4_TABRPL"]
 SEEDS       = list(range(1, 31))
 
 # Tick (ms) phase boundaries
@@ -156,16 +168,17 @@ def parse_log(path: Path):
 
         # ---- RX  -----------------------------------------------------------
         # CSV,RX,node=1,<src_ip>,<seq>,<t_recv_ms>,<t0_ms>,<len>
+        # parts: [0]=CSV [1]=RX [2]=node=X|src_ip [3]=src_ip|seq ...
         if rest.startswith("CSV,RX,"):
             parts = rest.split(",")
             if len(parts) >= 7:
                 try:
-                    # Optional leading "node=1" field
-                    offset = 1 if parts[1].startswith("node=") else 0
-                    src_ip = parts[1 + offset]
-                    seq    = int(parts[2 + offset])
-                    t_recv = int(parts[3 + offset])
-                    t0     = int(parts[4 + offset])
+                    # Optional "node=X" field at parts[2]
+                    offset = 1 if parts[2].startswith("node=") else 0
+                    src_ip = parts[2 + offset]
+                    seq    = int(parts[3 + offset])
+                    t_recv = int(parts[4 + offset])
+                    t0     = int(parts[5 + offset])
                     src_node  = _node_from_ip(src_ip)
                     delay_ms  = t_recv - t0          # ms; may be slightly negative due to clock skew
                     rx_records.append({
@@ -242,17 +255,22 @@ def _pdr_for_phase(tx_df: pd.DataFrame, rx_df: pd.DataFrame,
                    phase: str) -> tuple[int, int, float]:
     """
     Compute PDR for a single phase.
-    A seq is "delivered" if it appears in both tx and rx for that phase.
+    A (src_node, seq) pair is "delivered" if it appears in both tx and rx
+    for that phase. Matching on (node, seq) is required because every sender
+    resets its seq counter from 1, so bare seq numbers are not globally unique.
     Returns (tx_count, rx_matched, pdr_fraction).
     """
     tx_phase = tx_df[tx_df["phase"] == phase] if not tx_df.empty else pd.DataFrame()
     rx_phase = rx_df[rx_df["phase"] == phase] if not rx_df.empty else pd.DataFrame()
 
-    tx_seqs = set(tx_phase["seq"]) if not tx_phase.empty else set()
-    rx_seqs = set(rx_phase["seq"]) if not rx_phase.empty else set()
+    if tx_phase.empty:
+        return 0, 0, float("nan")
 
-    tx_count = len(tx_seqs)
-    matched  = len(tx_seqs & rx_seqs)
+    tx_pairs = set(zip(tx_phase["node_id"], tx_phase["seq"]))
+    rx_pairs = set(zip(rx_phase["src_node"], rx_phase["seq"])) if not rx_phase.empty else set()
+
+    tx_count = len(tx_pairs)
+    matched  = len(tx_pairs & rx_pairs)
     pdr      = matched / tx_count if tx_count > 0 else float("nan")
     return tx_count, matched, pdr
 
@@ -357,10 +375,12 @@ def main():
             # ----------------------------------------------------------------
             # PDR summary
             # ----------------------------------------------------------------
-            tx_all_seqs = set(tx_df["seq"]) if not tx_df.empty else set()
-            rx_all_seqs = set(rx_df["seq"]) if not rx_df.empty else set()
-            pdr_overall = (len(tx_all_seqs & rx_all_seqs) / len(tx_all_seqs)
-                           if tx_all_seqs else float("nan"))
+            tx_all_pairs = (set(zip(tx_df["node_id"], tx_df["seq"]))
+                            if not tx_df.empty else set())
+            rx_all_pairs = (set(zip(rx_df["src_node"], rx_df["seq"]))
+                            if not rx_df.empty else set())
+            pdr_overall = (len(tx_all_pairs & rx_all_pairs) / len(tx_all_pairs)
+                           if tx_all_pairs else float("nan"))
 
             _, _, pdr_pre  = _pdr_for_phase(tx_df, rx_df, "pre_attack")
             _, _, pdr_att  = _pdr_for_phase(tx_df, rx_df, "during_attack")
@@ -408,10 +428,11 @@ def main():
             })
 
             # ----------------------------------------------------------------
-            # Trust trace (TABRPL only)
+            # Trust trace (TABRPL and ablation variants)
             # ----------------------------------------------------------------
             for tr in trust_records:
                 trust_rows.append({
+                    "protocol":     protocol,
                     "seed":         seed,
                     "self_id":      tr["self_id"],
                     "nbr_id":       tr["nbr_id"],
@@ -490,7 +511,7 @@ def main():
         "delay_pre_attack", "delay_during_attack", "delay_recovery",
     ])
     _write(trust_rows,  "trust_trace.csv", [
-        "seed", "self_id", "nbr_id", "tick",
+        "protocol", "seed", "self_id", "nbr_id", "tick",
         "t_fwd", "t_ctrl", "t_hon", "t_agg", "t_ewma",
     ])
     _write(attack_rows, "attack_stats.csv", [

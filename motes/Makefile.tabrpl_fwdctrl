@@ -1,0 +1,28 @@
+# Makefile.tabrpl_fwdctrl
+# TA-BRPL Ablation: T_fwd + T_ctrl
+#   Trust aggregation: T̃ = T_fwd^0.6 * T_ctrl^0.4  (T_hon disabled)
+#   Weights proportionally redistribute T_hon(0.2) → T_fwd(0.6), T_ctrl(0.4)
+#   Purpose: measure added value of control-plane trust over forwarding alone
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DTABRPL_FWDCTRL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+# Ablation weights: T_fwd=60%, T_ctrl=40%, T_hon=0%
+# (original 5:3 ratio preserved, T_hon weight redistributed proportionally)
+CFLAGS += -DTA_TRUST_W_FWD=6
+CFLAGS += -DTA_TRUST_W_CTRL=4
+CFLAGS += -DTA_TRUST_W_HON=0
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

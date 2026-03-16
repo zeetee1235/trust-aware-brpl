@@ -87,6 +87,18 @@ static uip_ipaddr_t root_ipaddr;
 static uint16_t last_parent_id;
 static uint32_t parent_switch_count;
 
+#ifdef TABRPL_MODE
+#define TX_PARENT_HISTORY_SIZE 64
+typedef struct {
+  uint32_t seq;
+  uint16_t parent_id;
+  uint8_t valid;
+} tx_parent_hist_t;
+
+static tx_parent_hist_t tx_parent_hist[TX_PARENT_HISTORY_SIZE];
+static uint8_t tx_parent_hist_next;
+#endif
+
 /* Root-adjacent senders used to induce temporary congestion. */
 static int
 is_congestion_node(uint16_t node_id)
@@ -225,6 +237,30 @@ parse_echo(const uint8_t *data, uint16_t len,
     : 0;
 }
 
+#ifdef TABRPL_MODE
+static void
+remember_tx_parent(uint32_t seq, uint16_t parent_id)
+{
+  tx_parent_hist[tx_parent_hist_next].seq = seq;
+  tx_parent_hist[tx_parent_hist_next].parent_id = parent_id;
+  tx_parent_hist[tx_parent_hist_next].valid = 1;
+  tx_parent_hist_next = (uint8_t)((tx_parent_hist_next + 1) % TX_PARENT_HISTORY_SIZE);
+}
+
+static uint16_t
+take_tx_parent(uint32_t seq)
+{
+  for(uint8_t i = 0; i < TX_PARENT_HISTORY_SIZE; i++) {
+    if(tx_parent_hist[i].valid && tx_parent_hist[i].seq == seq) {
+      uint16_t parent_id = tx_parent_hist[i].parent_id;
+      tx_parent_hist[i].valid = 0;
+      return parent_id;
+    }
+  }
+  return 0xffff;
+}
+#endif
+
 #if CONGESTION_INDUCTION_ENABLE
 static void
 schedule_congestion_timer(struct etimer *timer, uint16_t node_id)
@@ -258,6 +294,7 @@ send_data_packet(uint16_t self_id)
   uint32_t t0;
   uint8_t joined;
   static uint32_t seq;
+  uint16_t tx_parent_id = 0xffff;
 
   log_preferred_parent();
   log_routing_status();
@@ -272,6 +309,7 @@ send_data_packet(uint16_t self_id)
       const linkaddr_t *pll = rpl_get_parent_lladdr(dag->preferred_parent);
       if(pll != NULL) {
         uint16_t pid = pll->u8[LINKADDR_SIZE - 1];
+        tx_parent_id = pid;
 #ifdef TABRPL_MODE
         ta_trust_notify_sent(pid);
 #endif
@@ -285,6 +323,11 @@ send_data_packet(uint16_t self_id)
 
   t0 = (uint32_t)clock_time();
   seq++;
+#ifdef TABRPL_MODE
+  if(tx_parent_id != 0xffff) {
+    remember_tx_parent(seq, tx_parent_id);
+  }
+#endif
   snprintf(buf, sizeof(buf), "seq=%lu t0=%lu",
            (unsigned long)seq, (unsigned long)t0);
 
@@ -330,17 +373,12 @@ echo_rx_callback(struct simple_udp_connection *c,
          (unsigned)datalen);
 
 #ifdef TABRPL_MODE
-  /* Echo reply received: current parent successfully forwarded the
-   * upward packet (and the reply arrived via the return path).
-   * Use this as the forwarding observation for T_fwd computation. */
+  /* Echo reply received: credit the parent that actually carried the
+   * original TX for this seq, not the current parent at reply time. */
   {
-    rpl_dag_t *dag = rpl_get_any_dag();
-    if(dag != NULL && dag->preferred_parent != NULL) {
-      const linkaddr_t *pll = rpl_get_parent_lladdr(dag->preferred_parent);
-      if(pll != NULL) {
-        uint16_t pid = pll->u8[LINKADDR_SIZE - 1];
-        ta_trust_notify_forwarded(pid);
-      }
+    uint16_t pid = take_tx_parent(seq);
+    if(pid != 0xffff) {
+      ta_trust_notify_forwarded(pid);
     }
   }
 #endif
@@ -375,7 +413,13 @@ PROCESS_THREAD(sender_process, ev, data)
   PROCESS_BEGIN();
 
   /* Protocol banner */
-#if defined(TABRPL_MODE)
+#if defined(TABRPL_FWD_MODE)
+  printf("CSV,PROTOCOL,%u,TABRPL_FWD\n",
+         (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1]);
+#elif defined(TABRPL_FWDCTRL_MODE)
+  printf("CSV,PROTOCOL,%u,TABRPL_FWDCTRL\n",
+         (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1]);
+#elif defined(TABRPL_MODE)
   printf("CSV,PROTOCOL,%u,TABRPL\n",
          (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1]);
 #elif defined(SMTRUST_MODE)
@@ -403,6 +447,10 @@ PROCESS_THREAD(sender_process, ev, data)
   self_id = (uint16_t)linkaddr_node_addr.u8[LINKADDR_SIZE - 1];
   last_parent_id = 0xffff;
   parent_switch_count = 0;
+#ifdef TABRPL_MODE
+  memset(tx_parent_hist, 0, sizeof(tx_parent_hist));
+  tx_parent_hist_next = 0;
+#endif
 
   update_root_ipaddr();
   simple_udp_register(&udp_conn, UDP_PORT, NULL, UDP_PORT, echo_rx_callback);

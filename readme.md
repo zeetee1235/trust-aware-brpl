@@ -55,13 +55,23 @@ python3 scripts/parse_results.py
 - [parent_churn.csv](/home/dev/TA-BRPL/results/parent_churn.csv)
 - [route_trace.csv](/home/dev/TA-BRPL/results/route_trace.csv)
 
+## Current Full-Sweep Snapshot
+
+- Latest full sweep: `30` seeds × `4` protocols
+- Mean PDR
+- `RPL`: pre `1.0000`, during `0.8759`, recovery `0.8754`
+- `BRPL`: pre `1.0000`, during `0.8510`, recovery `0.8399`
+- `SMTRUST`: pre `0.9999`, during `0.8701`, recovery `0.8649`
+- `TABRPL`: pre `0.9996`, during `0.9078`, recovery `0.9594`
+- Current takeaway: removing the BRPL trust floor and excluding direct attacker parents below `tau_join` makes `TABRPL` the strongest protocol in the current combined-attack setting.
+
 ## Main Figures
 
-- `fig1_pdr_distribution.pdf`
+- `fig1_pdr_phases.pdf`
 - `fig2_resilience_summary.pdf`
 - `fig3_attack_tradeoff.pdf`
 - `fig4_route_exposure_timeseries.pdf`
-- `fig5_tabrpl_trust_adversaries.pdf`
+- `fig5_trust_trace.pdf`
 - `fig6_churn_hotspots.pdf`
 
 ## Notes

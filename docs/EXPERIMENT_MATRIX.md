@@ -13,19 +13,20 @@
 - 핵심 주장: 신뢰 기반 우회로 PDR 회복
 - 비교군: RPL(기준선), BRPL, SMTrust
 - 조건: 공격 시작(350s) 전후 구간별 PDR
+- 현재 결과: `TA-BRPL`이 during/recovery 모두 최고 (`0.9078 / 0.9594`)
 
 ### RQ2: 탐지 및 복구 속도
 
 **TA-BRPL은 공격자 탐지와 경로 복구를 더 빠르게 수행하는가?**
 
-- 핵심 주장: asymmetric EWMA로 빠른 신뢰 하락 → 빠른 우회
+- 핵심 주장: asymmetric EWMA + persistence penalty + escape + direct attacker exclusion으로 빠른 우회
 - 측정: 공격 시작 → 첫 blacklist까지 시간, PDR 회복까지 시간
 
 ### RQ3: 혼잡 인식 유지
 
 **TA-BRPL은 신뢰 기반 보안을 추가하면서도 BRPL의 혼잡 인식 성능을 유지하는가?**
 
-- 핵심 주장: trust가 BRPL 비용함수에 통합 → 혼잡 인식 손실 없음
+- 핵심 주장: trust가 BRPL 비용함수에 통합되되, current implementation adds direct attacker exclusion when trust falls below `tau_join`
 - 측정: 공격 없는 조건에서 TA-BRPL과 BRPL의 E2E delay / 큐 활용률 비교
 
 ### RQ4: 신뢰 성분의 기여 (Ablation)

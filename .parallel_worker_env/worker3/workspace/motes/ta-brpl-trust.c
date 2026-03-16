@@ -85,12 +85,6 @@ static uint16_t current_parent_id = 0xffff;
 static clock_time_t current_parent_since;
 static uint8_t current_parent_escape_armed;
 
-static int
-is_attack_role(uint16_t node_id)
-{
-  return node_id == 18 || node_id == 2 || node_id == 3 || node_id == 4;
-}
-
 static clock_time_t
 current_parent_elapsed(void)
 {
@@ -105,7 +99,10 @@ attack_persistence_penalty_scale(uint16_t node_id, uint16_t trust)
 {
   uint16_t scale = TA_TRUST_SCALE;
 
-  if(!is_attack_role(node_id)) {
+  /* Apply persistence penalty to any node whose trust has fallen to
+   * SUSPECT or worse — not just a hardcoded attacker ID set.
+   * This makes the detection ID-agnostic and generalizable. */
+  if(trust >= TA_TRUST_TAU_WARN) {
     return scale;
   }
 
@@ -138,10 +135,12 @@ attack_persistence_penalty_scale(uint16_t node_id, uint16_t trust)
 static int
 escape_mode_for_node(uint16_t node_id, uint16_t trust)
 {
+  /* Escape triggers for ANY current parent that has kept trust below
+   * the escape threshold for longer than the escape trigger window.
+   * No hardcoded ID required — purely behaviour-driven. */
   return node_id == current_parent_id
-      && is_attack_role(node_id)
-      && current_parent_elapsed() >= (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND
-      && trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD;
+      && trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD
+      && current_parent_elapsed() >= (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND;
 }
 
 static uint16_t
@@ -458,25 +457,41 @@ ta_trust_notify_dio(uint16_t node_id, uint16_t rank, uint8_t version)
 
   e->ctrl_dio_count++;
 
-  /* Rank deviation: only flag nodes claiming rank BELOW root rank.
-   * Parents legitimately have lower rank than their children, so
-   * comparing against self rank causes false positives for all parents.
-   * We detect true sinkholes by checking for physically-impossible rank
-   * (lower than what root itself advertises = min_hoprankinc). */
   rpl_dag_t *dag = rpl_get_any_dag();
-  if(dag != NULL && dag->instance != NULL && rank != 0 &&
-     rank < dag->instance->min_hoprankinc) {
-    /* Neighbour claims rank below root level — blatant sinkhole        */
-    e->ctrl_rank_dev_count++;
+  if(dag != NULL && dag->instance != NULL && rank != 0) {
+    uint16_t min_inc = dag->instance->min_hoprankinc;
+
+    /* Case 1: blatant sinkhole — rank below root level */
+    if(rank < min_inc) {
+      e->ctrl_rank_dev_count++;
+
+    /* Case 2: significant rank decrease without DODAG version change.
+     * A sinkhole that spoofs a low rank (e.g. 512→257) without a
+     * DODAG version bump is caught here.  Threshold = min_hoprankinc/2
+     * to avoid false positives from small ETX-driven improvements.
+     * Mirrors the detection logic in smtrust.c:detect_rank_attack(). */
+    } else if(e->ctrl_version_seen &&
+              rank < e->ctrl_rank_last &&
+              (uint32_t)(e->ctrl_rank_last - rank) > (uint32_t)(min_inc / 2) &&
+              version == e->ctrl_version_last) {
+      e->ctrl_rank_dev_count++;
+    }
   }
 
-  /* Version inconsistency */
+  /* Update version and rank baseline */
   if(!e->ctrl_version_seen) {
     e->ctrl_version_last = version;
+    e->ctrl_rank_last    = rank;
     e->ctrl_version_seen = 1;
-  } else if(version != e->ctrl_version_last) {
-    e->ctrl_version_mismatch++;
-    e->ctrl_version_last = version;
+  } else {
+    if(version != e->ctrl_version_last) {
+      e->ctrl_version_mismatch++;
+      e->ctrl_version_last = version;
+      /* DODAG reset: new rank baseline, any change is now legitimate */
+      e->ctrl_rank_last = rank;
+    } else {
+      e->ctrl_rank_last = rank;
+    }
   }
 }
 
@@ -570,7 +585,7 @@ ta_trust_update_all(void)
       }
     }
 
-    if(e->node_id == current_parent_id || is_attack_role(e->node_id)) {
+    if(e->node_id == current_parent_id || e->trust < TA_TRUST_TAU_WARN) {
       uint16_t penalty_scale = penalty_scale_for_entry(e);
       int escape = escape_mode_for_node(e->node_id, e->trust);
       printf("CSV,TRUST_ROUTEGUARD,%u,%u,%lu,%u,%u,%u\n",
@@ -601,13 +616,25 @@ ta_trust_update_all(void)
            (unsigned)t_agg,
            (unsigned)e->trust);
 
-    /* Reset per-window counters after each update cycle               */
-    e->fwd_sent         = 0;
-    e->fwd_observed     = 0;
-    e->ctrl_dio_count   = 0;
-    e->ctrl_rank_dev_count  = 0;
-    e->ctrl_version_mismatch = 0;
-    e->ctrl_dio_excess  = 0;
+    /* Halving decay instead of hard reset.
+     *
+     * Previously counters were zeroed each window, which caused
+     * T_fwd = alpha/(alpha+beta) = 500 (neutral) whenever no packets
+     * were sent in that window (e.g. for non-parent neighbour nodes).
+     * Since T_agg(500, 1000, 1000) = 707 > T_INIT=500, trust drifted
+     * upward for every unobserved node including active attackers.
+     *
+     * With halving, historical counts persist with exponential
+     * forgetting (effective window ≈ 2 update periods).  A blackhole
+     * that accumulates fwd_sent >> fwd_observed will converge to
+     * T_fwd → alpha/(large_S + alpha + beta) → near 0, and the per-
+     * window EWMA update will then pull trust below the thresholds. */
+    e->fwd_sent          = e->fwd_sent      >> 1;
+    e->fwd_observed      = e->fwd_observed  >> 1;
+    e->ctrl_dio_count    = e->ctrl_dio_count >> 1;
+    e->ctrl_rank_dev_count   = e->ctrl_rank_dev_count   >> 1;
+    e->ctrl_version_mismatch = e->ctrl_version_mismatch >> 1;
+    e->ctrl_dio_excess   = e->ctrl_dio_excess >> 1;
   }
 
   if(escape_triggered) {
@@ -691,6 +718,27 @@ brpl_escape_mode_get(uint16_t node_id)
   return escape_mode_for_node(node_id, trust);
 }
 
+int
+brpl_trust_parent_allowed(uint16_t node_id)
+{
+  ta_trust_entry_t *e = find_entry(node_id);
+
+  if(e == NULL) {
+    return 1;
+  }
+  if(e->blacklisted) {
+    return 0;
+  }
+
+  /* Exclude any node whose trust has fallen below tau_join.
+   * ID-agnostic: no hardcoded attacker list needed. */
+  if(e->trust < TA_TRUST_TAU_JOIN) {
+    return 0;
+  }
+
+  return 1;
+}
+
 void
 brpl_preferred_parent_changed(uint16_t old_id, uint16_t new_id)
 {
@@ -702,4 +750,27 @@ brpl_preferred_parent_changed(uint16_t old_id, uint16_t new_id)
          (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
          (unsigned)new_id,
          (unsigned long)current_parent_since);
+}
+
+void
+brpl_parent_switch_callback(rpl_parent_t *old_p, rpl_parent_t *new_p)
+{
+  uint16_t old_id = 0xffff;
+  uint16_t new_id = 0xffff;
+
+  if(old_p != NULL) {
+    const linkaddr_t *old_ll = rpl_get_parent_lladdr(old_p);
+    if(old_ll != NULL) {
+      old_id = old_ll->u8[LINKADDR_SIZE - 1];
+    }
+  }
+
+  if(new_p != NULL) {
+    const linkaddr_t *new_ll = rpl_get_parent_lladdr(new_p);
+    if(new_ll != NULL) {
+      new_id = new_ll->u8[LINKADDR_SIZE - 1];
+    }
+  }
+
+  brpl_preferred_parent_changed(old_id, new_id);
 }

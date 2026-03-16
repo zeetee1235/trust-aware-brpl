@@ -93,10 +93,12 @@ blacklist 해제 후 trust는 `tau_join(450)`로 복구되지만,
 **현재 정책:** blacklist 해제 직후 부모 후보는 복귀시키되,
 추가 routing penalty를 `120초` 동안 `1.60 → 1.00`으로 선형 감쇠시킨다.
 또한 현재 preferred parent에는 별도 hysteresis를 유지한다.
+또한 2026-03-17 기준 direct attacker parent는 `trust < tau_join`이면 후보 집합에서 직접 제외된다.
 
 **영향:**
 - release 이후 재하락(redrop)이나 우회 경로 유지가 남을 수 있음
 - 로그 볼륨 증가
+- direct attacker exclusion이 공격자 식별 오류를 만났을 때 정상 parent를 과도하게 배제할 위험이 있음
 
 **완화:** `CSV,TRUST_UNBLACKLIST`, `CSV,TRUST_RECOVERY`, `CSV,TRUST_REDROP`
 로그로 release 직후 60~120초 구간을 별도 분석한다.

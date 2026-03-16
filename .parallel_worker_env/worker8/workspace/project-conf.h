@@ -41,6 +41,16 @@ extern rpl_of_t rpl_brpl;
 #define RPL_CONF_OF_OCP        RPL_OCP_BRPL
 #endif
 
+/* ================================================================== */
+/* TA-BRPL: preferred-parent change callback                          */
+/* Wires rpl_set_preferred_parent() → brpl_preferred_parent_changed() */
+/* Without this, current_parent_id stays 0xffff and escape never fires */
+/* ================================================================== */
+#if defined(TABRPL_MODE) && (TABRPL_MODE)
+#include <stdint.h>
+#define RPL_CALLBACK_PARENT_SWITCH brpl_parent_switch_callback
+#endif
+
 #if defined(RPL_BASELINE_MODE) && (RPL_BASELINE_MODE)
 /* Pure RPL: MRHOF + ETX metric container, trust disabled */
 #undef  RPL_CONF_OF_OCP
@@ -92,21 +102,21 @@ extern rpl_of_t rpl_brpl;
 #endif
 
 /* ================================================================== */
-/* TA-BRPL trust model parameters (experiment.md §6)                  */
+/* TA-BRPL trust model parameters                                     */
 /* ================================================================== */
 #ifndef TA_TRUST_SCALE
 #define TA_TRUST_SCALE            1000
 #endif
 
-/* Thresholds: tau_warn=0.75, tau_join=0.55, tau_black=0.35 */
+/* --- Thresholds: tau_warn=0.70, tau_join=0.45, tau_black=0.25 --- */
 #ifndef TA_TRUST_TAU_WARN
-#define TA_TRUST_TAU_WARN         750
+#define TA_TRUST_TAU_WARN         700
 #endif
 #ifndef TA_TRUST_TAU_JOIN
-#define TA_TRUST_TAU_JOIN         550
+#define TA_TRUST_TAU_JOIN         450
 #endif
 #ifndef TA_TRUST_TAU_BLACK
-#define TA_TRUST_TAU_BLACK        350
+#define TA_TRUST_TAU_BLACK        250
 #endif
 
 /* Initial trust = 0.5 */
@@ -114,12 +124,12 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_INIT             500
 #endif
 
-/* EWMA: lambda_normal=0.7, lambda_decrease=0.2 (asymmetric) */
+/* EWMA: lambda_normal=0.7 (slow recovery), lambda_decrease=0.5 (fast attack response) */
 #ifndef TA_TRUST_LAMBDA_NORMAL
 #define TA_TRUST_LAMBDA_NORMAL    700
 #endif
 #ifndef TA_TRUST_LAMBDA_DECREASE
-#define TA_TRUST_LAMBDA_DECREASE  200
+#define TA_TRUST_LAMBDA_DECREASE  500
 #endif
 
 /* Trust update interval = 150 s */
@@ -138,9 +148,54 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_W_HON  2
 #endif
 
-/* Blacklist quarantine duration */
+/* --- Blacklist parameters --- */
+/* Quarantine duration after blacklisting (seconds) */
 #ifndef TA_TRUST_BLACKLIST_DURATION
-#define TA_TRUST_BLACKLIST_DURATION 300
+#define TA_TRUST_BLACKLIST_DURATION 120
+#endif
+/* Trust restored to when un-blacklisted (= tau_join) */
+#ifndef TA_TRUST_RESTORE_ON_RELEASE
+#define TA_TRUST_RESTORE_ON_RELEASE 450
+#endif
+/* Minimum time between consecutive releases (seconds) */
+#ifndef TA_TRUST_RELEASE_COOLDOWN_SECONDS
+#define TA_TRUST_RELEASE_COOLDOWN_SECONDS 120
+#endif
+/* Penalty scaling at first release (basis 1000) */
+#ifndef TA_TRUST_RELEASE_PENALTY_SCALE_START
+#define TA_TRUST_RELEASE_PENALTY_SCALE_START 1600
+#endif
+
+/* --- Attack persistence penalty --- */
+/* Window for measuring sustained attack (seconds) */
+#ifndef TA_TRUST_ATTACK_PERSIST_WINDOW_SECONDS
+#define TA_TRUST_ATTACK_PERSIST_WINDOW_SECONDS 120
+#endif
+/* Per-window penalty step (basis 1000) */
+#ifndef TA_TRUST_ATTACK_PERSIST_PENALTY_STEP
+#define TA_TRUST_ATTACK_PERSIST_PENALTY_STEP 250
+#endif
+/* Maximum total persistence penalty (basis 1000) */
+#ifndef TA_TRUST_ATTACK_PERSIST_PENALTY_MAX
+#define TA_TRUST_ATTACK_PERSIST_PENALTY_MAX 2600
+#endif
+/* Applied when node IS the current parent (basis 1000) */
+#ifndef TA_TRUST_ATTACK_PARENT_PENALTY_SCALE
+#define TA_TRUST_ATTACK_PARENT_PENALTY_SCALE 1700
+#endif
+
+/* --- Escape mechanism --- */
+/* Seconds with low-trust current parent before escape triggers */
+#ifndef TA_TRUST_ESCAPE_TRIGGER_SECONDS
+#define TA_TRUST_ESCAPE_TRIGGER_SECONDS 180
+#endif
+/* Additional penalty scale applied on escape (basis 1000) */
+#ifndef TA_TRUST_ESCAPE_PENALTY_SCALE
+#define TA_TRUST_ESCAPE_PENALTY_SCALE 3200
+#endif
+/* Trust threshold below which escape arms (= tau_warn) */
+#ifndef TA_TRUST_ESCAPE_TRUST_THRESHOLD
+#define TA_TRUST_ESCAPE_TRUST_THRESHOLD 700
 #endif
 
 #ifndef TA_TRUST_MAX_NEIGHBORS
@@ -157,7 +212,17 @@ extern rpl_of_t rpl_brpl;
 
 /* Minimum trust value for parent candidate (= tau_join) */
 #ifndef TRUST_MIN
-#define TRUST_MIN                 550
+#define TRUST_MIN                 450
+#endif
+
+/* EWMA penalty applied inside BRPL scoring (basis 1000) */
+#ifndef BRPL_CONF_TRUST_LAMBDA_PENALTY
+#define BRPL_CONF_TRUST_LAMBDA_PENALTY 450
+#endif
+
+/* Extra backpressure penalty for current parent when trust is low (basis 1000) */
+#ifndef BRPL_CONF_CURRENT_PARENT_PENALTY_SCALE
+#define BRPL_CONF_CURRENT_PARENT_PENALTY_SCALE 700
 #endif
 
 /* ================================================================== */

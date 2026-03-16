@@ -260,12 +260,12 @@ blacklist 해제 이후 recovery 구간의 과도한 route 재평가를 줄였�
 - [ ] PDR/delay/trust trace CSV 생성됨
 - [ ] 4개 프로토콜 간 PDR 차이가 예상과 일치하는지 확인
 
-### 기대 결과 (정성적)
+### 현재 결과 (2026-03-17 전체 30-seed 기준)
 
 ```
-공격 하 PDR 순서: TA-BRPL > BRPL ≈ SMTrust > RPL
-공격 탐지 속도:   TA-BRPL > SMTrust > BRPL(없음) > RPL(없음)
-E2E 지연 공격 후: TA-BRPL ≈ BRPL < RPL < SMTrust (예상)
+PDR during:   TA-BRPL(0.9078) > RPL(0.8759) > SMTrust(0.8701) > BRPL(0.8510)
+PDR recovery: TA-BRPL(0.9594) > RPL(0.8754) > SMTrust(0.8649) > BRPL(0.8399)
+Exposure:     TA-BRPL during/recovery = 0.0677 / 0.0841
 ```
 
 ---
@@ -274,10 +274,10 @@ E2E 지연 공격 후: TA-BRPL ≈ BRPL < RPL < SMTrust (예상)
 
 | 실험 | 우선순위 | 구현 필요 | 완료 |
 |---|---|---|---|
-| V1. 단일 공격자 미니 토폴로지 | ★★★★★ | 미니 CSC 파일 생성 | ⬜ |
-| V2. 오탐 실험 | ★★★★★ | 공격자 없는 시나리오 | ⬜ |
-| V3. 혼잡 vs 공격 분리 | ★★★★★ | C1~C4 시나리오 CSC | ⬜ |
+| V1. 단일 공격자 미니 토폴로지 | ★★★★★ | `configs/scenarios/MINI_V1_TABRPL.csc` | ✅ |
+| V2. 오탐 실험 | ★★★★★ | `GRID6x6_{RPL,BRPL,TABRPL}_NOATTACK.csc` | ✅ |
+| V3. 혼잡 vs 공격 분리 | ★★★★★ | `GRID6x6_V3_C{1-4}_TABRPL.csc` + `Makefile.tabrpl_nocongestion` | ✅ |
 | V4. T_ctrl 독립 검증 | ★★★☆ | sinkhole 시나리오 확장 필요 | ⬜ |
-| V5. EWMA 민감도 | ★★★☆ | CFLAGS 파라미터 변경만 | ⬜ |
-| V6. 임계값 민감도 | ★★★☆ | CFLAGS 파라미터 변경만 | ⬜ |
+| V5. EWMA 민감도 | ★★★☆ | `Makefile.tabrpl_lambda_{fast,slow,fast_recovery,slow_recovery}` + 4개 CSC | ✅ |
+| V6. 임계값 민감도 | ★★★☆ | `Makefile.tabrpl_thresh_{strict,relaxed,joinlow}` + 3개 CSC | ✅ |
 | V7. Pilot 5 seeds | ★★★★ | run_sweep.sh 준비됨 | ⬜ |

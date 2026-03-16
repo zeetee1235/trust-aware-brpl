@@ -225,6 +225,7 @@ static void
 detect_rank_attack(smtrust_entry_t *e, uint16_t new_rank, uint8_t new_seq)
 {
   rpl_dag_t *dag = rpl_get_any_dag();
+  int attack = 0;
 
   if(!e->dio_seq_seen) {
     e->prev_rank    = new_rank;
@@ -233,19 +234,37 @@ detect_rank_attack(smtrust_entry_t *e, uint16_t new_rank, uint8_t new_seq)
     return;
   }
 
-  /* Contiki's DIO version is a DODAG-wide counter, not a per-neighbour
-   * sequence number, so natural rank updates with the same version are
-   * common. The previous heuristic falsely marked most stable parents as
-   * attackers and collapsed the network. We only flag physically
-   * impossible advertisements here: a non-root claiming rank below the
-   * root's own minimum rank. */
-  if(dag != NULL && dag->instance != NULL &&
-     new_rank != 0 && new_rank < dag->instance->min_hoprankinc) {
+  if(dag != NULL && dag->instance != NULL && new_rank != 0) {
+    uint16_t min_inc = dag->instance->min_hoprankinc;
+
+    /* Case 1: blatant sinkhole — rank below root level */
+    if(new_rank < min_inc) {
+      attack = 1;
+    }
+
+    /* Case 2: significant rank decrease without DODAG version change.
+     *
+     * Per the SMTrust paper: a rank change that is not accompanied by a
+     * DODAG version bump (here: the RPL Version field in the DIO, used as
+     * a sequence proxy) is suspicious.  We apply a threshold of half a hop
+     * increment so that small natural ETX improvements are not flagged,
+     * while a sinkhole spoofing a much lower rank (e.g. 512 → 257) is.
+     *
+     * Threshold = min_hoprankinc / 2  (typically 128 with default RPL). */
+    if(!attack && new_rank < e->prev_rank &&
+       (uint32_t)(e->prev_rank - new_rank) > (uint32_t)(min_inc / 2) &&
+       new_seq == e->prev_dio_seq) {
+      attack = 1;
+    }
+  }
+
+  if(attack && !e->is_suspicious) {
     e->is_suspicious = 1;
-    printf("CSV,SMTRUST_RANK_ATTACK,%u,%u,%u\n",
+    printf("CSV,SMTRUST_RANK_ATTACK,%u,%u,%u,%u\n",
            (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
            (unsigned)e->node_id,
-           (unsigned)new_rank);
+           (unsigned)new_rank,
+           (unsigned)e->prev_rank);
     if(e->node_id == preferred_parent_id()) {
       trigger_reevaluation("rank", e->node_id);
     }
@@ -432,13 +451,18 @@ smtrust_periodic_update(void)
            e->trust_index,
            e->is_suspicious ? "SUSP" : "OK");
 
-    /* Reset per-window counters */
-    e->pkts_sent     = 0;
-    e->pkts_observed = 0;
-    e->rssi_sum      = 0;
-    e->rssi_count    = 0;
-    e->tmrt_sum      = 0.0;
-    e->tmrt_count    = 0;
+    /* Halving decay instead of hard reset.
+     * Same rationale as ta-brpl-trust.c: zeroing pkts_sent each window
+     * means non-parent neighbours always show pkts_sent=0, preventing
+     * TMSR from ever dropping below the SUCCESS_THRESHOLD and blocking
+     * blackhole detection for nodes that are not the current parent.
+     * Halving preserves historical signal with exponential forgetting. */
+    e->pkts_sent     = e->pkts_sent     >> 1;
+    e->pkts_observed = e->pkts_observed >> 1;
+    e->rssi_sum      = e->rssi_sum      / 2;
+    e->rssi_count    = e->rssi_count    >> 1;
+    e->tmrt_sum      = e->tmrt_sum      / 2.0;
+    e->tmrt_count    = e->tmrt_count    >> 1;
   }
 }
 
@@ -468,7 +492,7 @@ smtrust_is_parent_candidate(uint16_t node_id)
   smtrust_entry_t *e = find_entry(node_id);
   if(e == NULL) return 1; /* unknown → optimistic */
   if(e->is_suspicious) return 0;
-  return e->trust_index >= SMTRUST_THRESHOLD;
+  return smtrust_level(node_id) >= SMTRUST_L3_FAIR;
 }
 
 void
@@ -548,22 +572,23 @@ smtrust_compare_parents(uint16_t p1_id, uint16_t p2_id,
     return p1_rank_ok ? -1 : 1;
   }
 
-  /* Let MRHOF dominate when route quality is clearly different. */
+  /* Paper intent: use t4/t5 whenever available, and consider t3 only
+   * when no better trust class exists. Enforce that before metric-based
+   * tie-breaking. */
+  if(l1 >= SMTRUST_L4_GOOD && l2 == SMTRUST_L3_FAIR) {
+    return -1;
+  }
+  if(l2 >= SMTRUST_L4_GOOD && l1 == SMTRUST_L3_FAIR) {
+    return 1;
+  }
+
+  /* Let MRHOF dominate when route quality is clearly different inside
+   * the same trust class bucket. */
   if(metric_gap > SMTRUST_METRIC_NEAR_TIE) {
     return 0;
   }
 
-  /* Only near-ties are reordered by trust. Prefer a clearly higher
-   * trust level among otherwise similar candidates. */
-  if(l1 >= SMTRUST_L4_GOOD && l2 <= SMTRUST_L3_FAIR &&
-     t1 >= t2 + strong_gap) {
-    return -1;
-  }
-  if(l2 >= SMTRUST_L4_GOOD && l1 <= SMTRUST_L3_FAIR &&
-     t2 >= t1 + strong_gap) {
-    return 1;
-  }
-
+  /* Inside the same admissible class, trust can break near-ties. */
   if(l1 != l2 && trust_gap >= strong_gap) {
     return l1 > l2 ? -1 : 1;
   }

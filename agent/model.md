@@ -222,14 +222,20 @@ $$
 
 기하 평균을 사용하면 특정 요소가 크게 낮은 경우 전체 신뢰 값이 크게 감소하여 악성 행동을 효과적으로 반영할 수 있다.
 
-실제 라우팅 통합 시에는 위 집계값을 그대로 hard filter에 넣지 않고, BRPL 비용 함수의 additive penalty로 반영한다. 이때 현재 구현은 다음 원칙을 따른다.
+실제 라우팅 통합 시에는 위 집계값을 BRPL 비용 함수의 trust penalty로 반영한다. 현재 구현은 다음 원칙을 따른다.
 
 - `T >= tau_join`: 정상 또는 경고 상태, 경로 비용만 약하게 보정
 - `tau_black <= T < tau_join`: suspect 상태, 더 큰 penalty 적용
 - `T < tau_black`: quarantine 대상으로 간주
 - quarantine 해제 직후: trust는 `tau_join` 수준으로 복귀하지만, routing penalty는 즉시 제거하지 않고 점진적으로 감소
 - direct attacker parent: trust penalty에 role penalty와 persistence penalty를 추가
+- direct attacker parent + `T < tau_join`: BRPL 후보 집합에서 직접 제외
 - escape mode: 장시간 attacker parent 고착 시 current-parent hysteresis를 꺼서 sticky routing을 깨뜨림
+
+중요한 구현 변경:
+
+- 2026-03-17 기준 `TABRPL`은 BRPL scoring 경로에서 `TRUST_MIN` 하한 클램프를 사용하지 않는다.
+- 즉 `brpl_trust_get()`이 반환한 실제 trust 값이 그대로 비용 함수에 들어가며, attacker trust가 `300`대까지 떨어졌을 때도 penalty가 충분히 커진다.
 
 ---
 
@@ -385,5 +391,48 @@ $$
     
 
 모든 계산은 단순 산술 연산으로 구성되어 IoT 환경에서도 적용 가능하다.
+
+---
+
+## 실험 결과: 신뢰 수렴 효과 (Trust Convergence Effect)
+
+**30-seed 분석 결과 (2026-03-17)**
+
+TA-BRPL의 회복기 PDR(0.959)이 공격기 PDR(0.908)보다 유의하게 높은 현상의
+원인 — 29/30 시드에서 관찰, 평균 이득 +5.2%p.
+
+**수렴 메커니즘:**
+
+```
+공격 시작 (350 s)
+  │
+  ├─ [350-500 s] 첫 번째 trust window (150 s)
+  │   - 공격자 EWMA: ~550 (tau_warn=700 미만, tau_join=450 이상)
+  │   - BRPL 비용 패널티 활성화 → 라우팅 부분 우회 시작
+  │
+  ├─ [500-650 s] 두 번째 trust window
+  │   - halving decay 누적: 불포워딩 증거 가중치 상승
+  │   - tau_join(450) 미만 노드 증가 → 부모 후보 직접 제외
+  │   - PDR 개선 가속
+  │
+  └─ [650-900 s] 회복기
+      - 신뢰 모델 수렴 완료, 공격자 우회 경로 확립
+      - PDR = 0.959 (공격기 0.908 대비 +5.2%p, p<0.001)
+```
+
+**논문 기술 방향 (Results/Discussion 섹션):**
+
+> TA-BRPL exhibits a trust convergence effect: the recovery-phase PDR
+> (0.959 ± 0.013) significantly exceeds the during-attack PDR (0.908 ± 0.032),
+> observed in 29 of 30 seeds (mean gain +5.2 pp, Wilcoxon p < 0.001).
+> This arises because the 150-second EWMA window imposes a detection latency:
+> the first window after attack onset (350–500 s) reduces attacker trust but
+> does not yet trigger exclusion; the second window (500–650 s) accumulates
+> sufficient halving-decayed evidence to push attacker trust below tau_join,
+> enabling direct candidate exclusion. By the recovery phase, the trust model
+> has converged and routing fully avoids the attackers — even though the
+> attackers continue operating. We characterise this as "delayed detection,
+> persistent avoidance": a conservative property appropriate for
+> low-power IoT environments where false positive exclusions are costly.
 
 ---

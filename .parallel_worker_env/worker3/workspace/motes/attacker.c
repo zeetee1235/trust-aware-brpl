@@ -66,6 +66,13 @@ static uint32_t fwd_total;
 static uint32_t fwd_udp_root;
 static uint32_t fwd_dropped;
 
+void
+brpl_parent_switch_callback(rpl_parent_t *old_p, rpl_parent_t *new_p)
+{
+  (void)old_p;
+  (void)new_p;
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */

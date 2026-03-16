@@ -230,6 +230,13 @@ int ta_trust_is_parent_candidate(uint16_t node_id);
  */
 void ta_trust_log_all(void);
 
+/**
+ * RPL parent-switch callback wired through project-conf.h.
+ */
+struct rpl_parent;
+void brpl_parent_switch_callback(struct rpl_parent *old_p,
+                                 struct rpl_parent *new_p);
+
 /*
  * Overrides the __attribute__((weak)) brpl_trust_get() symbol in rpl-brpl.c.
  * The BRPL objective function calls this to obtain trust for parent scoring.
@@ -247,5 +254,11 @@ uint16_t brpl_penalty_scale_get(uint16_t node_id);
  * receive preferred-parent hysteresis.
  */
 int brpl_escape_mode_get(uint16_t node_id);
+
+/*
+ * Returns 0 when a direct attacker parent should be excluded from the
+ * BRPL candidate set rather than merely penalised.
+ */
+int brpl_trust_parent_allowed(uint16_t node_id);
 
 #endif /* TA_BRPL_TRUST_H_ */

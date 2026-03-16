@@ -9,7 +9,7 @@ python3 scripts/parse_results.py
 
 echo ""
 echo "=== Generating figures ==="
-python3 scripts/plot_figures.py
+Rscript scripts/plot_main_figures.R
 
 echo ""
 echo "=== Statistical analysis ==="

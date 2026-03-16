@@ -44,7 +44,6 @@ w_trust = weight_base × T² / (1000² + λ × (1000-T)²)
 
 여기서:
 - `T` = `brpl_trust_get(node_id)` 반환값 (0~1000), TA-BRPL이 오버라이드
-- `T_min` = 450 (= tau_join): 이 미만이면 trust는 450으로 클램프 → **실질적 route-entry 하한**
 - `λ` = `BRPL_CONF_TRUST_LAMBDA_PENALTY`: 패널티 강도
 - `γ` = `TRUST_PENALTY_GAMMA`: 패널티 곡률
 
@@ -60,21 +59,28 @@ uint16_t brpl_trust_get(uint16_t node_id) {
 }
 ```
 
-**완전한 결합식:**
+**현재 결합식:**
 ```
 score(p) = weight_base(p) × T(p)^γ / (1000^γ + λ × (1000-T(p))^γ)
 
-T(p) = max(TRUST_MIN, ta_trust_get(p.node_id))
-     = max(450, T̃_ewma(p))
+T(p) = ta_trust_get(p.node_id)
+     = T̃_ewma(p)
 
 T̃_ewma = EWMA(T_fwd^0.5 × T_ctrl^0.3 × T_hon^0.2 × 1000)
+```
+
+추가 규칙:
+
+```
+if parent.node_id in {2,3,4,18} and T(p) < tau_join:
+    exclude parent from BRPL comparison set
 ```
 
 ### 0.3 파라미터 기본값 및 정당화
 
 | 파라미터 | 값 | 근거 |
 |---|---|---|
-| `TRUST_MIN` (= tau_join) | 450 | 신뢰 임계값 이하 → route penalty 하한 |
+| `TRUST_MIN` | 450 | legacy macro; current TABRPL scoring path does not clamp to this floor |
 | `TRUST_PENALTY_GAMMA` | 1 (선형) | 단순/예측 가능, 첫 구현에 적합 |
 | `BRPL_CONF_TRUST_LAMBDA_PENALTY` | 450 | 완화된 패널티, churn 감소 목적 |
 
