@@ -1,46 +1,78 @@
-## TA-BRPL (Trust Aware Backpressure RPL)
+# TA-BRPL
 
-(Contiki-NG/Cooja)
-RPL/BRPL 기반 LLN에서 **신뢰(Trust) 기반 패널티를 backpressure 메트릭에 통합**해 routing 공격(Selective Forwarding/Grayhole, Sinkhole)에 대한 복원력을 평가하는 실험용 저장소입니다.
+Reference repository for evaluating `TA-BRPL` against `RPL`, `BRPL`, and `SMTRUST` in Contiki-NG/Cooja under a combined `blackhole + sinkhole` attack setting.
 
-### 핵심 아이디어
-- **행동 신뢰(Grayhole trust)**와 **제어면 신뢰(Sinkhole trust)**를 계산
-- 이를 BRPL 메트릭에 패널티로 반영하여 **부모 선택/포워딩**을 제어
+## Overview
 
-### Trust 계산 수식
-- Grayhole trust (베타 추정 + EWMA)
+- Topology: `6 x 6` grid
+- Protocols: `RPL`, `BRPL`, `SMTRUST`, `TABRPL`
+- Attack setting: `3` blackholes + `1` sinkhole
+- Seeds: `30`
+- Main outputs: parsed CSV summaries and publication-style PDF figures
 
-![Grayhole trust](figures/equations/eq_grayhole.svg)
+## Reproducibility
 
-- Sinkhole trust (rank 불일치 + 안정성)
+Run the full sweep:
 
-![Sinkhole trust](figures/equations/eq_sinkhole.svg)
+```bash
+./scripts/run_sweep.sh --jobs 8 --rerun
+```
 
-- Total trust 결합
+Parse the logs:
 
-![Total trust](figures/equations/eq_total.svg)
+```bash
+python3 scripts/parse_results.py
+```
 
-- Trust-aware BRPL 메트릭
+Generate the figures:
 
-![Trust-aware BRPL](figures/equations/eq_bp.svg)
+```bash
+Rscript scripts/plot_main_figures.R
+```
 
-### 공격 모드
-- `ATTACK_MODE=0`: Selective Forwarding (Grayhole)
-- `ATTACK_MODE=1`: Sinkhole (rank manipulation)
-- `ATTACK_MODE=2`: Combined (sinkhole + selective)
+For a short sanity check:
 
-### 실행 방법
-- 전체 스윕: `./scripts/run_experiments.sh`
-- 빠른 미리보기: `QUICK_PREVIEW=1 ./scripts/run_experiments.sh`
-- 단일 검증: `TOPOLOGY=configs/topologies/GRID_L.csc ./scripts/single_test.sh`
-- 특정 토폴로지만: `TOPOLOGIES="configs/topologies/CLUSTER_S.csc configs/topologies/GRID_L.csc" ./scripts/run_experiments.sh`
+```bash
+./scripts/run_sweep.sh --protocols RPL,SMTRUST --seeds 1-5 --jobs 4 --rerun
+python3 scripts/parse_results.py
+```
 
-### 결과 파일
-각 run 디렉토리에는 아래 파일이 생성됩니다.
-- `COOJA.testlog`
-- `exposure.csv` / `parent_switch.csv` / `stats.csv` / `trust_final.log`
+## Repository Layout
 
-### 토폴로지/파라미터 참고
-- 토폴로지: `configs/topologies/*.csc`
-- 상세 실험 메모: `docs/paper_base/memo.md`
-- 토폴로지 규칙/좌표: `docs/paper_base/topology.md`
+- [configs/scenarios](/home/dev/TA-BRPL/configs/scenarios): Cooja scenarios
+- [motes](/home/dev/TA-BRPL/motes): sender, receiver, attacker, and trust logic
+- [scripts/run_sweep.sh](/home/dev/TA-BRPL/scripts/run_sweep.sh): queued parallel sweep runner
+- [scripts/parse_results.py](/home/dev/TA-BRPL/scripts/parse_results.py): log parser
+- [scripts/plot_main_figures.R](/home/dev/TA-BRPL/scripts/plot_main_figures.R): main paper figures
+- [results](/home/dev/TA-BRPL/results): parsed result tables
+- [figures](/home/dev/TA-BRPL/figures): rendered figures
+
+## Main Result Files
+
+- [pdr_summary.csv](/home/dev/TA-BRPL/results/pdr_summary.csv)
+- [delay_summary.csv](/home/dev/TA-BRPL/results/delay_summary.csv)
+- [trust_trace.csv](/home/dev/TA-BRPL/results/trust_trace.csv)
+- [parent_churn.csv](/home/dev/TA-BRPL/results/parent_churn.csv)
+- [route_trace.csv](/home/dev/TA-BRPL/results/route_trace.csv)
+
+## Main Figures
+
+- `fig1_pdr_distribution.pdf`
+- `fig2_resilience_summary.pdf`
+- `fig3_attack_tradeoff.pdf`
+- `fig4_route_exposure_timeseries.pdf`
+- `fig5_tabrpl_trust_adversaries.pdf`
+- `fig6_churn_hotspots.pdf`
+
+## Notes
+
+- Attack start time: `350 s`
+- Default workflow: `run_sweep -> parse_results -> plot_main_figures`
+- The repository currently reflects the combined-attack experimental setup used in the paper workflow
+
+## Documentation
+
+- [agent/experiment.md](/home/dev/TA-BRPL/agent/experiment.md)
+- [agent/model.md](/home/dev/TA-BRPL/agent/model.md)
+- [agent/SMTrust.md](/home/dev/TA-BRPL/agent/SMTrust.md)
+- [docs/ARCHITECTURE.md](/home/dev/TA-BRPL/docs/ARCHITECTURE.md)

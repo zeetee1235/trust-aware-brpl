@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>de.sciss</groupId>
+    <artifactId>syntaxpane</artifactId>
+    <packaging>jar</packaging>
+    <description>An extension of Java Swing's JEditorKit that supports syntax highlighting for several languages.</description>
+    <url>https://codeberg.org/sciss/SyntaxPane</url>
+    <version>1.3.0</version>
+    <licenses>
+        <license>
+            <name>Apache 2.0 License</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <name>SyntaxPane</name>
+    <organization>
+        <name>de.sciss</name>
+        <url>https://codeberg.org/sciss/SyntaxPane</url>
+    </organization>
+    <scm>
+        <url>https://codeberg.org/sciss/SyntaxPane</url>
+        <connection>scm:git@codeberg.org:sciss/SyntaxPane.git</connection>
+    </scm>
+    <developers>
+        <developer>
+            <id>sciss</id>
+            <name>Hanns Holger Rutz</name>
+            <url>https://www.sciss.de</url>
+            <email>contact@sciss.de</email>
+        </developer>
+    </developers>
+    <properties>
+        <info.versionScheme>pvp</info.versionScheme>
+    </properties>
+</project>

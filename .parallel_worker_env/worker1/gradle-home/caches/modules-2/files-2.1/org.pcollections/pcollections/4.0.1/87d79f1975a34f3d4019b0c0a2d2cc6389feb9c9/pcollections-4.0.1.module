@@ -1,0 +1,100 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.pcollections",
+    "module": "pcollections",
+    "version": "4.0.1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.5.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "pcollections-4.0.1.jar",
+          "url": "pcollections-4.0.1.jar",
+          "size": 73684,
+          "sha512": "7f69aaf59c15a5869f328ceb1c7a4ce1ee6d2516492bb8086590520ea1a7f9e8bced544bcd110a8cd0171ea364e217de9d978473d5afb0ea465a3c7b18b29537",
+          "sha256": "1f82766d7c3221930854033bebff5073ea46b43f27326074bbe15d148c18bfb3",
+          "sha1": "059f3bf5fb28c5f5386804dcf129267416b75d7c",
+          "md5": "154284a86ee0f4ef02cb00dfcb81ce2d"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "pcollections-4.0.1.jar",
+          "url": "pcollections-4.0.1.jar",
+          "size": 73684,
+          "sha512": "7f69aaf59c15a5869f328ceb1c7a4ce1ee6d2516492bb8086590520ea1a7f9e8bced544bcd110a8cd0171ea364e217de9d978473d5afb0ea465a3c7b18b29537",
+          "sha256": "1f82766d7c3221930854033bebff5073ea46b43f27326074bbe15d148c18bfb3",
+          "sha1": "059f3bf5fb28c5f5386804dcf129267416b75d7c",
+          "md5": "154284a86ee0f4ef02cb00dfcb81ce2d"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "pcollections-4.0.1-sources.jar",
+          "url": "pcollections-4.0.1-sources.jar",
+          "size": 51852,
+          "sha512": "02e1cfe383cccb667595d77f6b4fae2319499b0367a564dfdde6d6fa785be6ea6add5d9ec30692c5fa5968c4b035455f0fec5a76b73f5f5957631641479b688e",
+          "sha256": "0e08c0d3264ba4c2e64bbaf2f06d540918851950b9b1e2ff3aec29adad9a3498",
+          "sha1": "191af40ac9428742a792916390fd20408b52ef93",
+          "md5": "aee26b9c6f872b50e9d0facaa8ccfc64"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "pcollections-4.0.1-javadoc.jar",
+          "url": "pcollections-4.0.1-javadoc.jar",
+          "size": 272472,
+          "sha512": "ee91056328c5fd888f15a9d88ff34f3c06547a9c2f2514da956486363bba968480119951e811f14a85e8be530974a952dd2caf9ae8c0279a2a75b932ee4152ff",
+          "sha256": "bde420e44cafebf8c95a5cbebccb25b397d1d00690b86a159e37d3df96be24ff",
+          "sha1": "e4fd0a7889528cc45d44eea3c64ca451f54abe2f",
+          "md5": "3278b5cc2299699df2d44d3d4cad2062"
+        }
+      ]
+    }
+  ]
+}

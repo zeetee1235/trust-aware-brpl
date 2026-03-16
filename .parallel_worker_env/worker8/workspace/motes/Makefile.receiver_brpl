@@ -1,0 +1,14 @@
+# Makefile.receiver_brpl
+# RPL root compiled with BRPL OCP — for use with BRPL and TABRPL sender variants
+
+CONTIKI_PROJECT = receiver_root
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
+include $(CONTIKI)/Makefile.include

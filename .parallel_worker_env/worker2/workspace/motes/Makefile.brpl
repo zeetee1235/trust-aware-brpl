@@ -1,0 +1,15 @@
+# Makefile.brpl
+# BRPL: Backpressure RPL with congestion-aware parent selection, no trust
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=0
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
+include $(CONTIKI)/Makefile.include

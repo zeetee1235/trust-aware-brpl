@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <!-- This module was also published with a richer model, Gradle metadata,  -->
+  <!-- which should be used instead. Do not delete the following line which  -->
+  <!-- is to indicate to Gradle or any Gradle module metadata file consumer  -->
+  <!-- that they should prefer consuming it instead. -->
+  <!-- do_not_remove: published-with-gradle-metadata -->
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>net.ltgt.gradle</groupId>
+  <artifactId>gradle-errorprone-plugin</artifactId>
+  <version>4.3.0</version>
+  <name>Gradle error-prone plugin</name>
+  <description>Gradle plugin to use the error-prone compiler for Java</description>
+  <url>https://github.com/tbroyer/gradle-errorprone-plugin</url>
+  <licenses>
+    <license>
+      <name>Apache-2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Thomas Broyer</name>
+      <email>t.broyer@ltgt.net</email>
+    </developer>
+  </developers>
+  <scm>
+    <connection>https://github.com/tbroyer/gradle-errorprone-plugin.git</connection>
+    <developerConnection>scm:git:ssh://github.com:tbroyer/gradle-errorprone-plugin.git</developerConnection>
+    <url>https://github.com/tbroyer/gradle-errorprone-plugin</url>
+  </scm>
+</project>

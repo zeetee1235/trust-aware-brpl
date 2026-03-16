@@ -1,0 +1,14 @@
+# Makefile.nobuild — copies a pre-built .cooja binary to the LIBNAME path
+# that Cooja injected as an environment variable.
+#
+# Usage (from Cooja <commands>):
+#   make -f Makefile.nobuild nobuild SRC=build/cooja/PROTO_sender.cooja
+#
+# Cooja sets: LIBNAME=$(BUILD_DIR_BOARD)/mtype<hash>.cooja
+# make expands $(BUILD_DIR_BOARD) → build/cooja  →  build/cooja/mtype<hash>.cooja
+
+BUILD_DIR_BOARD ?= build/cooja
+
+nobuild:
+	mkdir -p $(BUILD_DIR_BOARD)
+	cp $(SRC) $(LIBNAME)

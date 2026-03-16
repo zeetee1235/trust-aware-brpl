@@ -1,0 +1,14 @@
+# Makefile.rpl
+# Pure RPL baseline (MRHOF, ETX metric, no BRPL, no trust)
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DRPL_BASELINE_MODE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
+include $(CONTIKI)/Makefile.include

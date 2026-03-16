@@ -1,0 +1,21 @@
+# Makefile.smtrust
+# SMTrust: Social-metric Trust model on top of RPL (MRHOF)
+#   - Pure RPL parent selection with trust-based filtering
+#   - TrustIndex = w1·TMSR + w2·TM(H0) + w3·TMEL + w4·TMLLS + w5·TMMobility + w6·TMRT
+#   - Rank attack + blackhole detection
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += smtrust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DSMTRUST_MODE=1
+CFLAGS += -DRPL_BASELINE_MODE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include
