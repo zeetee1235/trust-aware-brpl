@@ -24,6 +24,18 @@ results/
 *.csv
 *.log
 
+# Parallel worker and simulation temp artifacts
+.parallel_worker_env/
+configs/temp_*.csc
+configs/scenarios/tmp_*.csc
+
+# Local build/cache outputs
+motes/build/
+.gradle/
+gradle-home/
+tmp/
+workspace/
+
 # IDE
 .vscode/
 .idea/
