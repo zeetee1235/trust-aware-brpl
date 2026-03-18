@@ -124,28 +124,63 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_INIT             500
 #endif
 
-/* EWMA: lambda_normal=0.7 (slow recovery), lambda_decrease=0.5 (fast attack response) */
+/* EWMA: lambda_normal=0.7 (slow recovery), lambda_decrease=0.2 (fast attack response) */
 #ifndef TA_TRUST_LAMBDA_NORMAL
 #define TA_TRUST_LAMBDA_NORMAL    700
 #endif
 #ifndef TA_TRUST_LAMBDA_DECREASE
-#define TA_TRUST_LAMBDA_DECREASE  500
+#define TA_TRUST_LAMBDA_DECREASE  200
 #endif
 
-/* Trust update interval = 150 s */
+/* Trust update interval = 60 s */
 #ifndef TA_TRUST_UPDATE_INTERVAL
-#define TA_TRUST_UPDATE_INTERVAL  150
+#define TA_TRUST_UPDATE_INTERVAL  60
 #endif
 
-/* Aggregation weights: T_fwd=50%, T_ctrl=30%, T_hon=20% */
+/* ETX-based PRR estimation clamps for T_fwd (per-mille scale). */
+#ifndef TA_PRR_MIN
+#define TA_PRR_MIN               100
+#endif
+#ifndef TA_PRR_BLEND_WEIGHT
+#define TA_PRR_BLEND_WEIGHT      1000
+#endif
+#ifndef TA_PRR_MAX
+#define TA_PRR_MAX               1000
+#endif
+#ifndef TA_PRR_FALLBACK
+#define TA_PRR_FALLBACK          1000
+#endif
+#ifndef TA_TFWD_SHARPEN_SCALE
+#define TA_TFWD_SHARPEN_SCALE    1000
+#endif
+#ifndef TA_TRUST_RELATIVE_FILTER_ENABLE
+#define TA_TRUST_RELATIVE_FILTER_ENABLE 0
+#endif
+#ifndef TA_TRUST_RELATIVE_PENALTY_ENABLE
+#define TA_TRUST_RELATIVE_PENALTY_ENABLE 0
+#endif
+#ifndef TA_TRUST_REL_MARGIN
+#define TA_TRUST_REL_MARGIN      25
+#endif
+#ifndef TA_TRUST_REL_PENALTY_SCALE
+#define TA_TRUST_REL_PENALTY_SCALE 1000
+#endif
+#ifndef TA_TRUST_REL_MAX_SOFT_PENALTY
+#define TA_TRUST_REL_MAX_SOFT_PENALTY 400
+#endif
+
+/* Aggregation weights: T_fwd=70%, T_ctrl=20%, T_hon=10% (sum=10).
+ * Higher T_fwd weight ensures T_agg(t_fwd=0.25) = 0.25^0.7 = 0.379
+ * remains below tau_join=0.45, stopping trust oscillation after
+ * attacker exclusion even when per-window T_fwd_ewma is preserved. */
 #ifndef TA_TRUST_W_FWD
-#define TA_TRUST_W_FWD  5
+#define TA_TRUST_W_FWD  7
 #endif
 #ifndef TA_TRUST_W_CTRL
-#define TA_TRUST_W_CTRL 3
+#define TA_TRUST_W_CTRL 2
 #endif
 #ifndef TA_TRUST_W_HON
-#define TA_TRUST_W_HON  2
+#define TA_TRUST_W_HON  1
 #endif
 
 /* --- Blacklist parameters --- */
@@ -196,6 +231,38 @@ extern rpl_of_t rpl_brpl;
 /* Trust threshold below which escape arms (= tau_warn) */
 #ifndef TA_TRUST_ESCAPE_TRUST_THRESHOLD
 #define TA_TRUST_ESCAPE_TRUST_THRESHOLD 700
+#endif
+#ifndef TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES
+#define TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES 1
+#endif
+#ifndef TA_TRUST_ESCAPE_COOLDOWN_SECONDS
+#define TA_TRUST_ESCAPE_COOLDOWN_SECONDS 0
+#endif
+#ifndef TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT
+#define TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_PATH_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_PATH_MARGIN 0
+#endif
+#ifndef TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD
+#define TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD 450
+#endif
+#ifndef TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD
+#define TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD 850
+#endif
+/* Minimum consecutive below-tau_join updates before parent exclusion.
+ * 120 s → 2 update windows minimum.  Honest nodes with a transient
+ * bad window recover before reaching this count (below_join resets on
+ * any window where trust >= tau_join).  Attackers are persistent, so
+ * they reach the threshold after ~3 windows (180 s) from attack start. */
+#ifndef TA_TRUST_JOIN_MIN_DURATION_SECONDS
+#define TA_TRUST_JOIN_MIN_DURATION_SECONDS 120
+#endif
+#ifndef TA_TRUST_BLACK_MIN_DURATION_SECONDS
+#define TA_TRUST_BLACK_MIN_DURATION_SECONDS 120
 #endif
 
 #ifndef TA_TRUST_MAX_NEIGHBORS

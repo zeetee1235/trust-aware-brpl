@@ -1,0 +1,21 @@
+# Makefile.tabrpl_loss80
+# TA-BRPL build for 20% radio link loss experiments.
+#   T_fwd now estimates PRR dynamically from Contiki-NG link-stats ETX,
+#   so no fixed compile-time PRR override is required.
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

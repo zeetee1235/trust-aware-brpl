@@ -67,6 +67,34 @@
 #define TA_TRUST_FWD_BETA    1
 #endif
 
+/* PRR estimation clamps for ETX-based T_fwd normalisation.
+ * PRR is estimated from link-stats as LINK_STATS_ETX_DIVISOR / etx_raw
+ * and then clamped to [TA_PRR_MIN, TA_PRR_FALLBACK]. */
+#ifndef TA_PRR_MIN
+#define TA_PRR_MIN            100
+#endif
+#ifndef TA_PRR_BLEND_WEIGHT
+#define TA_PRR_BLEND_WEIGHT   1000
+#endif
+#ifndef TA_PRR_FALLBACK
+#define TA_PRR_FALLBACK       1000
+#endif
+
+/* When set above 1000, spread T_fwd away from the neutral 0.5 point.
+ * This helps small forwarding differences remain visible in high-loss
+ * regimes where both attackers and normal nodes cluster near 500. */
+#ifndef TA_TFWD_SHARPEN_SCALE
+#define TA_TFWD_SHARPEN_SCALE 1000
+#endif
+
+/* Minimum fwd_sent count to consider T_fwd evidence "fresh".
+ * When fwd_sent < this threshold (counters are mostly halvings of old
+ * data with no new sends), T_fwd uses MIN(stale_compute, cached_prev)
+ * to prevent artificial trust recovery for nodes not currently used. */
+#ifndef TA_TRUST_FWD_FRESH_THRESHOLD
+#define TA_TRUST_FWD_FRESH_THRESHOLD 3
+#endif
+
 /* ------------------------------------------------------------------ */
 /* T_ctrl component weights (w1+w2+w3 = 10)                           */
 /* ------------------------------------------------------------------ */
@@ -141,6 +169,21 @@
 #ifndef TA_TRUST_ESCAPE_TRUST_THRESHOLD
 #define TA_TRUST_ESCAPE_TRUST_THRESHOLD TA_TRUST_TAU_WARN
 #endif
+#ifndef TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES
+#define TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES 1
+#endif
+#ifndef TA_TRUST_ESCAPE_COOLDOWN_SECONDS
+#define TA_TRUST_ESCAPE_COOLDOWN_SECONDS 0
+#endif
+#ifndef TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT
+#define TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_PATH_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_PATH_MARGIN 0
+#endif
 
 /* Max number of neighbours tracked */
 #ifndef TA_TRUST_MAX_NEIGHBORS
@@ -149,7 +192,7 @@
 
 /* Trust update interval (seconds) */
 #ifndef TA_TRUST_UPDATE_INTERVAL
-#define TA_TRUST_UPDATE_INTERVAL 150
+#define TA_TRUST_UPDATE_INTERVAL 60
 #endif
 
 /* DIO anomaly: number of DIOs per window considered normal */

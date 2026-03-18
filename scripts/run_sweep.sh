@@ -3,7 +3,7 @@
 # Headless Cooja sweep: 4 protocols × 30 seeds (queue-based worker pool)
 #
 # Usage:
-#   ./scripts/run_sweep.sh [--protocols RPL,BRPL,SMTRUST,TABRPL] [--seeds 1-30] [--jobs 8] [--rerun]
+#   ./scripts/run_sweep.sh [--protocols RPL,BRPL,SMTRUST,TABRPL] [--seeds 1-30] [--jobs 10] [--rerun]
 #
 # Strategy:
 #   Maintain a shared job queue and let a fixed-size worker pool pull jobs
@@ -24,17 +24,18 @@ set -euo pipefail
 PROTOCOLS="RPL BRPL SMTRUST TABRPL"
 SEED_START=1
 SEED_END=30
-PARALLEL_JOBS=8
+PARALLEL_JOBS=10
 FORCE_RERUN=0
 MONITOR_INTERVAL=15
 ERROR_TAIL_LINES=40
+SCENARIO_SUFFIX=""
 COOJA_GRADLEW="/home/dev/contiki-ng/tools/cooja/gradlew"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCENARIOS_DIR="${ROOT_DIR}/configs/scenarios"
 RESULTS_DIR="${ROOT_DIR}/results"
-WORKER_ROOT="${ROOT_DIR}/.parallel_worker_env"
+WORKER_BASE_ROOT="${ROOT_DIR}/.parallel_worker_env"
+RUN_ROOT=""
 DEFAULT_GRADLE_HOME="${HOME}/.gradle"
-FALLBACK_GRADLE_BIN="$(find "${DEFAULT_GRADLE_HOME}/wrapper/dists" -path '*/bin/gradle' -type f 2>/dev/null | head -n 1)"
 
 # ------------------------------------------------------------------ #
 # Argument parsing
@@ -50,12 +51,13 @@ while [[ $# -gt 0 ]]; do
     --rerun|--force-rerun) FORCE_RERUN=1; shift;;
     --jobs)       PARALLEL_JOBS="$2"; shift 2;;
     --monitor-interval) MONITOR_INTERVAL="$2"; shift 2;;
+    --suffix)     SCENARIO_SUFFIX="$2"; RESULTS_DIR="${ROOT_DIR}/results/results${2}"; shift 2;;
     *) echo "Unknown option: $1" >&2; exit 1;;
   esac
 done
 
 mkdir -p "$RESULTS_DIR"
-mkdir -p "$WORKER_ROOT"
+mkdir -p "$WORKER_BASE_ROOT"
 
 # ------------------------------------------------------------------ #
 # Validate
@@ -64,8 +66,8 @@ if [[ ! -x "$COOJA_GRADLEW" ]]; then
   echo "ERROR: Cooja gradlew not found at $COOJA_GRADLEW" >&2; exit 1
 fi
 for PROTO in $PROTOCOLS; do
-  if [[ ! -f "$SCENARIOS_DIR/GRID6x6_${PROTO}.csc" ]]; then
-    echo "ERROR: scenario not found: GRID6x6_${PROTO}.csc" >&2; exit 1
+  if [[ ! -f "$SCENARIOS_DIR/GRID6x6_${PROTO}${SCENARIO_SUFFIX}.csc" ]]; then
+    echo "ERROR: scenario not found: GRID6x6_${PROTO}${SCENARIO_SUFFIX}.csc" >&2; exit 1
   fi
 done
 
@@ -80,13 +82,12 @@ run_one() {
   local OUT_DIR="$RESULTS_DIR/${PROTO}/${SEED}"
   local LOG="$OUT_DIR/sim.log"
   local DONE="$OUT_DIR/done"
-  local WORKER_DIR="$WORKER_ROOT/worker${WORKER_ID}"
+  local WORKER_DIR="$RUN_ROOT/worker${WORKER_ID}"
   local GRADLE_HOME="$WORKER_DIR/gradle-home"
   local TMP_ROOT="$WORKER_DIR/tmp"
   local WS_ROOT="$WORKER_DIR/workspace"
   local WS_SCENARIOS="$WS_ROOT/configs/scenarios"
   local WORKER_LOG="$LOG_DIR/${PROTO}_${SEED}_w${WORKER_ID}.log"
-  local GRADLE_CMD="$COOJA_GRADLEW"
   local JAVA_NET_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"
 
   if [[ -f "$DONE" ]]; then
@@ -100,10 +101,6 @@ run_one() {
   prepare_worker_workspace "$WORKER_DIR"
   rm -f "$WORKER_LOG"
 
-  if [[ -n "${FALLBACK_GRADLE_BIN:-}" && -x "${FALLBACK_GRADLE_BIN:-}" ]]; then
-    GRADLE_CMD="$FALLBACK_GRADLE_BIN"
-  fi
-
   # Patch randomseed into a temp copy of the CSC
   local TMP_CSC TMP_LOGDIR
   TMP_CSC=$(mktemp    "${WS_SCENARIOS}/tmp_${PROTO}_${SEED}_XXXXXX.csc")
@@ -111,7 +108,7 @@ run_one() {
 
   python3 -c "
 import re, sys
-src = '${WS_SCENARIOS}/GRID6x6_${PROTO}.csc'
+src = '${WS_SCENARIOS}/GRID6x6_${PROTO}${SCENARIO_SUFFIX}.csc'
 with open(src) as f:
     txt = f.read()
 txt = re.sub(r'<randomseed>[^<]*</randomseed>',
@@ -124,8 +121,9 @@ with open('${TMP_CSC}', 'w') as f:
   echo "[W${WORKER_ID}] [RUN ] ${PROTO} seed=${SEED}"
 
   if JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${JAVA_NET_OPTS}" \
+      JAVA_OPTS="${JAVA_OPTS:-} ${JAVA_NET_OPTS}" \
       GRADLE_OPTS="${GRADLE_OPTS:-} ${JAVA_NET_OPTS}" \
-      GRADLE_USER_HOME="$GRADLE_HOME" "$GRADLE_CMD" \
+      GRADLE_USER_HOME="$GRADLE_HOME" "$COOJA_GRADLEW" \
       --no-daemon --no-watch-fs --parallel --build-cache \
       -p "$(dirname "$COOJA_GRADLEW")" \
       run --args="--no-gui --autostart --logdir=${TMP_LOGDIR} ${TMP_CSC}" \
@@ -157,7 +155,7 @@ with open('${TMP_CSC}', 'w') as f:
 }
 
 export -f run_one
-export ROOT_DIR SCENARIOS_DIR RESULTS_DIR COOJA_GRADLEW WORKER_ROOT DEFAULT_GRADLE_HOME FALLBACK_GRADLE_BIN
+export ROOT_DIR SCENARIOS_DIR RESULTS_DIR COOJA_GRADLEW RUN_ROOT DEFAULT_GRADLE_HOME SCENARIO_SUFFIX
 
 QUEUE_FILE=""
 QUEUE_LOCK=""
@@ -305,8 +303,9 @@ for PROTO in $PROTOCOLS; do
 done
 
 TOTAL="${#JOBS[@]}"
-STATUS_DIR="${WORKER_ROOT}/status"
-LOG_DIR="${WORKER_ROOT}/logs"
+RUN_ROOT="$(mktemp -d "${WORKER_BASE_ROOT}/run_XXXXXX")"
+STATUS_DIR="${RUN_ROOT}/status"
+LOG_DIR="${RUN_ROOT}/logs"
 mkdir -p "$STATUS_DIR/queued" "$STATUS_DIR/running" "$STATUS_DIR/done" "$STATUS_DIR/failed" "$LOG_DIR"
 rm -f "$STATUS_DIR"/queued/* "$STATUS_DIR"/running/* "$STATUS_DIR"/done/* "$STATUS_DIR"/failed/* 2>/dev/null || true
 
@@ -323,7 +322,7 @@ if [[ "$FORCE_RERUN" -eq 1 ]]; then
         "$RESULTS_DIR"/parent_churn.csv
 fi
 
-QUEUE_FILE=$(mktemp "${WORKER_ROOT}/queue_XXXXXX.txt")
+QUEUE_FILE=$(mktemp "${RUN_ROOT}/queue_XXXXXX.txt")
 QUEUE_LOCK="${QUEUE_FILE}.lock"
 touch "$QUEUE_LOCK"
 printf '%s\n' "${JOBS[@]}" > "$QUEUE_FILE"
@@ -337,11 +336,12 @@ cleanup_queue() {
   rm -f "$QUEUE_FILE" "$QUEUE_LOCK"
 }
 trap cleanup_queue EXIT
-export QUEUE_FILE QUEUE_LOCK STATUS_DIR LOG_DIR TOTAL MONITOR_INTERVAL ERROR_TAIL_LINES FORCE_RERUN
+export QUEUE_FILE QUEUE_LOCK STATUS_DIR LOG_DIR TOTAL MONITOR_INTERVAL ERROR_TAIL_LINES FORCE_RERUN RUN_ROOT
 
 echo "=== Running ${TOTAL} simulations (${PARALLEL_JOBS} workers, queued) ==="
 echo "    Protocols : $PROTOCOLS"
 echo "    Seeds     : ${SEED_START}–${SEED_END}"
+echo "    Run root  : $RUN_ROOT"
 echo "    Queue     : $QUEUE_FILE"
 echo "    Logs      : $LOG_DIR"
 if [[ "$FORCE_RERUN" -eq 1 ]]; then

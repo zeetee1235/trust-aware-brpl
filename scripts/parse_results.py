@@ -14,6 +14,7 @@ Outputs (in results/):
 
 from pathlib import Path
 from collections import defaultdict
+import argparse
 import csv
 import statistics
 
@@ -28,7 +29,7 @@ PHASES = {
 }
 
 # TA-BRPL trust update interval (seconds * CLOCK_SECOND = ms)
-TRUST_INTERVAL_MS = 150 * 1000
+TRUST_INTERVAL_MS = 60 * 1000
 
 
 def classify_phase(t0_ms: int):
@@ -369,4 +370,14 @@ def main():
 
 
 if __name__ == '__main__':
+    ap = argparse.ArgumentParser(description='Parse TA-BRPL sim.log files into summary CSVs.')
+    ap.add_argument('--results-dir', default=None,
+                    help='Override results directory (default: <repo>/results)')
+    ap.add_argument('--protocols', default=None,
+                    help='Comma-separated protocol list (default: RPL,BRPL,SMTRUST,TABRPL)')
+    args = ap.parse_args()
+    if args.results_dir:
+        RESULTS_DIR = Path(args.results_dir)
+    if args.protocols:
+        PROTOCOLS = [p.strip() for p in args.protocols.split(',')]
     main()

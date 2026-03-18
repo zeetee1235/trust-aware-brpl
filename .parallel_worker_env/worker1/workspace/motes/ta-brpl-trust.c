@@ -18,9 +18,9 @@
  *               asymmetric: lambda_decrease when trust falling
  */
 
-#include "ta-brpl-trust.h"
-
 #include "contiki.h"
+
+#include "ta-brpl-trust.h"
 #include "sys/log.h"
 #include "sys/clock.h"
 #include "net/netstack.h"
@@ -29,6 +29,7 @@
 #include "net/ipv6/uipbuf.h"
 #include "net/ipv6/uip-icmp6.h"
 #include "net/linkaddr.h"
+#include "net/link-stats.h"
 #include "net/routing/rpl-classic/rpl-private.h"
 #include "net/routing/rpl-classic/brpl-queue.h"
 
@@ -48,7 +49,8 @@ typedef struct {
 
   /* T_fwd */
   uint32_t fwd_sent;       /* S_ij: packets sent to this neighbour     */
-  uint32_t fwd_observed;   /* F_ij: overheard forwarding events        */
+  uint32_t fwd_observed;   /* F_ij: forwarding observations (EWMA acc) */
+  uint32_t fwd_observed_new; /* fresh observations this update window  */
 
   /* T_ctrl */
   uint16_t ctrl_rank_last;         /* last advertised rank              */
@@ -73,6 +75,7 @@ typedef struct {
   uint8_t       release_active;
   uint8_t       release_redrop_armed;
   clock_time_t  release_started_at;
+  uint8_t       low_trust_updates;
 
 } ta_trust_entry_t;
 
@@ -84,6 +87,9 @@ static uint8_t trust_table_size;
 static uint16_t current_parent_id = 0xffff;
 static clock_time_t current_parent_since;
 static uint8_t current_parent_escape_armed;
+static clock_time_t current_parent_escape_cooldown_until;
+
+static ta_trust_entry_t *find_entry(uint16_t node_id);
 
 static clock_time_t
 current_parent_elapsed(void)
@@ -132,15 +138,124 @@ attack_persistence_penalty_scale(uint16_t node_id, uint16_t trust)
   return scale;
 }
 
-static int
-escape_mode_for_node(uint16_t node_id, uint16_t trust)
+static uint16_t
+ta_sharpen_tfwd(uint16_t trust)
 {
-  /* Escape triggers for ANY current parent that has kept trust below
-   * the escape threshold for longer than the escape trigger window.
-   * No hardcoded ID required — purely behaviour-driven. */
-  return node_id == current_parent_id
-      && trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD
-      && current_parent_elapsed() >= (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND;
+#if TA_TFWD_SHARPEN_SCALE <= 1000
+  return trust;
+#else
+  int32_t centered = (int32_t)trust - (int32_t)(TA_TRUST_SCALE / 2);
+  int32_t scaled = (centered * TA_TFWD_SHARPEN_SCALE) / 1000;
+  int32_t sharpened = (int32_t)(TA_TRUST_SCALE / 2) + scaled;
+
+  if(sharpened < 0) {
+    sharpened = 0;
+  } else if(sharpened > TA_TRUST_SCALE) {
+    sharpened = TA_TRUST_SCALE;
+  }
+  return (uint16_t)sharpened;
+#endif
+}
+
+static int
+ta_has_better_parent_candidate(uint16_t current_node_id, uint16_t current_trust)
+{
+#if TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT
+  rpl_dag_t *dag = rpl_get_any_dag();
+
+  if(dag != NULL) {
+    rpl_parent_t *current_parent = NULL;
+    rpl_parent_t *p;
+    uint32_t current_path_cost = 0xffffffff;
+    extern nbr_table_t *rpl_parents;
+
+    for(p = nbr_table_head(rpl_parents); p != NULL;
+        p = nbr_table_next(rpl_parents, p)) {
+      const linkaddr_t *ll = rpl_get_parent_lladdr(p);
+      if(ll != NULL && ll->u8[LINKADDR_SIZE - 1] == current_node_id) {
+        current_parent = p;
+        break;
+      }
+    }
+
+    if(current_parent != NULL) {
+      current_path_cost = (uint32_t)rpl_get_parent_link_metric(current_parent)
+                        + (uint32_t)current_parent->rank;
+    }
+
+    for(p = nbr_table_head(rpl_parents); p != NULL;
+        p = nbr_table_next(rpl_parents, p)) {
+      const linkaddr_t *ll = rpl_get_parent_lladdr(p);
+      ta_trust_entry_t *candidate;
+      uint16_t node_id;
+      uint16_t trust;
+      uint32_t path_cost;
+
+      if(ll == NULL) {
+        continue;
+      }
+
+      node_id = ll->u8[LINKADDR_SIZE - 1];
+      if(node_id == current_node_id) {
+        continue;
+      }
+
+      candidate = find_entry(node_id);
+      if(candidate != NULL && candidate->blacklisted) {
+        continue;
+      }
+
+      trust = candidate != NULL ? candidate->trust : TA_TRUST_INIT;
+      if(trust < TA_TRUST_TAU_JOIN) {
+        continue;
+      }
+      if(trust + TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN < current_trust) {
+        continue;
+      }
+
+      path_cost = (uint32_t)rpl_get_parent_link_metric(p) + (uint32_t)p->rank;
+      if(current_path_cost != 0xffffffff &&
+         path_cost > current_path_cost + TA_TRUST_ESCAPE_BETTER_PATH_MARGIN) {
+        continue;
+      }
+
+      return 1;
+    }
+  }
+
+  return 0;
+#else
+  (void)current_node_id;
+  (void)current_trust;
+  return 1;
+#endif
+}
+
+static int
+escape_mode_for_entry(const ta_trust_entry_t *e)
+{
+  clock_time_t now = clock_time();
+
+  if(e == NULL || e->node_id != current_parent_id) {
+    return 0;
+  }
+  if(e->trust >= TA_TRUST_ESCAPE_TRUST_THRESHOLD) {
+    return 0;
+  }
+  if(current_parent_elapsed() < (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND) {
+    return 0;
+  }
+  if(current_parent_escape_cooldown_until != 0 && now < current_parent_escape_cooldown_until) {
+    return 0;
+  }
+  if(e->low_trust_updates < TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES) {
+    return 0;
+  }
+  if(!ta_has_better_parent_candidate(e->node_id, e->trust)) {
+    return 0;
+  }
+
+  return 1;
 }
 
 static uint16_t
@@ -206,18 +321,82 @@ get_or_create(uint16_t node_id)
 }
 
 /* ------------------------------------------------------------------ */
-/* T_fwd  = (F + alpha) / (S + alpha + beta)                          */
+/* T_fwd  = (F + alpha) / (E + alpha + beta)                          */
+/* E = expected forwarding events = sent * PRR (channel-loss-aware)   */
+/* PRR is estimated from Contiki-NG link-stats ETX for the neighbour. */
 /* ------------------------------------------------------------------ */
+static const linkaddr_t *
+find_lladdr_by_node_id(uint16_t node_id)
+{
+  rpl_dag_t *dag = rpl_get_any_dag();
+
+  if(dag != NULL) {
+    rpl_parent_t *p;
+    extern nbr_table_t *rpl_parents;
+
+    for(p = nbr_table_head(rpl_parents); p != NULL;
+        p = nbr_table_next(rpl_parents, p)) {
+      const linkaddr_t *ll = rpl_get_parent_lladdr(p);
+      if(ll != NULL && ll->u8[LINKADDR_SIZE - 1] == node_id) {
+        return ll;
+      }
+    }
+  }
+
+  return NULL;
+}
+
+static uint32_t
+ta_estimate_prr(const linkaddr_t *lladdr)
+{
+  const struct link_stats *stats;
+  uint32_t raw_prr;
+  uint32_t prr;
+
+  if(lladdr == NULL) {
+    return TA_PRR_FALLBACK;
+  }
+
+  stats = link_stats_from_lladdr(lladdr);
+  if(stats == NULL || !link_stats_is_fresh(stats) || stats->etx == 0) {
+    return TA_PRR_FALLBACK;
+  }
+
+  raw_prr = ((uint32_t)LINK_STATS_ETX_DIVISOR * TA_TRUST_SCALE) / stats->etx;
+  if(raw_prr > TA_TRUST_SCALE) {
+    raw_prr = TA_TRUST_SCALE;
+  }
+
+  prr = ((uint32_t)TA_PRR_BLEND_WEIGHT * raw_prr
+       + (uint32_t)(TA_TRUST_SCALE - TA_PRR_BLEND_WEIGHT) * TA_TRUST_SCALE)
+      / TA_TRUST_SCALE;
+  if(prr > TA_TRUST_SCALE) {
+    prr = TA_TRUST_SCALE;
+  }
+  if(prr < TA_PRR_MIN) {
+    prr = TA_PRR_MIN;
+  }
+
+  return prr;
+}
+
 static uint16_t
 compute_t_fwd(const ta_trust_entry_t *e)
 {
+  const linkaddr_t *lladdr = find_lladdr_by_node_id(e->node_id);
+  uint32_t prr = ta_estimate_prr(lladdr);
+  uint32_t expected = (e->fwd_sent * prr + 500) / TA_TRUST_SCALE;
+
   uint32_t num = e->fwd_observed + TA_TRUST_FWD_ALPHA;
-  uint32_t den = e->fwd_sent + TA_TRUST_FWD_ALPHA + TA_TRUST_FWD_BETA;
+  uint32_t den = expected        + TA_TRUST_FWD_ALPHA + TA_TRUST_FWD_BETA;
   if(den == 0) {
     return TA_TRUST_SCALE;
   }
   uint32_t val = (num * TA_TRUST_SCALE) / den;
-  return (uint16_t)(val > TA_TRUST_SCALE ? TA_TRUST_SCALE : val);
+  if(val > TA_TRUST_SCALE) {
+    val = TA_TRUST_SCALE;
+  }
+  return ta_sharpen_tfwd((uint16_t)val);
 }
 
 /* ------------------------------------------------------------------ */
@@ -387,12 +566,14 @@ ta_ip_input_hook(void)
   }
   uint16_t mac_id = mac_sender->u8[LINKADDR_SIZE - 1];
 
-  /* Forwarded packet: MAC sender != IP source owner                   */
-  uint8_t ip_src_id = UIP_IP_BUF->srcipaddr.u8[15];
-  if(ip_src_id != mac_id) {
-    /* mac_id is forwarding a packet on behalf of ip_src_id            */
-    ta_trust_notify_forwarded(mac_id);
-  }
+  /* T_fwd is measured exclusively via echo_rx_callback in sender.c:
+   * the sender tracks which parent each data TX used (take_tx_parent),
+   * and credits that parent when a root echo confirms end-to-end
+   * delivery.  The IP hook does NOT credit T_fwd here because:
+   *   (a) downward echo replies are routed through the parent and would
+   *       give FALSE positive credits to selective-forwarding attackers;
+   *   (b) CSMA discards unicast frames not addressed to this node, so
+   *       genuine upward overhearing is impossible in 802.15.4.       */
 
   /* DIO interception for T_ctrl                                       */
   if(UIP_IP_BUF->proto == UIP_PROTO_ICMP6) {
@@ -447,6 +628,7 @@ ta_trust_notify_forwarded(uint16_t node_id)
   ta_trust_entry_t *e = get_or_create(node_id);
   if(e == NULL) return;
   e->fwd_observed++;
+  e->fwd_observed_new++;
 }
 
 void
@@ -550,6 +732,14 @@ ta_trust_update_all(void)
 
     uint16_t t_old = e->trust;
     e->trust = ewma_update(t_old, t_agg);
+    if(e->trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD) {
+      if(e->low_trust_updates < 0xff) {
+        e->low_trust_updates++;
+      }
+    } else {
+      e->low_trust_updates = 0;
+    }
+    e->fwd_observed_new = 0;
 
     check_blacklist(e);
 
@@ -587,7 +777,7 @@ ta_trust_update_all(void)
 
     if(e->node_id == current_parent_id || e->trust < TA_TRUST_TAU_WARN) {
       uint16_t penalty_scale = penalty_scale_for_entry(e);
-      int escape = escape_mode_for_node(e->node_id, e->trust);
+      int escape = escape_mode_for_entry(e);
       printf("CSV,TRUST_ROUTEGUARD,%u,%u,%lu,%u,%u,%u\n",
              (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
              (unsigned)e->node_id,
@@ -598,6 +788,8 @@ ta_trust_update_all(void)
 
       if(escape && e->node_id == current_parent_id && current_parent_escape_armed) {
         current_parent_escape_armed = 0;
+        current_parent_escape_cooldown_until =
+          clock_time() + (clock_time_t)TA_TRUST_ESCAPE_COOLDOWN_SECONDS * CLOCK_SECOND;
         printf("CSV,TRUST_ESCAPE,%u,%u,%lu,%u\n",
                (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
                (unsigned)e->node_id,
@@ -714,8 +906,7 @@ int
 brpl_escape_mode_get(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  uint16_t trust = e != NULL ? e->trust : TA_TRUST_INIT;
-  return escape_mode_for_node(node_id, trust);
+  return escape_mode_for_entry(e);
 }
 
 int
@@ -746,6 +937,7 @@ brpl_preferred_parent_changed(uint16_t old_id, uint16_t new_id)
   current_parent_id = new_id;
   current_parent_since = clock_time();
   current_parent_escape_armed = 1;
+  current_parent_escape_cooldown_until = 0;
   printf("CSV,TRUST_PARENT,%u,%u,%lu\n",
          (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
          (unsigned)new_id,

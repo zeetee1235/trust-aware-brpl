@@ -124,17 +124,31 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_INIT             500
 #endif
 
-/* EWMA: lambda_normal=0.7 (slow recovery), lambda_decrease=0.5 (fast attack response) */
+/* EWMA: lambda_normal=0.7 (slow recovery), lambda_decrease=0.2 (fast attack response) */
 #ifndef TA_TRUST_LAMBDA_NORMAL
 #define TA_TRUST_LAMBDA_NORMAL    700
 #endif
 #ifndef TA_TRUST_LAMBDA_DECREASE
-#define TA_TRUST_LAMBDA_DECREASE  500
+#define TA_TRUST_LAMBDA_DECREASE  200
 #endif
 
-/* Trust update interval = 150 s */
+/* Trust update interval = 60 s */
 #ifndef TA_TRUST_UPDATE_INTERVAL
-#define TA_TRUST_UPDATE_INTERVAL  150
+#define TA_TRUST_UPDATE_INTERVAL  60
+#endif
+
+/* ETX-based PRR estimation clamps for T_fwd (per-mille scale). */
+#ifndef TA_PRR_MIN
+#define TA_PRR_MIN               100
+#endif
+#ifndef TA_PRR_BLEND_WEIGHT
+#define TA_PRR_BLEND_WEIGHT      1000
+#endif
+#ifndef TA_PRR_FALLBACK
+#define TA_PRR_FALLBACK          1000
+#endif
+#ifndef TA_TFWD_SHARPEN_SCALE
+#define TA_TFWD_SHARPEN_SCALE    1000
 #endif
 
 /* Aggregation weights: T_fwd=50%, T_ctrl=30%, T_hon=20% */
@@ -196,6 +210,21 @@ extern rpl_of_t rpl_brpl;
 /* Trust threshold below which escape arms (= tau_warn) */
 #ifndef TA_TRUST_ESCAPE_TRUST_THRESHOLD
 #define TA_TRUST_ESCAPE_TRUST_THRESHOLD 700
+#endif
+#ifndef TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES
+#define TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES 1
+#endif
+#ifndef TA_TRUST_ESCAPE_COOLDOWN_SECONDS
+#define TA_TRUST_ESCAPE_COOLDOWN_SECONDS 0
+#endif
+#ifndef TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT
+#define TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN 0
+#endif
+#ifndef TA_TRUST_ESCAPE_BETTER_PATH_MARGIN
+#define TA_TRUST_ESCAPE_BETTER_PATH_MARGIN 0
 #endif
 
 #ifndef TA_TRUST_MAX_NEIGHBORS
