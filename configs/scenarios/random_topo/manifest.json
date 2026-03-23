@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "generator": "scripts/generate_random_topologies.py",
+  "num_nodes": 36,
+  "root_id": 1,
+  "attacker_count": 3,
+  "tx_range": 50.0,
+  "protocols": [
+    "TABRPL"
+  ],
+  "densities": [
+    "medium"
+  ],
+  "topology_seeds": [
+    1
+  ],
+  "topologies": [
+    {
+      "density": "medium",
+      "topology_seed": 1,
+      "topology_name": "topo_001",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6111,
+      "avg_hop_root": 2.7714,
+      "attacker_ids": [
+        3,
+        15,
+        25
+      ],
+      "scenarios": {
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_medium_topo_001.csc"
+      }
+    }
+  ]
+}
