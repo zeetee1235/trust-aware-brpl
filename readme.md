@@ -1,88 +1,96 @@
 # TA-BRPL
 
-Reference repository for evaluating `TA-BRPL` against `RPL`, `BRPL`, and `SMTRUST` in Contiki-NG/Cooja under a combined `blackhole + sinkhole` attack setting.
+이 저장소는 **현재 연구 진행 중**입니다.
 
-## Overview
-
-- Topology: `6 x 6` grid
-- Protocols: `RPL`, `BRPL`, `SMTRUST`, `TABRPL`
-- Attack setting: `3` blackholes + `1` sinkhole
-- Seeds: `30`
-- Main outputs: parsed CSV summaries and publication-style PDF figures
-
-## Reproducibility
-
-Run the full sweep:
+## 빠른 사용 순서
 
 ```bash
-./scripts/run_sweep.sh --jobs 8 --rerun
-```
-
-Parse the logs:
-
-```bash
+./scripts/cleanup_before_sweep.sh --apply
+./scripts/run_sweep.sh --jobs 12 --rerun
 python3 scripts/parse_results.py
-```
-
-Generate the figures:
-
-```bash
 Rscript scripts/plot_main_figures.R
 ```
 
-For a short sanity check:
+## 파일/디렉토리 사용법
 
-```bash
-./scripts/run_sweep.sh --protocols RPL,SMTRUST --seeds 1-5 --jobs 4 --rerun
-python3 scripts/parse_results.py
-```
+- `motes/`
+  - Contiki 펌웨어 소스.
+  - `ta-brpl-trust.c`, `ta-brpl-trust.h`: TA-BRPL 신뢰/검증 로직.
+  - `attacker.c`, `sinkhole_attacker.c`: 공격 노드 동작.
+  - `sender.c`, `receiver_root.c`: 트래픽 송신/루트 수신 로직.
+  - `Makefile.*`: 프로토콜/변형별 빌드 설정.
 
-## Repository Layout
+- `configs/scenarios/`
+  - Cooja 시나리오(`.csc`) 모음.
+  - `tmp_*.csc`는 실행 중 생성되는 임시 파일.
 
-- [configs/scenarios](/home/dev/TA-BRPL/configs/scenarios): Cooja scenarios
-- [motes](/home/dev/TA-BRPL/motes): sender, receiver, attacker, and trust logic
-- [scripts/run_sweep.sh](/home/dev/TA-BRPL/scripts/run_sweep.sh): queued parallel sweep runner
-- [scripts/parse_results.py](/home/dev/TA-BRPL/scripts/parse_results.py): log parser
-- [scripts/plot_main_figures.R](/home/dev/TA-BRPL/scripts/plot_main_figures.R): main paper figures
-- [results](/home/dev/TA-BRPL/results): parsed result tables
-- [figures](/home/dev/TA-BRPL/figures): rendered figures
+- `scripts/run_sweep.sh`
+  - 병렬 실험 실행 스크립트.
+  - 예: `./scripts/run_sweep.sh --jobs 12 --rerun`
 
-## Main Result Files
+- `scripts/parse_results.py`
+  - 시뮬레이션 로그를 CSV 요약으로 파싱.
+  - 예: `python3 scripts/parse_results.py`
 
-- [pdr_summary.csv](/home/dev/TA-BRPL/results/pdr_summary.csv)
-- [delay_summary.csv](/home/dev/TA-BRPL/results/delay_summary.csv)
-- [trust_trace.csv](/home/dev/TA-BRPL/results/trust_trace.csv)
-- [parent_churn.csv](/home/dev/TA-BRPL/results/parent_churn.csv)
-- [route_trace.csv](/home/dev/TA-BRPL/results/route_trace.csv)
+- `scripts/plot_main_figures.R`
+  - 메인 Figure PDF 생성.
+  - 예: `Rscript scripts/plot_main_figures.R`
 
-## Current Full-Sweep Snapshot
+- `scripts/plot_figures.py`
+  - 보조/커스텀 Figure 생성용 Python 플로팅 스크립트.
 
-- Latest full sweep: `30` seeds × `4` protocols
-- Mean PDR
-- `RPL`: pre `1.0000`, during `0.8759`, recovery `0.8754`
-- `BRPL`: pre `1.0000`, during `0.8510`, recovery `0.8399`
-- `SMTRUST`: pre `0.9999`, during `0.8701`, recovery `0.8649`
-- `TABRPL`: pre `0.9996`, during `0.9078`, recovery `0.9594`
-- Current takeaway: removing the BRPL trust floor and excluding direct attacker parents below `tau_join` makes `TABRPL` the strongest protocol in the current combined-attack setting.
+- `scripts/plot_additional_figures.py`
+  - 추가 분석 Figure 생성 스크립트.
 
-## Main Figures
+- `scripts/generate_random_topologies.py`
+  - 랜덤 토폴로지 생성기.
 
-- `fig1_pdr_phases.pdf`
-- `fig2_resilience_summary.pdf`
-- `fig3_attack_tradeoff.pdf`
-- `fig4_route_exposure_timeseries.pdf`
-- `fig5_trust_trace.pdf`
-- `fig6_churn_hotspots.pdf`
+- `scripts/generate_threshold_sweep_variants.py`
+  - threshold 스윕용 시나리오/설정 변형 생성.
 
-## Notes
+- `scripts/generate_soft_penalty_sweep_variants.py`
+  - soft-penalty 스윕 변형 생성.
 
-- Attack start time: `350 s`
-- Default workflow: `run_sweep -> parse_results -> plot_main_figures`
-- The repository currently reflects the combined-attack experimental setup used in the paper workflow
+- `scripts/generate_relative_sweep_variants.py`
+  - 상대 파라미터 스윕 변형 생성.
 
-## Documentation
+- `scripts/cleanup_before_sweep.sh`
+  - 재실험 전 대용량 산출물/로그 정리.
+  - 미리보기: `./scripts/cleanup_before_sweep.sh`
+  - 실제 삭제: `./scripts/cleanup_before_sweep.sh --apply`
 
-- [agent/experiment.md](/home/dev/TA-BRPL/agent/experiment.md)
-- [agent/model.md](/home/dev/TA-BRPL/agent/model.md)
-- [agent/SMTrust.md](/home/dev/TA-BRPL/agent/SMTrust.md)
-- [docs/ARCHITECTURE.md](/home/dev/TA-BRPL/docs/ARCHITECTURE.md)
+- `results/`
+  - 파싱된 CSV 결과 저장 위치.
+
+- `figures/`
+  - 생성된 Figure(PDF/PNG) 저장 위치.
+
+- `docs/paper/`
+  - 논문 원고(`paper.tex`, `paper_draft.tex`) 및 관련 파일.
+
+- `docs/`
+  - 모델/실험 설계 문서.
+
+- `agent/`
+  - 내부 실험/모델 노트.
+
+## 나중에 한 번에 돌릴 때
+
+- 랜덤 토폴로지 스윕 실행:
+  - `./scripts/run_random_topo_sweep.sh --jobs 12 --rerun`
+  - 기본값: `protocols=4`, `densities=3`, `topology-seeds=1-10`, `run-seeds=1-5`
+  - 총 run 수: `4 x 3 x 10 x 5 = 600`
+
+- 파라미터 스윕 번들 실행:
+  - `./scripts/run_param_sweep_bundle.sh --jobs 12 --rerun`
+  - 기본값: `seeds=30`, `losses=3`, `families=threshold,soft,relative,margin,path,prr`
+  - 기본 프로토콜 LOSS 스윕 run 수: `4 x 30 x 3 = 360`
+  - family 변형 수:
+    - `threshold=15`, `soft=4`, `relative=7`, `margin=4`, `path=4`, `prr=5` (합계 `39`)
+  - family 스윕 run 수: `39 x 30 x 3 = 3510`
+  - 번들 기본 총 run 수: `360 + 3510 = 3870`
+
+- LOSS x 공격 드롭 매트릭스까지 포함해서 한 번에:
+  - `./scripts/run_param_sweep_bundle.sh --jobs 12 --rerun --with-loss-attack`
+  - 매트릭스 추가 run 수: `loss(3) x drop(5) x protocols(4) x seeds(30) = 1800`
+  - 전체 총 run 수: `3870 + 1800 = 5670`

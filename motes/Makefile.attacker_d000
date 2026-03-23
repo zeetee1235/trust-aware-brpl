@@ -1,0 +1,14 @@
+# Auto-generated attacker variant: ATTACK_DROP_PCT=0
+
+CONTIKI_PROJECT = attacker
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+CFLAGS += -DPROJECT_CONF_PATH="../project-conf.h"
+CFLAGS += -DATTACK_DROP_PCT=0
+CFLAGS += -DATTACK_WARMUP_SECONDS=350
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
+include $(CONTIKI)/Makefile.include

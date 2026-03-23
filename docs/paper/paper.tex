@@ -1220,6 +1220,49 @@ topology 평균들을 독립 표본으로 사용해 paired 통계를 수행한�
 세부적으로는 $(\text{density}, \text{topology seed})$를 1차 표본 단위로 두고,
 각 표본 내 run-seed 반복의 평균/중앙값을 계산한 후 프로토콜 간 비교를 수행한다.
 
+\subsection{파라미터 스윕 실행 계획 (구현 완료, 미실행)}
+\label{sec:param_sweep_plan}
+
+핵심 모델의 민감도와 강건성을 점검하기 위해, 파라미터 스윕 자동화 파이프라인을
+구현해 두었다. 본 문서 작성 시점에서는 \textbf{아직 전체 스윕을 실행하지 않았으며},
+아래 내용은 실행 설계 및 재현 절차를 명시한다.
+
+\paragraph{구현 스크립트}
+\begin{itemize}
+  \item 번들 오케스트레이터: \texttt{scripts/run\_param\_sweep\_bundle.sh}
+  \item 변형 생성기:
+  \texttt{generate\_threshold\_sweep\_variants.py},
+  \texttt{generate\_soft\_penalty\_sweep\_variants.py},
+  \texttt{generate\_relative\_sweep\_variants.py},
+  \texttt{generate\_margin\_sweep\_variants.py},
+  \texttt{generate\_path\_margin\_sweep\_variants.py},
+  \texttt{generate\_prr\_sweep\_variants.py}
+  \item 손실/공격 매트릭스 생성 및 실행:
+  \texttt{scripts/generate\_loss\_attack\_variants.py},
+  \texttt{scripts/run\_loss\_attack\_sweep.sh}
+\end{itemize}
+
+\paragraph{스윕 축}
+\begin{itemize}
+  \item 링크 손실률: 0\%, 10\%, 20\%
+  \item 공격 드롭률: 0\%, 30\%, 50\%, 70\%, 100\%
+  \item trust/validation/parent-stability 관련 파라미터군:
+  threshold, soft-penalty, relative-filter, switch-margin, path-margin, PRR
+\end{itemize}
+
+\paragraph{실행 원칙}
+\begin{itemize}
+  \item TA-BRPL 핵심 구현(\texttt{motes/*.c}, \texttt{project-conf.h})은 수정하지 않는다.
+  \item 변형은 \texttt{Makefile.*}와 \texttt{.csc} 시나리오 레벨에서만 생성한다.
+  \item 모든 실행은 기존 \texttt{scripts/run\_sweep.sh}를 통해 수행한다.
+\end{itemize}
+
+\paragraph{예정 보고 항목}
+스윕 실행 완료 후, 각 파라미터군에 대해 during/recovery PDR,
+attacker exposure, parent churn의 평균/중앙값/95\% CI를 정리하고,
+기본 설정 대비 개선량 및 실패 케이스를 별도 표로 보고할 예정이다.
+현재 버전의 본문에는 해당 정량 결과를 포함하지 않는다.
+
 \subsection{비교 프로토콜}
 
 \begin{itemize}
