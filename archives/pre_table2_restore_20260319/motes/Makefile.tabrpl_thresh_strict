@@ -1,0 +1,27 @@
+# Makefile.tabrpl_thresh_strict
+# V6 threshold sensitivity: conservative thresholds
+#   tau_warn=0.80, tau_join=0.60, tau_black=0.40
+#   Expects faster blacklisting but possibly higher FPR
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_TRUST_TAU_WARN=800
+CFLAGS += -DTA_TRUST_TAU_JOIN=600
+CFLAGS += -DTA_TRUST_TAU_BLACK=400
+CFLAGS += -DTRUST_MIN=600
+CFLAGS += -DTA_TRUST_RESTORE_ON_RELEASE=600
+CFLAGS += -DTA_TRUST_ESCAPE_TRUST_THRESHOLD=800
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

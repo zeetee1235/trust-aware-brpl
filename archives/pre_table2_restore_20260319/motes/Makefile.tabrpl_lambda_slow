@@ -1,0 +1,22 @@
+# Makefile.tabrpl_lambda_slow
+# V5 EWMA sensitivity: slow attack response (lambda_decrease=0.4)
+#   Base: lambda_decrease=0.5, lambda_normal=0.7
+#   This: lambda_decrease=0.4 → slower trust drop on attack
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_TRUST_LAMBDA_DECREASE=400
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

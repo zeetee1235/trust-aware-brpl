@@ -1,0 +1,21 @@
+# Auto-generated sliding-window T_fwd variant
+# TA-BRPL with sliding-window forwarding trust, window=8 sends.
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_TRUST_FWD_WINDOW_ENABLE=1
+CFLAGS += -DTA_TRUST_FWD_WINDOW_SIZE=8
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

@@ -1,0 +1,26 @@
+# Makefile.tabrpl_fwd
+# TA-BRPL Ablation: T_fwd only
+#   Trust aggregation: T̃ = T_fwd^1.0  (T_ctrl, T_hon disabled)
+#   Purpose: isolate the contribution of forwarding trust alone
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DTABRPL_FWD_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+# Ablation weights: T_fwd=100%, T_ctrl=0%, T_hon=0%
+CFLAGS += -DTA_TRUST_W_FWD=10
+CFLAGS += -DTA_TRUST_W_CTRL=0
+CFLAGS += -DTA_TRUST_W_HON=0
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

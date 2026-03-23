@@ -1,0 +1,25 @@
+# Makefile.tabrpl_phase1
+# Phase 1: strengthen T_fwd discrimination under high loss.
+#   - raise PRR floor
+#   - blend ETX-derived PRR toward 1.0
+#   - sharpen T_fwd around the neutral 0.5 region
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_PRR_MIN=300
+CFLAGS += -DTA_PRR_BLEND_WEIGHT=700
+CFLAGS += -DTA_TFWD_SHARPEN_SCALE=1400
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

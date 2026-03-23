@@ -1,0 +1,13 @@
+# Makefile.receiver
+# RPL root node (shared across all protocol variants)
+
+CONTIKI_PROJECT = receiver_root
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+
+include $(CONTIKI)/Makefile.include

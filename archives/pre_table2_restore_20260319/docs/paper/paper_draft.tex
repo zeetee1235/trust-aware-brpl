@@ -1,0 +1,1197 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{kotex}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{array}
+\usepackage{balance}
+\graphicspath{{../../figures/}}
+
+\begin{document}
+
+\title{TA-BRPL 연구노트 v0.3.3\\
+Blackhole + Sinkhole 복합 공격 환경에서의\\
+Trust-Aware Backpressure RPL 구현 및 초기 결과}
+
+\author{연구노트 v0.3.3 --- Internal Draft\\최종 수정: 2026-03-19}
+
+\maketitle
+
+% ============================================================
+\begin{abstract}
+% ============================================================
+본 문서는 TA-BRPL(Trust-Aware Backpressure RPL)의 현재 구현 상태와 최신 실험 결과를
+통합 정리한 연구노트이다. 대상 환경은 Contiki-NG/Cooja 기반의 $6\times6$ GRID 토폴로지
+(총 36개 노드, 30개 random seed)이며, 3개의 blackhole 공격자(node 2, 3, 4)와
+1개의 sinkhole 공격자(node 18)가 동시에 동작하는 복합 공격 시나리오를 가정한다.
+
+TA-BRPL은 BRPL의 backpressure 기반 경로 선택 능력을 유지하면서,
+3성분 on-node trust 모델($T_\text{fwd}$, $T_\text{ctrl}$, $T_\text{hon}$)을
+BRPL objective function에 직접 결합한다. 전체 30-seed 실험에서 TA-BRPL은
+during-attack PDR \textbf{0.9077}, recovery PDR \textbf{0.9593}을 기록하여,
+RPL(0.8759/0.8754), BRPL(0.8508/0.8399), SMTrust(0.8701/0.8649) 대비
+더 높은 공격 복원력을 보였다.
+
+v0.3.3에서는 기존 30-seed 기본 결과를 유지한 상태에서, 링크 손실 강건성 분석을 확장하였다.
+구체적으로 ETX 기반 PRR 정규화, 절대 threshold 재튜닝($\tau_\text{join}=580$, $\tau_\text{warn}=630$),
+soft-penalty sweep, 그리고 median 기반 relative trust filtering을 구현하고 5-seed loss ladder
+(10\%, 30\%, 50\%)에서 비교하였다. 그 결과, 강한 soft penalty는 공격자 사용 비율은 줄이지만
+정상 parent까지 과도하게 pruning하는 문제가 확인되었고, relative filtering은 absolute threshold보다
+``attacker share 감소 + usable parent 유지''의 균형을 더 잘 달성하였다.
+
+본 문서는 설계 의도, 전체 구현 구조, 실험 설정, 30-seed 기본 결과,
+EWMA/임계값 민감도 분석, 성분 절제 실험, 혼잡--공격 분리 실험,
+오탐 실험, 링크 손실 robustness와 tuning progression, 그리고 현재 한계와 후속 과제를 정리한다.
+\end{abstract}
+
+\textbf{키워드:} IoT, LLN, RPL, BRPL, Trust Management, Blackhole, Sinkhole,
+Selective Forwarding, Cooja, Contiki-NG
+
+% ============================================================
+\section{연구 목표}
+% ============================================================
+
+본 연구의 목적은 LLN(Low-power and Lossy Network) 환경에서 다음의 두 가지 상충되는 요구를
+동시에 만족시키는 것이다. 첫째, BRPL이 제공하는 backpressure 기반 혼잡 인식 라우팅
+능력을 유지한다. 둘째, blackhole(선택적 패킷 드롭)과 sinkhole(rank 조작)과 같은
+insider routing attack에 대해 노드 내 자율적 복원력을 확보한다.
+
+기존 접근의 한계는 크게 두 가지다. 첫째, 단순 forwarding rate 기반 감시는
+혼잡과 공격을 구분하지 못한다. 즉, 정직하지만 혼잡한 노드와 의도적으로 패킷을
+드롭하는 공격자는 모두 forwarding rate 하락을 유발한다. 둘째, SMTrust와 같이
+weighted-sum trust를 MRHOF 위에 얹는 구조는 정적 환경에서 일부 가중치 성분이
+상수처럼 고정되어 trust floor가 탐지 임계값 이상에 묶이는 구조적 한계를 가진다
+(Section~\ref{sec:smtrust} 참조).
+
+TA-BRPL의 핵심 가설은 다음과 같다.
+\begin{itemize}
+  \item $T_\text{fwd}$: 수동 도청(passive overhearing) 기반 forwarding success rate로 blackhole을 탐지한다.
+  \item $T_\text{ctrl}$: DIO rank/version 이상 징후를 활용해 sinkhole을 탐지한다.
+  \item $T_\text{hon}$: 큐 광고값과 로컬 추정치의 교차 검증을 통해 혼잡과 공격을 분리한다.
+  \item 세 성분의 가중 기하평균을 trust로 집계하고 이를 BRPL cost function에 직접 결합함으로써,
+  공격자 parent가 점진적으로 배제되도록 한다.
+\end{itemize}
+
+% ============================================================
+\section{전체 시스템 구조}
+% ============================================================
+
+\subsection{계층 구조}
+
+TA-BRPL은 Contiki-NG의 RPL-Classic 라우팅 스택 위에서 동작한다.
+핵심 모듈은 \texttt{ta-brpl-trust.c/h}(trust 엔진, 약 850 LoC)이며,
+\texttt{rpl-brpl.c}의 objective function에 C weak-symbol 오버라이드를 통해
+결합된다. 이 설계는 TA-BRPL을 컴파일에서 제거하더라도 BRPL/RPL의
+원본 소스를 직접 수정할 필요가 없음을 의미한다.
+
+네트워크 스택에서 trust 엔진으로 입력되는 훅은 다음 세 가지다.
+\begin{enumerate}
+  \item \textbf{IP input hook} (\texttt{NETSTACK\_CONF\_IP\_INPUT\_CALLBACK}):  
+  릴레이 unicast 패킷을 감지하여 $T_\text{fwd}$ 관찰 이벤트를 공급하고,
+  DIO ICMPv6 메시지를 파싱하여 $T_\text{ctrl}$ 이상 지표를 갱신한다.
+  \item \textbf{BRPL queue callback}:  
+  이웃 노드의 큐 광고값($Q_\text{adv}$, $Q_\text{max}$)을 전달하여
+  $T_\text{hon}$ 계산에 사용한다.
+  \item \textbf{RPL parent-change callback}
+  (\texttt{RPL\_CALLBACK\_PARENT\_SWITCH}):  
+  preferred parent 교체 시 \texttt{current\_parent\_id}와 escape 타이머를 갱신한다.
+  이 훅이 없으면 escape 메커니즘은 발동하지 않는다.
+\end{enumerate}
+
+trust 엔진에서 BRPL 측으로 전달되는 출력은 다음의 세 weak-symbol 함수로 제공된다.
+\begin{itemize}
+  \item \texttt{brpl\_trust\_get(node\_id)}: trust 값 [0, 1000] 반환
+  \item \texttt{brpl\_penalty\_scale\_get(node\_id)}: 지속 패널티 배율 반환
+  \item \texttt{brpl\_escape\_mode\_get(node\_id)}: 탈출 모드 플래그 반환
+\end{itemize}
+
+\subsection{파라미터 단일 소스}
+
+모든 tunable parameter는 \texttt{project-conf.h}의 C 매크로로 정의된다.
+각 프로토콜 변형의 \texttt{Makefile.*}은 모드 플래그만 설정하며,
+임계값 및 $\lambda$ 값은 모두 \texttt{project-conf.h}에서만 관리된다.
+민감도 실험은 컴파일러 커맨드라인에서 특정 매크로만 오버라이드하는 방식으로 수행한다.
+
+% ============================================================
+\section{Trust 모델 상세}
+% ============================================================
+
+\subsection{$T_\text{fwd}$: Forwarding Trust}
+
+$T_\text{fwd}$는 이웃 $j$가 패킷을 얼마나 신뢰성 있게 중계하는지를
+측정하는 성분이다. 노드 $i$는 이웃 $j$를 통해 패킷을 전송할 때마다
+카운터 $S_{ij}$를 증가시키고, root로부터 echo reply가 돌아오면
+해당 TX를 실제로 실어 나른 parent $j$에 대해 forwarding 관측치 $F_{ij}$를 증가시킨다.
+초기 trust가 과도하게 0 또는 1로 치우치지 않도록 Laplace smoothing
+파라미터 $(\alpha,\beta)$를 적용하여 초기값을 0.5 근방으로 유지한다.
+\begin{equation}
+  T_\text{fwd}(i,j) = \frac{F_{ij} + \alpha}{E_{ij} + \alpha + \beta}, \quad
+  E_{ij} = S_{ij}\,\widehat{\mathrm{PRR}}_{ij}.
+  \label{eq:tfwd}
+\end{equation}
+
+여기서 $\widehat{\mathrm{PRR}}_{ij}$는 Contiki-NG의 \texttt{link-stats} 모듈이 유지하는
+이웃별 ETX로부터 추정한다.
+\begin{equation}
+  \widehat{\mathrm{PRR}}_{ij}
+  = \mathrm{clamp}\!\left(
+      \frac{\texttt{ETX\_DIVISOR}}{\texttt{etx}_{ij}},
+      \mathrm{PRR}_{\min},
+      1
+    \right).
+\end{equation}
+ETX가 아직 수렴하지 않았거나 freshness가 부족한 경우에는
+$\widehat{\mathrm{PRR}}_{ij}=1$로 두어 join 직후 FP를 방지한다.
+
+카운터는 60초 업데이트 주기마다 \textbf{우측 비트시프트(halving)}로 감쇠된다.
+여기서 리셋 대신 halving을 사용하는 이유는, 완전 리셋을 사용할 경우
+공격자가 잠시 정상적으로 패킷을 전달하는 것만으로 trust가 다시 0.5 수준으로
+중립화되는 문제가 발생하기 때문이다.
+
+\subsection{$T_\text{ctrl}$: Control-Plane Trust}
+
+$T_\text{ctrl}$은 제어 평면 이상을 세 가지 지표로 탐지한다.
+
+\textbf{Rank 이상 $A_\text{rank}$}: DIO에 포함된 rank가 root rank보다 낮으면
+물리적으로 불가능한 상태이므로 즉시 최대 이상으로 처리한다.
+또한 과도한 rank 변동은 hysteresis 기준을 초과한 변화 횟수로 누적한다.
+
+\textbf{DIO 빈도 이상 $A_\text{DIO}$}: trickle 타이머 기준의 기대 전송률 대비
+과도하게 많은 DIO 전송 횟수를 누적하여 DIO suppression/flooding 이상을 탐지한다.
+
+\textbf{Version 이상 $A_\text{ver}$}: root에서 전파되지 않은 RPL version 번호의 증가는
+DODAG 강제 리셋을 유발하는 version attack의 신호로 해석한다.
+
+세 지표를 가중합하여 제어 평면 이상 점수를 계산하고 이를 trust로 변환한다.
+\begin{equation}
+  A_{ij} = \frac{w_1 A_\text{rank} + w_2 A_\text{DIO} + w_3 A_\text{ver}}{10},\quad
+  T_\text{ctrl}(i,j) = 1 - A_{ij}.
+\end{equation}
+기본 가중치는 $w_1=5$, $w_2=3$, $w_3=2$이다.
+
+\subsection{$T_\text{hon}$: Congestion-Honesty Trust}
+
+$T_\text{hon}$은 이웃 $j$가 자신의 큐 상태를 정직하게 광고하는지를
+검증하는 성분이다.
+\begin{equation}
+  T_\text{hon}(i,j) = 1 - \min\!\left(1,\; \frac{|Q_\text{adv} - Q_\text{est}|}{Q_\text{max}}\right).
+\end{equation}
+
+여기서 $Q_\text{adv}$는 이웃 $j$가 BRPL 비콘에 실어 보낸 큐 점유율이고,
+$Q_\text{est}$는 노드 $i$가 자신의 로컬 상태로부터 추정한
+이웃 $j$의 예상 부하다. 정직하게 혼잡한 노드는 대체로
+$Q_\text{adv} \approx Q_\text{est}$를 만족하므로 $T_\text{hon} \approx 1.0$을 유지한다.
+반면 공격자가 큐 상태를 실제보다 낮게 광고하면 두 값의 차이가 커지고,
+그 결과 $T_\text{hon}$이 하락한다.
+
+이 성분은 ``혼잡으로 인해 forwarding rate가 낮아진 정직한 노드''와
+``의도적으로 패킷을 드롭하는 공격자''를 구분하기 위해 필요하다.
+
+\subsection{가중 기하평균 집계}
+
+세 trust 성분은 다음과 같이 가중 기하평균으로 결합된다.
+\begin{equation}
+  \tilde{T}(i,j) =
+  T_\text{fwd}^{w_f/W}
+  \cdot
+  T_\text{ctrl}^{w_c/W}
+  \cdot
+  T_\text{hon}^{w_h/W},
+\end{equation}
+여기서 $W = w_f + w_c + w_h = 10$이며, 기본 가중치 벡터는
+$(w_f, w_c, w_h) = (7, 2, 1)$이다.
+현재 구현은 forwarding 신호에 더 큰 비중을 두어,
+공격자 배제 이후에도 $T_\text{fwd}$ 하락이 aggregate trust에 충분히 반영되도록 설계되어 있다.
+
+기하평균을 사용하는 이유는 어느 한 성분이라도 0에 가까워지면
+전체 trust가 크게 하락하기 때문에, 공격자가 특정 단일 지표만 조작해서
+높은 trust를 유지하기 어렵기 때문이다.
+
+\subsection{비대칭 EWMA 업데이트}
+
+60초마다 다음 점화식으로 per-neighbor trust를 업데이트한다.
+\begin{equation}
+  T_{ij}(t+1) = \lambda(t)\, T_{ij}(t) + (1-\lambda(t))\, \tilde{T}_{ij},
+\end{equation}
+\begin{equation}
+  \lambda(t) =
+  \begin{cases}
+    \lambda_\downarrow = 0.2, & \tilde{T}_{ij} < T_{ij}(t)\quad \text{(신뢰 하락 시)} \\
+    \lambda_\uparrow   = 0.7, & \text{otherwise}\quad \text{(신뢰 유지/회복 시).}
+  \end{cases}
+\end{equation}
+
+$\lambda_\downarrow=0.2$는 공격 직후 trust가 빠르게 하락하도록 허용하고,
+$\lambda_\uparrow=0.7$은 회복 속도를 의도적으로 늦춰,
+공격자가 잠시 정상 동작을 보이며 trust를 회복하는 on-off 전략에 대응한다.
+
+모든 연산은 고정소수점(정수 범위 $[0,1000]$, 해상도 1/1000)으로 수행된다.
+기하평균 계산에 필요한 지수 연산은 추후 lookup table 기반으로 대체 가능하다.
+
+\subsection{임계값 정책과 튜닝 경로}
+
+\begin{table}[t]
+  \centering
+  \caption{TA-BRPL trust tier 정의(기본선)}
+  \label{tab:thresholds}
+  \begin{tabular}{lllp{3.2cm}}
+    \toprule
+    Tier & 범위 & 상태 & BRPL 효과 \\
+    \midrule
+    Normal    & $T \ge 700$       & NORMAL      & 패널티 없음 \\
+    Suspect   & $450 \le T < 700$ & SUSPECT     & cost 배율 패널티 적용 \\
+    Untrusted & $250 \le T < 450$ & UNTRUSTED   & parent 후보 제외 \\
+    Blacklist & $T < 250$         & BLACKLISTED & 하드 격리 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+parent 선택 시 이웃 $j$의 BRPL routing cost는 다음과 같이 조정된다.
+\begin{equation}
+  \text{cost}'(j) = \text{cost}(j) \times \frac{P_s(j)}{1000},
+\end{equation}
+여기서 $P_s(j)$는 Normal 노드에서는 1000(즉, 효과 없음)이며,
+Suspect 노드에서는 상황에 따라 가변 패널티를 갖는다.
+본선 30-seed 기본 결과는 이 절대 임계값 구조를 사용하였다.
+반면 손실 robustness tuning에서는
+$(\tau_\text{join},\tau_\text{warn})=(580,630)$과 같은 재튜닝 및
+relative trust filtering 변형을 추가로 탐색하였다.
+
+\subsection{지속 패널티와 탈출 메커니즘}
+
+현재 preferred parent가 공격자인 경우, RPL 자체의 parent-change hysteresis가
+전환을 지연시키거나 막을 수 있다. TA-BRPL은 이를 극복하기 위해 두 가지 메커니즘을 둔다.
+
+\textbf{Attack persistence penalty}: preferred parent의 trust가
+$\tau_\text{warn}$ 미만인 상태가 지속되면, 매 120초 창마다
+패널티 배율에 250을 가산한다(최대 2600).
+
+\textbf{Escape mode}: preferred parent의 trust가 $\tau_\text{warn}$ 미만인 상태가
+180초 이상 지속되면 escape mode를 활성화한다.
+이 모드에서는 현재 parent에 대한 hysteresis가 해제되고,
+추가 패널티 배율 3200이 적용되어 metric 차이와 무관하게 parent 교체가 강제된다.
+현재 코드에서는 여기에 더해
+\texttt{low-trust} 연속 업데이트 조건,
+$T_\text{fwd}<450$ 및 $T_\text{hon}>850$의 원인 기반 조건,
+그리고 선택적으로 better-parent-only 조건을 결합할 수 있도록 구현되어 있다.
+
+격리 해제 후에는 trust를 $\tau_\text{join}$으로 복원하고,
+패널티 배율을 120초 동안 $1.6\times \rightarrow 1.0\times$로 선형 감쇠시키며,
+재드롭 감시 플래그를 활성화하여 공격이 재개될 경우 즉시 재격리한다.
+또한 현재 구현은 join/blacklist 판정에 최소 지속 시간(기본 120초)을 적용하여,
+일시적 혼잡이나 단기 loss dip이 즉시 hard exclusion으로 이어지지 않도록 한다.
+
+v0.3.3의 tuning 실험에서는 escape churn을 줄이기 위해
+연속 low-trust 조건, cooldown, better-parent-only 조건을 포함한 Phase 3 변형도 탐색하였다.
+이 변형들은 attacker share와 parent churn을 줄이는 데는 유효했지만,
+단독으로는 BRPL과의 PDR 격차를 해소하지 못했다.
+
+\subsection{Loss-Robustness 확장: Relative Trust Filtering}
+
+v0.3.3에서는 손실 환경에서 절대 임계값만으로 parent 후보를 자를 경우
+정상 이웃까지 함께 제외되는 문제를 완화하기 위해,
+\textbf{median 기반 relative filtering} 실험 변형을 추가하였다.
+핵심 아이디어는 ``$T < \tau_\text{join}$이면 제외''라는 절대 기준을
+현재 이웃 trust 분포에 대한 상대 기준으로 일부 대체하는 것이다.
+
+\begin{equation}
+  T^\text{floor}_i = \max\!\bigl(\tau_\text{black},\; \mathrm{median}_i(T) - \Delta_\text{rel}\bigr),
+\end{equation}
+\begin{equation}
+  j \in \mathcal{P}_i \iff T_{ij} \ge T^\text{floor}_i.
+\end{equation}
+
+여기서 $\Delta_\text{rel}$은 relative margin이다. 이 변형에서는 공격자를
+``절대적으로 낮은 trust''가 아니라, \emph{이웃 집단 대비 유의미하게 낮은 trust}를
+보이는 노드로 해석한다. 따라서 링크 손실로 인해 모든 이웃의 trust가 함께 하락해도,
+정상 노드들이 median 근방에 모여 있으면 후보 집합이 과도하게 축소되지 않는다.
+
+soft penalty 역시 절대 trust 값이 아니라 median 대비 gap에 따라 부여하였다.
+\begin{equation}
+  \mathrm{gap}_{ij} = \max(0,\; \mathrm{median}_i(T) - T_{ij}),
+\end{equation}
+\begin{equation}
+  P^\text{rel}_{ij} = \min\!\left(P_\text{max},\;
+  \frac{\mathrm{gap}_{ij}}{1000}\, S_\text{rel}\right).
+\end{equation}
+
+이 실험 변형은 본선 30-seed 기본 결과를 대체하는 최종 기본 설정은 아니며,
+loss ladder에서 absolute threshold 구조의 한계를 진단하고
+후속 설계를 탐색하기 위한 \emph{robustness-oriented tuned variant}로 사용하였다.
+
+% ============================================================
+\section{SMTrust 구현 상태 및 구조적 한계}
+\label{sec:smtrust}
+% ============================================================
+
+\subsection{현재 구현}
+
+SMTrust는 ``RPL + trust-aware parent filtering'' 구조로 구현되어 있다.
+기반 라우팅은 MRHOF이며, parent 선택 시 다음의 두 단계를 거친다.
+\begin{enumerate}
+  \item trust class $t_1$/$t_2$ 노드를 후보에서 제외한다 (threshold 0.46).
+  \item near-tie 상황에서는 $t_4$/$t_5$ 노드를 $t_3$ 노드보다 우선한다.
+\end{enumerate}
+
+Trust index는 다음과 같은 6개 성분의 가중합으로 계산된다.
+\begin{equation}
+  \text{TI} = 0.25\,\text{TMSR} + 0.15\,\text{TM}_{H_0}
+             + 0.15\,\text{TMEL} + 0.20\,\text{TMLLS}
+             + 0.15\,\text{TMMobility} + 0.10\,\text{TMRT}.
+\end{equation}
+
+\subsection{구조적 한계: TI Floor}
+
+현재 실험 환경은 정적 $6\times6$ GRID 토폴로지이므로, 두 성분이 사실상 상수로 고정된다.
+\begin{itemize}
+  \item \textbf{TMEL} (가중치 0.15): 이웃의 실제 잔여 에너지가 아니라
+  로컬 Energest 추정치를 사용하므로 환경 전반에서 거의 상수 $\approx 0.50$로 유지된다.
+  \item \textbf{TMMobility} (가중치 0.15): 정적 토폴로지이므로 $=1.00$으로 고정된다.
+\end{itemize}
+
+즉, 총 결합 가중치 0.30이 변별력을 갖지 못한 채 상수처럼 작용한다.
+$\text{TMSR}=0$인 완전 blackhole 극단 시나리오를 가정하면 TI의 최솟값은 다음과 같다.
+\begin{align}
+  \text{TI}_\text{min}
+  &= 0 \cdot 0.25 + 0.50 \cdot 0.15 + 0.50 \cdot 0.15 \notag\\
+  &\quad + 0.57 \cdot 0.20 + 1.00 \cdot 0.15 + 0.50 \cdot 0.10 \notag\\
+  &= 0.464 > 0.460 \quad \text{(필터링 임계값)}.
+\end{align}
+30-seed 실측 최솟값 역시 $\text{TI}_\text{min}=0.489$였다.
+
+따라서 공격자 노드는 아무리 패킷을 드롭하더라도 TI가 임계값 아래로
+충분히 내려가지 않아 parent 후보 집합에서 제거되지 않는다.
+
+이는 단순 구현 버그라기보다, \textbf{구현--환경 불일치}
+(implementation-environment mismatch)로 해석하는 것이 더 적절하다.
+즉, 실제 이동성이 존재하거나 에너지 정보 교환이 가능한 환경에서는
+TMMobility와 TMEL이 변별력을 가질 수 있으나, 현재 실험 환경에서는 그렇지 않다.
+
+% ============================================================
+\section{실험 설정}
+% ============================================================
+
+\subsection{토폴로지와 노드 역할}
+
+실험 토폴로지는 $6\times6$ GRID, 총 36개 노드이며,
+노드 간 간격은 40\,m, 전파 모델은 UDGM
+(\texttt{tx\_range=50\,m}, \texttt{success\_ratio=1.0})를 사용하였다.
+
+\begin{itemize}
+  \item \textbf{Node 1}: DODAG root (border router)
+  \item \textbf{Node 2, 3, 4}: Blackhole 공격자. 350초 이후 전달해야 할 UDP 패킷을 100\% 드롭하며, DIO/routing 동작은 정상적으로 유지
+  \item \textbf{Node 18}: Sinkhole 공격자. DIO에 rank$+1$을 광고하여 인근 노드를 유인하고, 유입된 트래픽은 드롭
+  \item \textbf{나머지 31개 노드}: Sender. 30초마다 root에 UDP 패킷을 전송
+\end{itemize}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{fig0_topology_grid6x6.pdf}
+  \caption{실험 토폴로지($6\times6$ GRID). Node 1은 root, Node 2/3/4는 blackhole,
+  Node 18은 sinkhole, 나머지 노드는 sender이다.}
+  \label{fig:topology_grid}
+\end{figure}
+
+\subsection{실험 타임라인}
+
+\begin{itemize}
+  \item $[0,150)$초: Warm-up. DODAG 형성 및 초기 수렴 단계, 통계 미수집
+  \item $[150,350)$초: Pre-attack. 정상 동작 구간, 기준 PDR 측정
+  \item $[200,300)$초: \textit{(pre-attack 내부)} 합성 혼잡 버스트.
+  root 인접 5개 노드가 15초 주기로 추가 송신하여 큐 포화를 유도하고,
+  $T_\text{hon}$의 혼잡 인식 능력을 검증
+  \item $[350,650)$초: During attack. 공격자 활성화, 주요 PDR 측정 구간
+  \item $[650,900)$초: Recovery. 공격자는 계속 활성 상태를 유지하나,
+  trust 기반 우회가 수렴한 이후의 PDR 측정
+\end{itemize}
+
+전체 시뮬레이션 시간은 900초이며, random seed는 총 30개를 사용하였다.
+통계 검정은 Wilcoxon rank-sum test(비모수, Bonferroni 보정)를 적용하였다.
+
+\subsection{비교 프로토콜}
+
+\begin{itemize}
+  \item \textbf{RPL}: RPL-Classic + MRHOF/ETX, trust 비활성
+  \item \textbf{BRPL}: BRPL + queue-aware cost, trust 비활성
+  \item \textbf{SMTrust}: RPL-Classic MRHOF + 6성분 trust filtering
+  \item \textbf{TA-BRPL}: 제안 프로토콜
+\end{itemize}
+
+% ============================================================
+\section{전체 30-Seed 기본 결과}
+\label{sec:main}
+% ============================================================
+
+Table~\ref{tab:main_pdr}는 4개 프로토콜의 phase별 평균 PDR을 보여준다.
+
+\begin{table}[t]
+  \centering
+  \caption{Phase별 평균 PDR (30 seeds)}
+  \label{tab:main_pdr}
+  \begin{tabular}{lrrr}
+    \toprule
+    프로토콜 & Pre-attack & During attack & Recovery \\
+    \midrule
+    TA-BRPL  & 0.9993 & \textbf{0.9077} & \textbf{0.9593} \\
+    RPL      & 1.0000 & 0.8759 & 0.8754 \\
+    SMTrust  & 0.9998 & 0.8701 & 0.8649 \\
+    BRPL     & 0.9999 & 0.8508 & 0.8399 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{TA-BRPL vs. RPL}: during에서 $+3.2$\,pp, recovery에서 $+8.4$\,pp 개선되었다.  
+\textbf{TA-BRPL vs. BRPL}: during에서 $+5.7$\,pp, recovery에서 $+11.9$\,pp 개선되었다.  
+모든 pairwise 비교에서 Wilcoxon 검정 결과는 $p < 0.001$이었다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig1_pdr_phases.pdf}
+  \caption{Phase별 PDR 비교 (30 seeds). 각 박스는 25--75 백분위수, 수염은 10--90 백분위수를 나타낸다.
+  TA-BRPL은 during-attack과 recovery 두 구간 모두에서 가장 높은 PDR을 달성한다.}
+  \label{fig:pdr_phases}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig2_resilience_summary.pdf}
+  \caption{공격 복원력 요약. TA-BRPL에서는 recovery PDR이 during-attack PDR보다 높게 나타나는
+  trust convergence effect가 뚜렷하게 관찰된다.}
+  \label{fig:resilience}
+\end{figure}
+
+\subsection{Trust Convergence Effect}
+
+TA-BRPL의 recovery PDR(0.9593)은 during-attack PDR(0.9077)보다 높다.
+공격자가 recovery 구간에서도 계속 활성 상태임을 고려하면 이는 직관에 반하는 결과처럼 보인다.
+
+그 원인은 150초 주기의 EWMA 업데이트 지연에 있다.
+\begin{itemize}
+  \item 1차 창(350--500초): EWMA trust가 대략 550 수준까지 하락한다.  
+  cost penalty는 적용되지만 아직 parent 후보에서 완전히 제외되지는 않는다.
+  \item 2차 창(500--650초): halving decay가 누적되면서 trust가
+  $\tau_\text{join}=450$ 이하로 하락한다. 이 시점부터 공격자 노드가 parent 후보 집합에서 제거되기 시작한다.
+  \item Recovery 구간(650--900초): 공격자 배제가 충분히 적용되고,
+  트래픽이 대안 경로로 재수렴하면서 PDR이 상승한다.
+\end{itemize}
+
+이 현상은 전체 30개 seed 중 29개에서 관찰되었으며, 평균 상승폭은 $+5.2$\,pp였다.
+
+반면 SMTrust에서는 이러한 효과가 관찰되지 않는다
+(recovery 대비 during 변화량 $-0.05$\,pp).
+이는 SMTrust가 공격자 노드를 parent 후보 집합에서 실질적으로 제거하지 못하기 때문이다
+(Section~\ref{sec:smtrust}의 TI floor 분석 참조).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig5_trust_trace.pdf}
+  \caption{단일 seed에서의 trust trace. 공격자(attacker) 노드의 $T_\text{fwd}$가
+  350초 이후 급격히 하락하여 $\tau_\text{join}=0.45$ 아래로 내려가고,
+  이후 recovery 구간에서 대안 경로로의 전환이 이루어지는 과정을 보여준다.}
+  \label{fig:trust_trace}
+\end{figure}
+
+% ============================================================
+\section{V2: 오탐(FPR) 실험}
+% ============================================================
+
+공격자가 존재하지 않는 환경에서, TA-BRPL이 정상 노드를 부당하게 격리하는지 확인하기 위해
+5-seed 실험을 수행하였다. 이때 기존 공격자 노드는 일반 sender로 대체하였다.
+
+\subsection{PDR 요약과 seed 편차}
+
+\begin{table}[t]
+  \centering
+  \caption{공격이 없는 환경에서의 PDR (5 seeds)}
+  \label{tab:noattack}
+  \begin{tabular}{lrrr}
+    \toprule
+    프로토콜 & Pre & During & Recovery \\
+    \midrule
+    RPL (no attack)     & 1.0000 & 1.0000 & 1.0000 \\
+    BRPL (no attack)    & 1.0000 & 0.9994 & 1.0000 \\
+    TA-BRPL (no attack) & 0.9817 & 0.8924 & 0.8076 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+TA-BRPL\_NOATTACK의 during/recovery PDR은 0.8924/0.8076으로 여전히 baseline보다 낮다.
+그러나 이는 전형적인 의미의 FPR(정상 노드의 blacklist)이라기보다,
+\textbf{합성 혼잡 버스트(200--300초)로 인해 $T_\text{hon}$이 혼잡 노드에 패널티를 부여한 결과}에 가깝다.
+동시에 seed 간 편차도 크다. 예를 들어 seed 1은 1.0000/1.0000/1.0000을 유지했지만,
+seed 2는 0.9882/0.7048/0.6667까지 하락하였다.
+즉 no-attack 저하는 평균값 하나보다도 \emph{특정 seed에서의 불안정성}으로 해석하는 것이 더 적절하다.
+이 해석은 V3 분리 실험(Section~\ref{sec:v3}) 및 이후의 seed-level failure analysis와 일관된다.
+
+\begin{table}[t]
+  \centering
+  \caption{TA-BRPL no-attack seed별 PDR 편차 (5 seeds)}
+  \label{tab:noattack-seeds}
+  \begin{tabular}{lrrr}
+    \toprule
+    Seed & Pre & During & Recovery \\
+    \midrule
+    1 & 1.0000 & 1.0000 & 1.0000 \\
+    2 & 0.9882 & 0.7048 & 0.6667 \\
+    3 & 0.9735 & 0.9143 & 0.7429 \\
+    4 & 0.9882 & 0.8976 & 0.7111 \\
+    5 & 0.9588 & 0.9452 & 0.9175 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{TA-BRPL no-attack 안정성 진단 요약 (5-seed 평균)}
+  \label{tab:noattack-diagnostics}
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Phase & False BL & Escape & Churn & Allowed cand. & Excl. ratio & $T_\text{ewma}$ \\
+    \midrule
+    Pre      & 0.4 & 8.4 & 63.8 & 5.91 & 0.0219 & 556.9 \\
+    During   & 1.4 & 6.0 & 74.2 & 5.72 & 0.0532 & 578.4 \\
+    Recovery & 0.2 & 4.2 & 47.8 & 5.71 & 0.0566 & 594.5 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{안정성 진단: blacklist보다 churn}
+
+Table~\ref{tab:noattack-diagnostics}는 no-attack 저하가 단순한 의미의
+``대량 false blacklist''라기보다, \textbf{suspect 상태 증가와 parent churn/penalty의 누적 비용}으로
+해석되어야 함을 보여준다. 평균 false blacklist count는 during/recovery에서 각각 1.4/0.2에 그쳤고,
+trust tier의 black 비율도 사실상 0이었다. 반면 suspect 비율은 pre의 0.816에서 during 0.571,
+recovery 0.582 수준으로 넓게 분포했고, parent churn은 pre/during/recovery에서 각각 63.8/74.2/47.8회였다.
+즉 PDR 저하의 주원인은 정상 노드의 즉시 격리보다는,
+\emph{정상 parent에 대한 반복적인 패널티와 경로 재평가 비용}으로 보는 편이 타당하다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig9_noattack_diagnostics.pdf}
+  \caption{TA-BRPL no-attack 안정성 진단. blacklist는 많지 않지만, suspect/escape/churn과
+  candidate 제외 비율이 during/recovery에서 함께 증가하며 PDR 저하와 동행한다.}
+  \label{fig:noattack-diagnostics}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig7_noattack_seed_spread.pdf}
+  \caption{TA-BRPL no-attack seed별 PDR 편차. 평균 during/recovery PDR은 0.8924/0.8076이지만,
+  실제로는 seed 1의 완전 안정(1.0/1.0/1.0)부터 seed 2의 급락(0.7048/0.6667)까지
+  불안정성 폭이 크다.}
+  \label{fig:noattack-seed-spread}
+\end{figure}
+
+\subsection{Route-level 증거}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig4_route_exposure_timeseries.pdf}
+  \caption{공격자 노드를 경유하는 라우트 비율의 시계열(30-seed 평균).
+  TA-BRPL은 공격 시작(350초) 이후 가장 빠르게 공격자 노드 노출을 감소시키며,
+  recovery 구간에서는 거의 0에 수렴한다.}
+  \label{fig:exposure_ts}
+\end{figure}
+
+추가적인 route-level 진단도 같은 해석을 뒷받침한다.
+30-seed 평균에서 attacker route share는 pre/during/recovery에 대해
+0.2081/0.1564/0.0927로 감소하였다.
+이때 sinkhole attraction(node 18 share)은 0.0653/0.0203/0.0369,
+blackhole aggregate share(node 2/3/4)는 0.1429/0.1360/0.0559였다.
+동시에 average hop count는 2.995에서 4.015, 6.241로 증가하고,
+top-parent concentration은 0.1752에서 0.1242, 0.1015로 낮아졌다.
+즉 TA-BRPL의 recovery 이득은 특정 정상 parent로의 과도한 집중보다는,
+\textbf{공격자 경유 비율 감소와 더 분산된 대안 parent 집합 사용}에서 온 것으로 해석할 수 있다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig11_route_phase_summary.pdf}
+  \caption{Phase별 route-level summary. node 18 및 blackhole parent adoption은 시간이 지나며 감소하고,
+  unique parent 수는 회복 구간에서 다시 증가한다.}
+  \label{fig:route-phase-summary}
+\end{figure}
+
+% ============================================================
+\section{V3: 혼잡 vs. 공격 분리 실험}
+\label{sec:v3}
+% ============================================================
+
+TA-BRPL의 핵심 주장인 ``단순 PDR 하락 $\ne$ 공격''을 검증하기 위해,
+혼잡과 공격을 각각 독립적으로 on/off한 4개 시나리오를 구성하여 실험하였다.
+
+\begin{table}[t]
+  \centering
+  \caption{V3 혼잡--공격 분리 실험 결과 (5 seeds, TA-BRPL)}
+  \label{tab:v3}
+  \begin{tabular}{lllrrr}
+    \toprule
+    시나리오 & 혼잡 & 공격 & Pre & During & Recovery \\
+    \midrule
+    C1: Baseline    & \texttimes & \texttimes & 0.961 & 0.793 & 0.875 \\
+    C2: 혼잡만      & \checkmark & \texttimes & 0.980 & 0.857 & 0.789 \\
+    C3: 공격만      & \texttimes & \checkmark & 0.994 & 0.379 & 0.595 \\
+    C4: 혼잡+공격   & \checkmark & \checkmark & 0.999 & 0.417 & 0.353 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+핵심 비교는 \textbf{C2(0.857) $\gg$ C3(0.379)}이다.
+혼잡만 존재하는 경우에는 $T_\text{hon}$이 혼잡 노드에 적절한 패널티를 부여하지만,
+전체 PDR은 상대적으로 크게 악화되지 않는다. 반면 공격만 존재하는 경우에는
+$T_\text{fwd}$가 급락하면서 조기 blacklist가 유도되고, PDR이 크게 하락한다.
+이 대비는 ``TA-BRPL이 혼잡과 공격을 구분한다''는 주장의 실험적 근거를 제공한다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig3_attack_tradeoff.pdf}
+  \caption{V3 혼잡--공격 분리 실험 결과. C2(혼잡만)와 C3(공격만)의 during PDR 차이가
+  뚜렷하게 나타나며, $T_\text{hon}$과 $T_\text{fwd}$가 서로 다른 원인을 탐지함을 보여준다.}
+  \label{fig:attack_tradeoff}
+\end{figure}
+
+한편, C1(혼잡 없음, 공격 없음)에서도 during PDR이 0.793까지 하락한다.
+이는 공격 때문이 아니라, TA-BRPL 자체의 trust penalty 기반 경로 재평가 과정에서
+정상 노드에 대해 escape/persistence 패널티가 발동하는 비용으로 해석된다.
+
+% ============================================================
+\section{V5: EWMA 파라미터 민감도}
+% ============================================================
+
+이 절의 결과는 본선 30-seed 기본 TA-BRPL 설정을 기준으로 수행한
+\emph{초기 민감도 실험}이다. 따라서 이후 손실 robustness tuning에서 도입된
+PRR 정규화, $J580/W630$, relative filtering 변형과는 직접 비교하지 않는다.
+
+$\lambda_\downarrow$와 $\lambda_\uparrow$의 선택을 정당화하기 위해,
+4개의 변형을 각각 5-seed씩 실험하였다(Table~\ref{tab:lambda}).
+
+\begin{table}[t]
+  \centering
+  \caption{EWMA $\lambda$ 민감도 분석 (5 seeds)}
+  \label{tab:lambda}
+  \begin{tabular}{llrr}
+    \toprule
+    변형 & $(\lambda_\downarrow,\,\lambda_\uparrow)$ & During PDR & Recovery PDR \\
+    \midrule
+    \textbf{기본값 (TA-BRPL)} & $(0.5,\;0.7)$ & \textbf{0.908} & \textbf{0.959} \\
+    LAMBDA\_FAST              & $(0.1,\;0.7)$ & 0.384 & 0.444 \\
+    LAMBDA\_SLOW              & $(0.4,\;0.7)$ & 0.474 & 0.490 \\
+    LAMBDA\_FAST\_RECOVERY    & $(0.2,\;0.5)$ & 0.517 & 0.561 \\
+    LAMBDA\_SLOW\_RECOVERY    & $(0.2,\;0.9)$ & 0.534 & 0.685 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+모든 변형은 기본값보다 현저히 낮은 성능을 보였다. 그 해석은 다음과 같다.
+\begin{itemize}
+  \item \textbf{LAMBDA\_FAST ($\lambda_\downarrow=0.1$)}: 신규 관찰에 90\%의 가중치를 부여하므로
+  EWMA 분산이 급격히 증가하고, 정상 노드도 단일 관찰 창에서 FP blacklist될 수 있다.
+  그 결과 during PDR이 0.384까지 하락하여 가장 나쁜 성능을 보였다.
+  \item \textbf{LAMBDA\_SLOW ($\lambda_\downarrow=0.4$)}: 이름과 달리 기본값(0.5)보다
+  신규 관찰 비중이 더 크므로 오히려 더 반응적이다(60\% vs.\ 50\%).
+  따라서 FP 비율이 상승한다.
+  \item \textbf{FAST/SLOW\_RECOVERY}: 두 변형 모두 $\lambda_\downarrow=0.2$를 사용하므로
+  이미 과반응 영역에 진입한 상태다. 따라서 회복 속도의 차이보다 공격 중 FP 증가의 영향이 더 크게 나타난다.
+\end{itemize}
+
+결론적으로, $\lambda_\downarrow=0.5$는 공격 반응성과 EWMA 안정성 사이의 균형점으로 해석된다.
+특히 $\lambda_\downarrow < 0.5$인 경우에는 분산이 과도하게 증가하여 성능 저하를 초래한다.
+
+% ============================================================
+\section{V6: 임계값 민감도}
+% ============================================================
+
+이 절 역시 본선 기본 설정의 절대 threshold 구조를 기준으로 수행한
+\emph{초기 민감도 실험}이다. Section~\ref{tab:loss} 이후의 loss-ladder tuning은
+별도의 robustness 확장으로 해석해야 한다.
+
+$(\tau_\text{warn}, \tau_\text{join}, \tau_\text{black})$의 선택을 정당화하기 위해,
+3개 변형을 각각 5-seed씩 실험하였다(Table~\ref{tab:thresh}).
+
+\begin{table}[t]
+  \centering
+  \caption{임계값 민감도 분석 (5 seeds). 기본값: $(0.70,\;0.45,\;0.25)$}
+  \label{tab:thresh}
+  \begin{tabular}{lp{2.2cm}rr}
+    \toprule
+    변형 & $(\tau_w,\;\tau_j,\;\tau_b)$ & Pre PDR & During PDR \\
+    \midrule
+    \textbf{기본값} & $(0.70,\;0.45,\;0.25)$ & 0.999 & \textbf{0.908} \\
+    THRESH\_STRICT  & $(0.80,\;0.60,\;0.40)$ & 0.914 & 0.586 \\
+    THRESH\_RELAXED & $(0.70,\;0.50,\;0.30)$ & 0.993 & 0.494 \\
+    THRESH\_JOINLOW & $(0.75,\;0.40,\;0.25)$ & 0.999 & 0.750 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{THRESH\_STRICT}: $\tau_\text{join}=0.60$이 지나치게 높아,
+  네트워크 수렴 과정에서 자연스럽게 forwarding rate가 낮은 정상 노드까지
+  후보에서 제외된다. 그 결과 pre PDR이 이미 0.914까지 하락한다.
+  \item \textbf{THRESH\_RELAXED}: $\tau_\text{join}=0.50$으로 상승하면
+  trust가 $[0.45,0.50)$ 구간에 있는 노드가 더 오래 후보로 남게 되어 탐지가 지연된다.
+  결과적으로 during PDR이 0.494로 크게 악화된다.
+  \item \textbf{THRESH\_JOINLOW}: $\tau_\text{join}=0.40$으로 낮추면
+  suspect 구간이 넓어지고(0.40$\sim$0.75), 배제 전 패널티 기간이 길어진다.
+  다만 완전 배제까지의 시간이 증가하여 during PDR은 0.750 수준에 머문다.
+\end{itemize}
+
+결론적으로 기본값 $(0.70, 0.45, 0.25)$는 EWMA 파라미터와 함께 설계된
+실질적 최적점으로 해석된다. 특히 $\tau_\text{warn} - \tau_\text{join} \ge 0.20$의
+간격을 확보하는 것이 중요하다.
+
+% ============================================================
+\section{절제 실험: 3성분 필요성 검증}
+% ============================================================
+
+각 trust 성분의 기여를 독립적으로 확인하기 위해,
+단일 성분 또는 2성분 변형을 각각 5-seed씩 실험하였다(Table~\ref{tab:ablation}).
+
+\begin{table}[t]
+  \centering
+  \caption{성분 절제 실험 결과 (5 seeds)}
+  \label{tab:ablation}
+  \begin{tabular}{lllrrr}
+    \toprule
+    변형 & 성분 & Pre & During & Recovery \\
+    \midrule
+    TA-BRPL (전체) & $T_f + T_c + T_h$ & 0.999 & \textbf{0.908} & \textbf{0.959} \\
+    FWD+CTRL       & $T_f + T_c$        & 0.926 & 0.660 & 0.516 \\
+    FWD only       & $T_f$ only         & 0.898 & 0.719 & 0.731 \\
+    \midrule
+    RPL (기준)     & 없음               & 1.000 & 0.876 & 0.875 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+흥미롭게도, \textbf{두 변형 모두 RPL보다 낮은 성능을 보였다}.
+예를 들어 FWD only의 during PDR(0.719)은 RPL의 during PDR(0.876)보다 낮다.
+
+그 이유는 다음과 같다.
+\begin{enumerate}
+  \item FWD only에서는 pre PDR이 이미 0.898로 하락한다.  
+  이는 네트워크 수렴 초기의 자연스러운 forwarding rate 저하가 FP blacklist로 이어지기 때문이다.
+  \item FWD+CTRL에서는 pre PDR이 0.926으로 다소 개선되지만,
+  DIO trickle 정착 구간에서 DIO 빈도 이상 역시 FP를 추가로 유발한다.
+  \item $T_\text{hon}$이 있어야 이러한 FP가 억제된다.  
+  혼잡 구간에서 정상 노드의 $T_\text{hon} \approx 1.0$이 EWMA를 안정화하여,
+  pre-attack FP를 줄이는 역할을 한다.
+\end{enumerate}
+
+즉, 세 trust 성분은 선택적으로 더하는 부가 요소가 아니라,
+\textbf{함께 사용될 때에만 의미를 갖는 상보적 구성}으로 해석할 수 있다.
+특히 $T_\text{hon}$이 없으면 $T_\text{fwd}$ 단독 사용은 오히려 RPL보다 더 나쁜 결과를 낳는다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig6_churn_hotspots.pdf}
+  \caption{Parent churn 핫스팟 분포. FWD-only 변형에서는 공격자 인근 노드의
+  parent 교체 빈도가 급증하며, $T_\text{hon}$을 추가하면 이 현상이 억제된다.}
+  \label{fig:churn}
+\end{figure}
+
+% ============================================================
+\section{손실률 로버스트니스와 튜닝 진행}
+% ============================================================
+
+v0.3.2까지의 핵심 수정은 $T_\text{fwd}$ 분모를 단순 $S_{ij}$가 아니라
+ETX 기반 기대 forwarding 수 $E_{ij}$로 바꾸는 것이었다.
+이 변경은 저손실 구간의 FP를 완화하는 데는 효과적이었지만,
+중간 이상의 손실률에서는 trust 제어가 여전히 공격자와 정상 이웃을 충분히 분리하지 못했다.
+이에 v0.3.3에서는 5-seed loss ladder(10\%, 30\%, 50\%)를 대상으로
+다음의 tuning progression을 순차적으로 수행하였다.
+\begin{enumerate}
+  \item ETX 기반 PRR 정규화(v0.3.2)
+  \item 절대 threshold 재튜닝: $(\tau_\text{join}, \tau_\text{warn})=(580,630)$
+  \item soft-penalty / escape 조건 sweep
+  \item median 기반 relative trust filtering
+\end{enumerate}
+
+이 절은 이 순서를 그대로 따라간다. 먼저 absolute threshold와 soft penalty가 왜 실패했는지를 보이고,
+그 다음 attacker/benign trust 분리도와 seed dependence를 통해 기준 모델 내부의 실패 패턴을 정리한 뒤,
+마지막으로 relative filtering이 어느 부분을 완화했는지와 sliding-window 대안이 왜 제외되었는지를 설명한다.
+
+\begin{table}[t]
+  \centering
+  \caption{Loss ladder에서의 대표 비교 결과 (5 seeds)}
+  \label{tab:loss}
+  \begin{tabular}{llrr}
+    \toprule
+    손실률 & 프로토콜/변형 & During PDR & Recovery PDR \\
+    \midrule
+    \multirow{4}{*}{10\%}
+      & BRPL                         & \textbf{0.838} & \textbf{0.806} \\
+      & TA-BRPL (기본)              & 0.778 & 0.767 \\
+      & TA-BRPL + J580/W630         & 0.643 & 0.627 \\
+      & TA-BRPL + REL\_020          & 0.637 & 0.664 \\
+    \midrule
+    \multirow{4}{*}{30\%}
+      & BRPL                         & \textbf{0.694} & \textbf{0.683} \\
+      & TA-BRPL (기본)              & 0.610 & 0.547 \\
+      & TA-BRPL + J580/W630         & 0.609 & 0.644 \\
+      & TA-BRPL + REL\_010          & 0.587 & 0.658 \\
+    \midrule
+    \multirow{4}{*}{50\%}
+      & BRPL                         & \textbf{0.588} & \textbf{0.567} \\
+      & TA-BRPL (기본)              & 0.508 & 0.505 \\
+      & TA-BRPL + J580/W630         & 0.503 & 0.495 \\
+      & TA-BRPL + REL\_050          & 0.539 & 0.533 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:loss}는 세 가지 중요한 사실을 보여준다.
+첫째, ETX 기반 PRR 정규화만으로는 10\% 손실에서는 개선이 있었지만,
+30\%/50\% 손실에서 BRPL과의 격차를 줄이기에 충분하지 않았다.
+둘째, 절대 threshold를 $(580,630)$으로 올리면 attacker share는 줄지만
+usable parent 수가 감소하여 10\% 손실 구간 PDR가 오히려 하락할 수 있었다.
+셋째, relative filtering은 이 절대 threshold 구조보다
+``attacker share 감소 + usable parent 유지''의 균형을 더 잘 달성하였다.
+
+\subsection{절대 threshold 재튜닝의 진단}
+
+threshold sweep 결과, $J580/W630$은 손실 ladder 전체에서 가장 균형적인 절충점이었다.
+예를 들어 30\% 손실에서는 during/recovery PDR이 0.609/0.644였고,
+attacker share는 0.208/0.207로 기본 TA-BRPL의 0.264/0.277보다 낮아졌다.
+그러나 10\% 손실에서는 during/recovery PDR이 0.643/0.627로 떨어져,
+BRPL(0.838/0.806)과의 격차가 오히려 커졌다.
+
+soft penalty를 더 강하게 주면 attacker share는 추가로 감소했지만,
+정상 parent까지 함께 pruning되는 문제가 드러났다.
+대표적으로 10\% 손실에서 \texttt{SFT\_BASE}는 attacker share 0.172/0.171,
+usable parents 2.69/2.70, PDR 0.643/0.627이었고,
+\texttt{SFT\_G2}는 attacker share를 0.165/0.173으로 더 낮췄지만
+usable parents가 2.54/2.52로 줄어들며 PDR이 0.574/0.629로 악화되었다.
+이 결과는 ``탐지 신호는 둔한데 제어 로직은 민감하다''는 구조적 불균형을 보여준다.
+
+\subsection{원인 분석: A $>$ C $\gg$ B}
+
+10\% 손실 구간에서 ``attacker share는 낮아졌는데 PDR이 더 낮은'' 현상을 설명하기 위해,
+세 가지 가설을 비교하였다.
+\begin{itemize}
+  \item \textbf{A. 정상 parent의 FP성 pruning}: 공격자뿐 아니라 정상 이웃도 trust 하향에 함께 노출되어
+  후보 집합이 과도하게 줄어드는 경우
+  \item \textbf{B. backpressure 교란}: trust penalty가 queue-aware ranking을 왜곡하여
+  특정 parent로 트래픽이 과집중되는 경우
+  \item \textbf{C. 경로 수렴 실패}: 공격자 배제 후 대안 경로 재수렴이 길어지는 경우
+\end{itemize}
+
+현재 로그는 A가 주원인이고, C가 보조 원인이며, B의 증거는 약함을 보여준다.
+정상 이웃의 $T_\text{fwd}$와 $T_\text{ewma}$도 공격자와 함께 하향했고,
+usable parent 수가 줄어드는 반면 top-parent concentration은 뚜렷하게 증가하지 않았다.
+즉, soft penalty 강화의 부작용은 ``공격자를 더 강하게 누르기보다
+정상 후보까지 같이 줄이는 것''으로 해석하는 것이 타당하다.
+
+\subsection{기준 모델 내부 진단: Seed 3 vs.\ Seed 28}
+
+기준 모델 자체의 불안정성을 더 구체적으로 보기 위해,
+30-seed baseline 중 가장 불안정한 \texttt{seed 3}과 가장 안정적인 \texttt{seed 28}을 직접 비교하였다.
+두 seed는 동일한 알고리즘과 파라미터를 사용하지만 결과는 크게 달랐다.
+\texttt{seed 3}의 PDR은 pre/during/recovery = 0.9877/0.2430/0.2661이었고,
+\texttt{seed 28}은 1.0000/0.5699/0.7688이었다.
+
+\begin{figure}[t]
+  \centering
+  \fbox{%
+  \begin{minipage}{0.94\linewidth}
+  \centering
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    지표 & seed 3 (불안정) & seed 28 (안정) \\
+    \midrule
+    During PDR & 0.2430 & 0.5699 \\
+    Recovery PDR & 0.2661 & 0.7688 \\
+    During allowed candidates (mean) & 2.89 & 4.13 \\
+    Recovery allowed candidates (mean) & 1.58 & 3.23 \\
+    Recovery $attacker$ route share & 0.182 & 0.037 \\
+    Recovery attacker 18 $T_\text{ewma}$ (mean) & 649.3 & 494.5 \\
+    During blacklist count & 2 & 0 \\
+    Recovery blacklist count & 2 & 0 \\
+    \bottomrule
+  \end{tabular}
+  \end{minipage}}
+  \caption{기준 TA-BRPL 내부의 seed-dependent failure pattern. 불안정한 seed 3에서는
+  attacker trust가 충분히 내려가지 않는 동시에 benign parent pruning이 겹치며,
+  recovery 단계에서 candidate set이 급격히 붕괴한다.}
+  \label{fig:seed3-vs-28}
+\end{figure}
+
+Figure~\ref{fig:seed3-vs-28}은 중요한 두 가지 사실을 보여준다.
+첫째, 흔들림의 핵심은 escape 이벤트 수 자체가 아니다.
+\texttt{seed 28}은 during-attack 구간에서 escape가 더 많이 발생했음에도 recovery가 잘 유지되었다.
+반면 \texttt{seed 3}은 escape 수가 상대적으로 적었지만 recovery가 크게 무너졌다.
+즉 병목은 ``escape의 빈도''보다 \textbf{escape 이후에도 유지되는 parent 후보 집합의 질}에 있다.
+
+둘째, 최악의 경우는 \textbf{attacker trust가 충분히 빨리 내려가지 않는 동시에 benign pruning이 겹치는 조합}이다.
+\texttt{seed 3}에서는 attacker 18의 $T_\text{ewma}$가 recovery에서도 평균 649.3으로 높게 남았고,
+동시에 allowed candidate 수는 1.58까지 감소하였다.
+그 결과 공격자 완전 배제가 일어나지 않은 상태에서 정상 parent set만 먼저 줄어들며,
+PDR recovery가 0.2661까지 하락하였다.
+반대로 \texttt{seed 28}에서는 recovery 단계 attacker route share가 0.037까지 줄고
+candidate 수가 3.23으로 유지되어 recovery PDR 0.7688을 달성하였다.
+
+\subsection{Relative Trust Filtering의 효과}
+
+이 진단을 바탕으로 v0.3.3에서는 절대 임계값 대신
+이웃 trust 분포의 median을 기준으로 후보를 자르는 relative filtering을 구현하였다.
+핵심 목적은 손실 환경에서 전체 trust 수준이 함께 낮아질 때,
+정상 노드들이 median 근방에서 살아남도록 하는 것이다.
+
+5-seed sweep에서 손실률별 best margin은 서로 달랐다.
+\begin{itemize}
+  \item 10\% 손실: \texttt{REL\_020}, PDR 0.637/0.664, attacker share 0.206/0.184
+  \item 30\% 손실: \texttt{REL\_010}, PDR 0.587/0.658, attacker share 0.211/0.183
+  \item 50\% 손실: \texttt{REL\_050}, PDR 0.539/0.533, attacker share 0.219/0.213
+\end{itemize}
+
+특히 \texttt{REL\_050}은 세 손실 구간 모두에서 비교적 안정적인 균형점을 제공했다.
+10\%/30\%/50\% 손실에서 PDR은 각각 0.656/0.639, 0.614/0.639, 0.539/0.533이었고,
+attacker share는 0.216/0.208, 0.217/0.188, 0.219/0.213으로 유지되었다.
+즉, 단일 margin으로 모든 구간을 최적화하지는 못했지만,
+absolute threshold 대비 ``parent 후보 유지'' 측면에서 더 일관된 거동을 보였다.
+
+\subsection{Trust 분리도와 threshold crossing 진단}
+
+기준 모델 내부의 흔들림이 정말 ``attacker under-suppression + benign overlap''인지 보기 위해,
+attacker/benign 이웃의 trust 성분 분포를 직접 비교하였다.
+Table~\ref{tab:trust-separability}의 overlap coefficient는 두 분포가 얼마나 겹치는지를 나타내며,
+1에 가까울수록 분리력이 약함을 의미한다.
+
+\begin{table}[t]
+  \centering
+  \caption{Attacker vs.\ benign trust separability (30-seed 평균)}
+  \label{tab:trust-separability}
+  \begin{tabular}{llrrr}
+    \toprule
+    Phase & Metric & Attacker mean & Benign mean & Overlap \\
+    \midrule
+    During   & $T_\text{fwd}$  & 345.7 & 409.1 & 0.748 \\
+    During   & $T_\text{ctrl}$ & 978.2 & 951.1 & 0.816 \\
+    During   & $T_\text{hon}$  & 1000.0 & 1000.0 & 1.000 \\
+    During   & $T_\text{ewma}$ & 462.5 & 517.4 & 0.739 \\
+    \midrule
+    Recovery & $T_\text{fwd}$  & 329.9 & 378.4 & 0.725 \\
+    Recovery & $T_\text{ctrl}$ & 909.9 & 792.3 & 0.385 \\
+    Recovery & $T_\text{hon}$  & 1000.0 & 1000.0 & 1.000 \\
+    Recovery & $T_\text{ewma}$ & 438.9 & 472.3 & 0.500 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+표가 보여주는 핵심은 세 가지다.
+첫째, blackhole 탐지에 가장 직접적으로 연결된 $T_\text{fwd}$조차 during/recovery overlap이
+0.748/0.725로 여전히 크다. 둘째, 현재 실험에서는 $T_\text{hon}$이 attacker와 benign 모두에서
+거의 1.0으로 포화되어, no-attack 혼잡 완화에는 도움을 주더라도 공격자 분리 신호로는 거의 작동하지 않는다.
+셋째, aggregate trust인 $T_\text{ewma}$도 overlap 0.739/0.500 수준을 보여,
+일부 seed에서는 공격자와 정상 노드가 여전히 같은 threshold band에 겹쳐질 수 있음을 시사한다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig10_trust_separability.pdf}
+  \caption{Attacker vs.\ benign trust separability. $T_\text{fwd}$와 $T_\text{ewma}$는
+  attacker 쪽이 더 낮지만, overlap이 여전히 커서 일부 seed에서는 threshold band가 겹친다.}
+  \label{fig:trust-separability-plot}
+\end{figure}
+
+threshold crossing 시간도 이 해석과 일치한다.
+attacker 이웃은 attack 시작 직후인 390001\,ms 부근에서
+$\tau_\text{warn}$과 $\tau_\text{join}$을 통과하는 경우가 많았지만,
+$\tau_\text{black}$ 아래로 내려간 사례는 관측되지 않았다.
+반면 benign 이웃도 $\tau_\text{join}$을 median 510001\,ms 수준에서 자주 통과했고,
+$\tau_\text{black}$ 아래로 내려간 사례도 소수 존재하였다.
+즉 현재 기준 모델의 실패는 ``공격자만 충분히 빨리 낮추지 못함''과
+``정상 이웃도 threshold 아래로 일부 함께 끌려감''이 동시에 존재하는 문제로 볼 수 있다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.78\linewidth]{fig12_threshold_crossing.pdf}
+  \caption{Median threshold crossing time. attacker는 $\tau_\text{warn}$ 아래로는 빠르게 내려가지만,
+  $\tau_\text{black}$까지는 거의 도달하지 못하고, benign 역시 $\tau_\text{join}$ 아래로 일부 함께 내려간다.}
+  \label{fig:threshold-crossing}
+\end{figure}
+
+\subsection{Population-level Seed Dependence}
+
+seed 3 vs.\ 28은 개별 사례였지만, 전체 30개 seed 분포를 보면 같은 패턴이 population level에서도 나타난다.
+During/recovery PDR는 각각 평균 0.530/0.405였고, 상위 5개 seed와 하위 5개 seed를 비교하면
+recovery PDR는 0.616 vs.\ 0.219로 큰 차이를 보였다.
+이 차이는 route concentration보다는 candidate set과 attacker trust 쪽 지표와 더 강하게 연결되었다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig8_seed_failure_correlation.pdf}
+  \caption{30-seed population-level failure pattern. Recovery allowed candidate 수가 많을수록 recovery PDR가 높고,
+  attacker 18의 recovery $T_\text{ewma}$가 높을수록 recovery PDR가 낮아지는 경향이 나타난다.}
+  \label{fig:seed-failure-corr}
+\end{figure}
+
+\begin{table}[t]
+  \centering
+  \caption{Worst 5 vs.\ Best 5 seeds 비교 (기준 TA-BRPL)}
+  \label{tab:worstbest5}
+  \begin{tabular}{lrr}
+    \toprule
+    지표 & Worst 5 mean & Best 5 mean \\
+    \midrule
+    During PDR & 0.409 & 0.584 \\
+    Recovery PDR & 0.219 & 0.616 \\
+    During allowed candidates & 3.79 & 4.26 \\
+    Recovery allowed candidates & 2.53 & 3.20 \\
+    During attacker share & 0.171 & 0.151 \\
+    Recovery attacker share & 0.153 & 0.068 \\
+    Recovery attacker 18 $T_\text{ewma}$ & 543.1 & 444.0 \\
+    During blacklists & 0.2 & 0.0 \\
+    Recovery blacklists & 0.6 & 0.0 \\
+    During escapes & 16.6 & 26.6 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+상관 분석도 같은 결론을 지지한다.
+During PDR는 during/recovery allowed candidate 수와 각각 $r=0.830$, $r=0.825$의 강한 양의 상관을 보였고,
+recovery attacker 18 $T_\text{ewma}$와는 $r=-0.772$의 강한 음의 상관을 보였다.
+반면 recovery top-parent share와 during PDR의 상관은 $r=0.154$로 약했다.
+즉 흔들린 seed의 공통점은 ``어느 한 정상 parent로의 과집중''이 아니라,
+\textbf{candidate collapse와 attacker under-suppression의 동시 발생}으로 보는 것이 타당하다.
+
+% ============================================================
+\section{전체 파라미터 목록}
+% ============================================================
+
+\begin{table}[t]
+  \centering
+  \caption{TA-BRPL 주요 파라미터 (\texttt{project-conf.h} 현재 기본값 기준)}
+  \label{tab:params}
+  \begin{tabular}{lll}
+    \toprule
+    파라미터 & 심벌 & 기본값 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{임계값}} \\
+    Warn 임계값       & $\tau_\text{warn}$    & 700 \\
+    Join 임계값       & $\tau_\text{join}$    & 450 \\
+    Blacklist 임계값  & $\tau_\text{black}$   & 250 \\
+    초기 신뢰         & $T_\text{init}$       & 500 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{EWMA}} \\
+    감소 람다         & $\lambda_\downarrow$  & 0.2 \\
+    정상 람다         & $\lambda_\uparrow$    & 0.7 \\
+    업데이트 주기     & $\Delta t$            & 60s \\
+    \midrule
+    \multicolumn{3}{l}{\textit{PRR 정규화}} \\
+    최소 PRR          & $\mathrm{PRR}_{\min}$ & 100/1000 \\
+    PRR blend weight  & --                    & 1000 \\
+    최대 PRR          & $\mathrm{PRR}_{\max}$ & 1000/1000 \\
+    ETX fallback PRR  & --                    & 1000/1000 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{Relative filtering (기본 비활성)}} \\
+    Relative filter enable  & -- & 0 \\
+    Relative penalty enable & -- & 0 \\
+    Relative margin         & $\Delta_\text{rel}$ & 25 \\
+    Relative penalty scale  & $S_\text{rel}$ & 1000 \\
+    Relative penalty max    & $P^\text{rel}_\text{max}$ & 400 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{가중치}} \\
+    $T_\text{fwd}$ 가중치   & $w_f$      & 7 \\
+    $T_\text{ctrl}$ 가중치  & $w_c$      & 2 \\
+    $T_\text{hon}$ 가중치   & $w_h$      & 1 \\
+    Laplace $\alpha$        & $\alpha$   & 1 \\
+    Laplace $\beta$         & $\beta$    & 1 \\
+    Rank 이상 가중치        & $w_1$      & 5 \\
+    DIO 이상 가중치         & $w_2$      & 3 \\
+    Version 이상 가중치     & $w_3$      & 2 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{Blacklist / 회복}} \\
+    격리 기간               & $t_\text{bl}$     & 120s \\
+    해제 후 복원 신뢰       & $T_\text{rst}$    & 450 \\
+    해제 cooldown           & $t_\text{cool}$   & 120s \\
+    해제 초기 패널티 배율   & $P_\text{rel}$    & $1.6\times$ \\
+    지속 패널티 창          & $t_\text{per}$    & 120s \\
+    지속 패널티 step        & $\Delta P$        & 250 \\
+    지속 패널티 최대값      & $P_\text{max}$    & $2.6\times$ \\
+    Escape 발동 시간        & $t_\text{esc}$    & 180s \\
+    Escape 패널티 배율      & $P_\text{esc}$    & $3.2\times$ \\
+    Escape 신뢰 임계값      & $\tau_\text{esc}$ & 700 \\
+    Escape 연속 조건        & --                & 1 update \\
+    Escape cooldown         & --                & 0s \\
+    Better-parent only      & --                & off \\
+    Escape $T_\text{fwd}$ 조건 & --             & $< 450$ \\
+    Escape $T_\text{hon}$ 조건 & --             & $> 850$ \\
+    Join 최소 지속 시간     & --                & 120s \\
+    Black 최소 지속 시간    & --                & 120s \\
+    \midrule
+    \multicolumn{3}{l}{\textit{실험 환경}} \\
+    토폴로지     & -- & GRID $6\times6$, 36 노드 \\
+    공격자       & -- & Blackhole $\times3$ + Sinkhole $\times1$ \\
+    Seed 수      & -- & 30 \\
+    송신 주기    & -- & 30s \\
+    시뮬레이션   & -- & 900s \\
+    혼잡 유도    & -- & on, 200--300s, 15s interval \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+손실 robustness tuning에서 사용한 대표 변형은 기본값을 그대로 바꾸지 않고
+\texttt{Makefile} 오버라이드로 실험하였다. 대표적으로 절대 threshold 재튜닝은
+$J580/W630$, relative filtering은 \texttt{REL\_010}--\texttt{REL\_100},
+soft penalty는 \texttt{SFT\_BASE}, \texttt{SFT\_G2}, \texttt{SFT\_L600} 등으로 분기하였다.
+
+% ============================================================
+\section{구현상 한계}
+% ============================================================
+
+\textbf{L1 정적 토폴로지}: 모든 실험은 고정 GRID 토폴로지에서 수행되었다.
+이동성이 있는 환경에서는 $T_\text{fwd}$의 overhearing 범위 이탈로 인해
+FP가 증가할 가능성이 있다.
+
+\textbf{L2 중간 이상 링크 손실}: v0.3.3에서는 10\%/30\%/50\% loss ladder와
+절대 threshold, soft penalty, relative filtering tuning까지 5-seed로 수행하였다.
+그러나 아직 30-seed robustness 재검증은 완료되지 않았고,
+단일 설정이 모든 손실 구간에서 BRPL을 일관되게 상회하지도 못했다.
+즉, 현재 데이터는 ``어떤 tuning이 어디서 실패하는가''를 진단하기에는 충분하지만,
+``TA-BRPL이 고손실에서도 전반적으로 우월하다''는 강한 주장을 하기에는 아직 부족하다.
+또한 sliding-window $T_\text{fwd}$는 무손실 baseline 자체를 크게 훼손하여
+본선 대안으로 채택하지 않았다.
+기준 모델 내부 분석(Figure~\ref{fig:seed3-vs-28})은
+성능 저하가 단순한 escape 과민반응이 아니라,
+``attacker trust 미하강 + benign pruning''이 동시에 발생하는 seed-dependent 최악 조합에서
+발생함을 보여준다.
+
+\textbf{L3 제한된 공격 유형}: 현재 평가는 Blackhole + rank sinkhole에 한정되어 있다.
+Colluding sinkhole, version attack, Sybil attack 등은 아직 평가하지 않았다.
+
+\textbf{L4 도청 불완전성}: IP 레이어 도청 훅은 MAC 필터링으로 폐기된 패킷을 감지하지 못한다.
+따라서 손실 환경에서 $F_{ij}$ 관측치가 구조적으로 과소계산될 가능성이 있다.
+현재 UDGM에서는 이 문제가 부분적으로 가려져 있지만, 실제 하드웨어나 더 현실적인 radio 모델에서는
+$T_\text{fwd}$ 분리력이 더 달라질 수 있다.
+
+\textbf{L5 SMTrust DIO 확장}: TMRT 성분은 비표준 ICMPv6 옵션(0xFE, 0x02)을 사용한다.
+따라서 RFC 호환성이 없다.
+
+\textbf{L6 부동소수점}: 현재 Cooja 구현에서는 기하평균 계산에 glibc의
+\texttt{pow()}를 사용한다. 실제 MCU(Cortex-M0+) 배포를 고려한다면,
+정수 기반 lookup table 방식으로 대체할 필요가 있다.
+
+\textbf{L7 정적 임계값의 한계}: 절대 threshold와 단일 relative margin 모두
+손실률 전 구간에서 공통 최적점을 제공하지 못했다.
+현재 결과는 candidate-aware threshold, loss-aware adaptive threshold,
+혹은 relative spread(MAD/IQR) 기반 판정이 다음 단계의 유력한 개선 방향임을 시사한다.
+동시에 보다 직접적인 남은 문제는,
+원래 TA-BRPL 기준 모델 내부에서 왜 특정 seed와 조건에서 attacker $T_\text{fwd}$가 충분히 빨리 내려가지 않는가를
+추적하는 것이다. 즉 다음 단계의 진단 초점은 새 모델 추가가 아니라,
+기존 echo-credit 기반 관측과 trust-to-control coupling의 상호작용을 해석하는 데 있다.
+
+\textbf{L8 정량 overhead 계측 부족}: 현재 로그는 parent churn, escape 횟수,
+candidate 수, route share와 같은 \emph{간접 비용 지표}는 충분히 제공하지만,
+DIO/DAO/DIS 개수, byte-level control overhead, queue occupancy, CPU time, RAM/ROM 증가량을
+직접 기록하지는 않는다. 따라서 본 문서는 현재 단계에서
+``보안/복원력 이득에 어떤 경로 제어 비용이 수반되는가''까지는 분석할 수 있지만,
+``정확히 몇 바이트/몇 사이클의 오버헤드인가''까지는 아직 정량화하지 못한다.
+향후 버전에서는 control-plane 카운터와 메모리 footprint 로깅을 추가하여
+성능 향상이 overhead를 정당화하는지까지 함께 평가할 필요가 있다.
+
+\end{document}

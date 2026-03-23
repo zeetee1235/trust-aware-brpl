@@ -1,0 +1,22 @@
+# Makefile.tabrpl_nocongestion
+# TA-BRPL with congestion induction disabled
+#   For V3-C3 (attack only, no congestion) and V5/V6 sensitivity experiments
+#   Allows isolating attack signal from congestion-induced backpressure
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DCONGESTION_INDUCTION_ENABLE=0
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

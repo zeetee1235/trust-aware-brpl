@@ -1,0 +1,22 @@
+# Makefile.tabrpl
+# TA-BRPL: Trust-Aware Backpressure RPL
+#   - BRPL congestion-aware parent selection
+#   - On-node trust model (ta-brpl-trust.c)
+#   - Three-component trust: T_fwd, T_ctrl, T_hon
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

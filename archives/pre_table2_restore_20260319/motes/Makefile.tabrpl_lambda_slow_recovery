@@ -1,0 +1,23 @@
+# Makefile.tabrpl_lambda_slow_recovery
+# V5 EWMA sensitivity: slow recovery (lambda_normal=0.9)
+#   Base: lambda_decrease=0.5, lambda_normal=0.7
+#   This: lambda_decrease=0.2, lambda_normal=0.9 → very slow trust recovery after attack
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_TRUST_LAMBDA_DECREASE=200
+CFLAGS += -DTA_TRUST_LAMBDA_NORMAL=900
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include
