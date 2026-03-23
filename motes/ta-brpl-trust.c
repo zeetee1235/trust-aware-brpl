@@ -40,6 +40,90 @@
 #define LOG_MODULE "TA-TRUST"
 #define LOG_LEVEL  LOG_LEVEL_WARN
 
+#ifndef TA_TRUST_FWD_BLACKLIST_STREAK
+#define TA_TRUST_FWD_BLACKLIST_STREAK 3
+#endif
+
+/* Two-stage validation before hard exclusion. */
+#ifndef TA_TRUST_REVIEW_WINDOWS
+#define TA_TRUST_REVIEW_WINDOWS 3
+#endif
+#ifndef TA_TRUST_REVIEW_BAD_TO_PENALIZED
+#define TA_TRUST_REVIEW_BAD_TO_PENALIZED 2
+#endif
+#ifndef TA_TRUST_REVIEW_BAD_TO_BLACKLIST
+#define TA_TRUST_REVIEW_BAD_TO_BLACKLIST 2
+#endif
+#ifndef TA_TRUST_REVIEW_GOOD_RESET
+#define TA_TRUST_REVIEW_GOOD_RESET 2
+#endif
+#ifndef TA_TRUST_REVIEW_PENALTY_SCALE
+#define TA_TRUST_REVIEW_PENALTY_SCALE 1200
+#endif
+#ifndef TA_TRUST_PENALIZED_PENALTY_SCALE
+#define TA_TRUST_PENALIZED_PENALTY_SCALE 1600
+#endif
+#ifndef TA_TRUST_REVIEW_SCORE_UNDER
+#define TA_TRUST_REVIEW_SCORE_UNDER 8
+#endif
+#ifndef TA_TRUST_REVIEW_SCORE_PENALIZED
+#define TA_TRUST_REVIEW_SCORE_PENALIZED 14
+#endif
+#ifndef TA_TRUST_REVIEW_SCORE_BLACKLIST
+#define TA_TRUST_REVIEW_SCORE_BLACKLIST 7
+#endif
+#ifndef TA_TRUST_BLACKLIST_MIN_WINDOWS
+#define TA_TRUST_BLACKLIST_MIN_WINDOWS 2
+#endif
+#ifndef TA_TRUST_VALIDATION_MIN_PARENT_AGE_SECONDS
+#define TA_TRUST_VALIDATION_MIN_PARENT_AGE_SECONDS 120
+#endif
+#ifndef TA_TRUST_VALIDATION_MIN_SENT
+#define TA_TRUST_VALIDATION_MIN_SENT 3
+#endif
+#ifndef TA_TRUST_VALIDATION_MIN_WINDOWS
+#define TA_TRUST_VALIDATION_MIN_WINDOWS 3
+#endif
+#ifndef TA_TRUST_VALIDATION_MIN_ACC_SENT
+#define TA_TRUST_VALIDATION_MIN_ACC_SENT 8
+#endif
+#ifndef TA_TRUST_VALIDATION_BAD_SUCCESS_MAX
+#define TA_TRUST_VALIDATION_BAD_SUCCESS_MAX 150
+#endif
+#ifndef TA_TRUST_VALIDATION_STRONG_SUCCESS_MAX
+#define TA_TRUST_VALIDATION_STRONG_SUCCESS_MAX 100
+#endif
+#ifndef TA_TRUST_VALIDATION_GOOD_SUCCESS_MIN
+#define TA_TRUST_VALIDATION_GOOD_SUCCESS_MIN 550
+#endif
+#ifndef TA_TRUST_VALIDATION_BAD_INC
+#define TA_TRUST_VALIDATION_BAD_INC 3
+#endif
+#ifndef TA_TRUST_VALIDATION_STRONG_BONUS
+#define TA_TRUST_VALIDATION_STRONG_BONUS 2
+#endif
+#ifndef TA_TRUST_VALIDATION_GOOD_DEC
+#define TA_TRUST_VALIDATION_GOOD_DEC 2
+#endif
+#ifndef TA_TRUST_VALIDATION_IDLE_DEC
+#define TA_TRUST_VALIDATION_IDLE_DEC 1
+#endif
+#ifndef TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST
+#define TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST 1
+#endif
+#ifndef TA_TRUST_FINAL_TFWD_MAX
+#define TA_TRUST_FINAL_TFWD_MAX 300
+#endif
+#ifndef TA_TRUST_FINAL_TFWD_STREAK
+#define TA_TRUST_FINAL_TFWD_STREAK 2
+#endif
+#ifndef TA_TRUST_LAMBDA_DECREASE_FWD
+#define TA_TRUST_LAMBDA_DECREASE_FWD 200
+#endif
+#define TA_REVIEW_STATE_NORMAL    0
+#define TA_REVIEW_STATE_UNDER     1
+#define TA_REVIEW_STATE_PENALIZED 2
+
 /* ------------------------------------------------------------------ */
 /* Per-neighbour record                                                */
 /* ------------------------------------------------------------------ */
@@ -48,11 +132,10 @@ typedef struct {
   uint8_t  valid;
 
   /* T_fwd */
-  uint32_t fwd_sent;         /* S_ij: packets sent to this neighbour     */
-  uint32_t fwd_observed;     /* F_ij: forwarding observations (EWMA acc) */
-  uint8_t  fwd_window_head;  /* next insertion index for recent send set */
-  uint8_t  fwd_window_count; /* active slots in recent send set          */
-  uint8_t  fwd_window_success[TA_TRUST_FWD_WINDOW_SIZE];
+  uint32_t fwd_sent;       /* S_ij: packets sent to this neighbour     */
+  uint32_t fwd_observed;   /* F_ij: forwarding observations (EWMA acc) */
+  uint32_t fwd_observed_new; /* fresh observations this update window  */
+  uint32_t fwd_sent_new;   /* fresh sends this update window (not halved) */
 
   /* T_ctrl */
   uint16_t ctrl_rank_last;         /* last advertised rank              */
@@ -70,10 +153,14 @@ typedef struct {
 
   /* Aggregated trust (0..TA_TRUST_SCALE) */
   uint16_t trust;
-  uint16_t last_t_fwd;
-  uint16_t last_t_ctrl;
-  uint16_t last_t_hon;
-  uint16_t last_t_agg;
+
+  /* T_fwd EWMA tracked independently from the geometric-mean aggregate.
+   * A pure blackhole attacker keeps T_ctrl≈1000 and T_hon≈1000, so the
+   * geometric mean floors at sqrt(T_fwd)≈0.4 even when T_fwd→0.17.
+   * With tau_join=350 that aggregate floor (≈408) never triggers exclusion.
+   * Tracking T_fwd separately lets us exclude based on forwarding evidence
+   * alone, bypassing the T_ctrl/T_hon dilution for blackhole detection.  */
+  uint16_t trust_fwd;
 
   /* Blacklist */
   uint8_t       blacklisted;
@@ -82,9 +169,15 @@ typedef struct {
   uint8_t       release_redrop_armed;
   clock_time_t  release_started_at;
   uint8_t       low_trust_updates;
-  uint8_t       below_join_updates;
-  uint8_t       below_black_updates;
-  uint8_t       below_join_ever;   /* set when trust first drops below tau_join; never cleared */
+  uint8_t       low_tfwd_streak;
+  uint8_t       review_state;
+  uint8_t       review_windows_seen;
+  uint8_t       review_bad_windows;
+  uint8_t       review_good_windows;
+  clock_time_t  review_parent_since;
+  uint8_t       review_score;
+  uint16_t      val_sent_acc;
+  uint16_t      val_obs_acc;
 
 } ta_trust_entry_t;
 
@@ -93,6 +186,8 @@ typedef struct {
 /* ------------------------------------------------------------------ */
 static ta_trust_entry_t trust_table[TA_TRUST_MAX_NEIGHBORS];
 static uint8_t trust_table_size;
+/* O(1) node_id -> trust entry index map (node IDs are lladdr suffix, 0..255). */
+static uint8_t trust_index_by_node_id[256];
 static uint16_t current_parent_id = 0xffff;
 static clock_time_t current_parent_since;
 static uint8_t current_parent_escape_armed;
@@ -101,51 +196,16 @@ static clock_time_t current_parent_escape_cooldown_until;
 static ta_trust_entry_t *find_entry(uint16_t node_id);
 
 static void
-log_parent_candidate_summary(void)
+reset_review_state(ta_trust_entry_t *e)
 {
-  rpl_dag_t *dag = rpl_get_any_dag();
-
-  if(dag != NULL) {
-    uint16_t total = 0;
-    uint16_t allowed = 0;
-    uint16_t blacklisted = 0;
-    uint16_t suspect_or_worse = 0;
-    rpl_parent_t *p;
-    extern nbr_table_t *rpl_parents;
-
-    for(p = nbr_table_head(rpl_parents); p != NULL;
-        p = nbr_table_next(rpl_parents, p)) {
-      const linkaddr_t *ll = rpl_get_parent_lladdr(p);
-      ta_trust_entry_t *e;
-      uint16_t node_id;
-
-      if(ll == NULL) {
-        continue;
-      }
-
-      total++;
-      node_id = ll->u8[LINKADDR_SIZE - 1];
-      e = find_entry(node_id);
-
-      if(e != NULL && e->blacklisted) {
-        blacklisted++;
-      }
-      if(e != NULL && e->trust < TA_TRUST_TAU_WARN) {
-        suspect_or_worse++;
-      }
-      if(brpl_trust_parent_allowed(node_id)) {
-        allowed++;
-      }
-    }
-
-    printf("CSV,TRUST_CANDIDATES,%u,%lu,%u,%u,%u,%u\n",
-           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
-           (unsigned long)clock_time(),
-           (unsigned)allowed,
-           (unsigned)total,
-           (unsigned)blacklisted,
-           (unsigned)suspect_or_worse);
-  }
+  e->review_state = TA_REVIEW_STATE_NORMAL;
+  e->review_windows_seen = 0;
+  e->review_bad_windows = 0;
+  e->review_good_windows = 0;
+  e->review_parent_since = 0;
+  e->review_score = 0;
+  e->val_sent_acc = 0;
+  e->val_obs_acc = 0;
 }
 
 static clock_time_t
@@ -158,38 +218,40 @@ current_parent_elapsed(void)
 }
 
 static uint16_t
-attack_persistence_penalty_scale(uint16_t node_id, uint16_t trust)
+attack_persistence_penalty_scale(const ta_trust_entry_t *e)
 {
   uint16_t scale = TA_TRUST_SCALE;
 
-  /* Apply persistence penalty to any node whose trust has fallen to
-   * SUSPECT or worse — not just a hardcoded attacker ID set.
-   * This makes the detection ID-agnostic and generalizable. */
-  if(trust >= TA_TRUST_TAU_WARN) {
+  if(e == NULL) {
+    return scale;
+  }
+
+  /* Only penalise the currently used parent when forwarding evidence
+   * already indicates degradation. This avoids network-wide false
+   * penalties in benign pre-attack periods. */
+  if(e->node_id != current_parent_id || e->trust_fwd >= TA_TRUST_TAU_WARN) {
     return scale;
   }
 
   scale = TA_TRUST_ATTACK_PARENT_PENALTY_SCALE;
 
-  if(node_id == current_parent_id) {
-    clock_time_t elapsed = current_parent_elapsed();
-    clock_time_t window = (clock_time_t)TA_TRUST_ATTACK_PERSIST_WINDOW_SECONDS * CLOCK_SECOND;
+  clock_time_t elapsed = current_parent_elapsed();
+  clock_time_t window = (clock_time_t)TA_TRUST_ATTACK_PERSIST_WINDOW_SECONDS * CLOCK_SECOND;
 
-    if(window > 0) {
-      uint32_t steps = elapsed / window;
-      uint32_t extra = steps * TA_TRUST_ATTACK_PERSIST_PENALTY_STEP;
-      uint32_t candidate = (uint32_t)scale + extra;
-      if(candidate > TA_TRUST_ATTACK_PERSIST_PENALTY_MAX) {
-        candidate = TA_TRUST_ATTACK_PERSIST_PENALTY_MAX;
-      }
-      scale = (uint16_t)candidate;
+  if(window > 0) {
+    uint32_t steps = elapsed / window;
+    uint32_t extra = steps * TA_TRUST_ATTACK_PERSIST_PENALTY_STEP;
+    uint32_t candidate = (uint32_t)scale + extra;
+    if(candidate > TA_TRUST_ATTACK_PERSIST_PENALTY_MAX) {
+      candidate = TA_TRUST_ATTACK_PERSIST_PENALTY_MAX;
     }
+    scale = (uint16_t)candidate;
+  }
 
-    if(elapsed >= (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND &&
-       trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD &&
-       scale < TA_TRUST_ESCAPE_PENALTY_SCALE) {
-      scale = TA_TRUST_ESCAPE_PENALTY_SCALE;
-    }
+  if(elapsed >= (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND &&
+     e->trust_fwd < TA_TRUST_TAU_JOIN &&
+     scale < TA_TRUST_ESCAPE_PENALTY_SCALE) {
+    scale = TA_TRUST_ESCAPE_PENALTY_SCALE;
   }
 
   return scale;
@@ -211,41 +273,6 @@ ta_sharpen_tfwd(uint16_t trust)
     sharpened = TA_TRUST_SCALE;
   }
   return (uint16_t)sharpened;
-#endif
-}
-
-static void
-ta_fwd_window_note_sent(ta_trust_entry_t *e)
-{
-#if TA_TRUST_FWD_WINDOW_ENABLE
-  e->fwd_window_success[e->fwd_window_head] = 0;
-  e->fwd_window_head = (uint8_t)((e->fwd_window_head + 1) % TA_TRUST_FWD_WINDOW_SIZE);
-  if(e->fwd_window_count < TA_TRUST_FWD_WINDOW_SIZE) {
-    e->fwd_window_count++;
-  }
-#else
-  (void)e;
-#endif
-}
-
-static void
-ta_fwd_window_note_credit(ta_trust_entry_t *e)
-{
-#if TA_TRUST_FWD_WINDOW_ENABLE
-  if(e->fwd_window_count == 0) {
-    return;
-  }
-
-  for(uint8_t age = 0; age < e->fwd_window_count; age++) {
-    uint8_t idx = (uint8_t)((e->fwd_window_head + TA_TRUST_FWD_WINDOW_SIZE
-                           - e->fwd_window_count + age) % TA_TRUST_FWD_WINDOW_SIZE);
-    if(e->fwd_window_success[idx] == 0) {
-      e->fwd_window_success[idx] = 1;
-      return;
-    }
-  }
-#else
-  (void)e;
 #endif
 }
 
@@ -298,7 +325,7 @@ ta_has_better_parent_candidate(uint16_t current_node_id, uint16_t current_trust)
       }
 
       trust = candidate != NULL ? candidate->trust : TA_TRUST_INIT;
-      if(!brpl_trust_parent_allowed(node_id)) {
+      if(trust < TA_TRUST_TAU_JOIN) {
         continue;
       }
       if(trust + TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN < current_trust) {
@@ -327,13 +354,11 @@ static int
 escape_mode_for_entry(const ta_trust_entry_t *e)
 {
   clock_time_t now = clock_time();
-  uint8_t fwd_driven;
-  uint8_t congestion_likely;
 
   if(e == NULL || e->node_id != current_parent_id) {
     return 0;
   }
-  if(e->trust >= TA_TRUST_ESCAPE_TRUST_THRESHOLD) {
+  if(e->trust_fwd >= TA_TRUST_TAU_JOIN) {
     return 0;
   }
   if(current_parent_elapsed() < (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND) {
@@ -346,14 +371,6 @@ escape_mode_for_entry(const ta_trust_entry_t *e)
     return 0;
   }
   if(!ta_has_better_parent_candidate(e->node_id, e->trust)) {
-    return 0;
-  }
-
-  fwd_driven = (e->last_t_fwd < TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD)
-            && (e->last_t_hon > TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD);
-  congestion_likely = (e->last_t_fwd < TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD)
-                   && (e->last_t_hon <= TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD);
-  if(!fwd_driven || congestion_likely) {
     return 0;
   }
 
@@ -378,131 +395,18 @@ penalty_scale_for_entry(const ta_trust_entry_t *e)
   }
 
   if(e != NULL) {
-    uint32_t combined = ((uint32_t)scale * attack_persistence_penalty_scale(e->node_id, e->trust))
+    uint32_t combined = ((uint32_t)scale * attack_persistence_penalty_scale(e))
                         / TA_TRUST_SCALE;
     if(combined > 0xffff) {
       combined = 0xffff;
     }
     scale = (uint16_t)combined;
+
+    /* Validation model is separated from trust model:
+     * review_state/review_score do not affect trust penalty scale. */
   }
 
   return scale;
-}
-
-static uint16_t
-ta_trust_median_snapshot(void)
-{
-#if TA_TRUST_RELATIVE_FILTER_ENABLE || TA_TRUST_RELATIVE_PENALTY_ENABLE
-  uint16_t vals[TA_TRUST_MAX_NEIGHBORS];
-  uint8_t n = 0;
-
-  for(uint8_t i = 0; i < trust_table_size && n < TA_TRUST_MAX_NEIGHBORS; i++) {
-    if(!trust_table[i].valid || trust_table[i].blacklisted) {
-      continue;
-    }
-    vals[n++] = trust_table[i].trust;
-  }
-
-  if(n == 0) {
-    return TA_TRUST_TAU_JOIN;
-  }
-
-  for(uint8_t i = 1; i < n; i++) {
-    uint16_t key = vals[i];
-    int8_t j = (int8_t)i - 1;
-    while(j >= 0 && vals[j] > key) {
-      vals[j + 1] = vals[j];
-      j--;
-    }
-    vals[j + 1] = key;
-  }
-
-  return vals[n / 2];
-#else
-  return TA_TRUST_TAU_JOIN;
-#endif
-}
-
-static uint16_t
-ta_trust_relative_floor(uint16_t median)
-{
-#if TA_TRUST_RELATIVE_FILTER_ENABLE
-  uint16_t floor = median > TA_TRUST_REL_MARGIN ? (uint16_t)(median - TA_TRUST_REL_MARGIN) : 0;
-  if(floor < TA_TRUST_TAU_BLACK) {
-    floor = TA_TRUST_TAU_BLACK;
-  }
-  return floor;
-#else
-  (void)median;
-  return TA_TRUST_TAU_JOIN;
-#endif
-}
-
-static uint16_t __attribute__((unused))
-ta_trust_relative_penalty(uint16_t trust, uint16_t median)
-{
-#if TA_TRUST_RELATIVE_PENALTY_ENABLE
-  if(trust >= median) {
-    return 0;
-  }
-
-  uint32_t gap = (uint32_t)(median - trust);
-  uint32_t penalty = (gap * TA_TRUST_REL_PENALTY_SCALE) / TA_TRUST_SCALE;
-  if(penalty > TA_TRUST_REL_MAX_SOFT_PENALTY) {
-    penalty = TA_TRUST_REL_MAX_SOFT_PENALTY;
-  }
-  return (uint16_t)penalty;
-#else
-  (void)trust;
-  (void)median;
-  return 0;
-#endif
-}
-
-static uint16_t
-ta_trust_effective_for_penalty(uint16_t node_id)
-{
-  uint16_t trust = ta_trust_get(node_id);
-
-#if TA_TRUST_RELATIVE_PENALTY_ENABLE
-  {
-    uint16_t median = ta_trust_median_snapshot();
-    uint16_t penalty = ta_trust_relative_penalty(trust, median);
-    if(penalty >= TA_TRUST_SCALE) {
-      return 0;
-    }
-    return (uint16_t)(TA_TRUST_SCALE - penalty);
-  }
-#else
-  return trust;
-#endif
-}
-
-static uint8_t
-ta_join_min_updates_required(void)
-{
-  uint8_t updates =
-    (TA_TRUST_JOIN_MIN_DURATION_SECONDS + TA_TRUST_UPDATE_INTERVAL - 1)
-    / TA_TRUST_UPDATE_INTERVAL;
-  return updates == 0 ? 1 : updates;
-}
-
-static int
-ta_parent_exclusion_ready(const ta_trust_entry_t *e, uint16_t floor)
-{
-  if(e == NULL) {
-    return 0;
-  }
-  if(e->blacklisted) {
-    return 1;
-  }
-  if(e->trust < TA_TRUST_TAU_BLACK) {
-    return 1;
-  }
-  if(e->trust >= floor) {
-    return 0;
-  }
-  return e->below_join_updates >= ta_join_min_updates_required();
 }
 
 /* ------------------------------------------------------------------ */
@@ -511,10 +415,15 @@ ta_parent_exclusion_ready(const ta_trust_entry_t *e, uint16_t floor)
 static ta_trust_entry_t *
 find_entry(uint16_t node_id)
 {
-  for(uint8_t i = 0; i < trust_table_size; i++) {
-    if(trust_table[i].valid && trust_table[i].node_id == node_id) {
-      return &trust_table[i];
-    }
+  if(node_id > 255) {
+    return NULL;
+  }
+  uint8_t idx = trust_index_by_node_id[node_id];
+  if(idx == 0xff || idx >= trust_table_size) {
+    return NULL;
+  }
+  if(trust_table[idx].valid && trust_table[idx].node_id == node_id) {
+    return &trust_table[idx];
   }
   return NULL;
 }
@@ -526,15 +435,22 @@ get_or_create(uint16_t node_id)
   if(e != NULL) {
     return e;
   }
+  if(node_id > 255) {
+    LOG_WARN("node id out of map range: %u\n", node_id);
+    return NULL;
+  }
   if(trust_table_size >= TA_TRUST_MAX_NEIGHBORS) {
     LOG_WARN("trust table full, dropping node %u\n", node_id);
     return NULL;
   }
-  e = &trust_table[trust_table_size++];
+  uint8_t idx = trust_table_size++;
+  e = &trust_table[idx];
   memset(e, 0, sizeof(*e));
-  e->node_id    = node_id;
-  e->valid      = 1;
-  e->trust      = TA_TRUST_INIT;
+  e->node_id = node_id;
+  e->valid   = 1;
+  e->trust     = TA_TRUST_INIT;
+  e->trust_fwd = TA_TRUST_INIT;
+  trust_index_by_node_id[node_id] = idx;
   return e;
 }
 
@@ -543,9 +459,6 @@ get_or_create(uint16_t node_id)
 /* E = expected forwarding events = sent * PRR (channel-loss-aware)   */
 /* PRR is estimated from Contiki-NG link-stats ETX for the neighbour. */
 /* ------------------------------------------------------------------ */
-static const linkaddr_t *
-find_lladdr_by_node_id(uint16_t node_id) __attribute__((unused));
-
 static const linkaddr_t *
 find_lladdr_by_node_id(uint16_t node_id)
 {
@@ -566,9 +479,6 @@ find_lladdr_by_node_id(uint16_t node_id)
 
   return NULL;
 }
-
-static uint32_t
-ta_estimate_prr(const linkaddr_t *lladdr) __attribute__((unused));
 
 static uint32_t
 ta_estimate_prr(const linkaddr_t *lladdr)
@@ -594,9 +504,6 @@ ta_estimate_prr(const linkaddr_t *lladdr)
   prr = ((uint32_t)TA_PRR_BLEND_WEIGHT * raw_prr
        + (uint32_t)(TA_TRUST_SCALE - TA_PRR_BLEND_WEIGHT) * TA_TRUST_SCALE)
       / TA_TRUST_SCALE;
-  if(prr > TA_PRR_MAX) {
-    prr = TA_PRR_MAX;
-  }
   if(prr > TA_TRUST_SCALE) {
     prr = TA_TRUST_SCALE;
   }
@@ -608,43 +515,37 @@ ta_estimate_prr(const linkaddr_t *lladdr)
 }
 
 static uint16_t
-compute_t_fwd_window(const ta_trust_entry_t *e) __attribute__((unused));
-
-static uint16_t
-compute_t_fwd_window(const ta_trust_entry_t *e)
-{
-#if TA_TRUST_FWD_WINDOW_ENABLE
-  uint32_t successes = 0;
-
-  for(uint8_t i = 0; i < e->fwd_window_count; i++) {
-    uint8_t idx = (uint8_t)((e->fwd_window_head + TA_TRUST_FWD_WINDOW_SIZE
-                           - e->fwd_window_count + i) % TA_TRUST_FWD_WINDOW_SIZE);
-    successes += e->fwd_window_success[idx] ? 1u : 0u;
-  }
-
-  {
-    uint32_t num = successes + TA_TRUST_FWD_ALPHA;
-    uint32_t den = e->fwd_window_count + TA_TRUST_FWD_ALPHA + TA_TRUST_FWD_BETA;
-    uint32_t val = (num * TA_TRUST_SCALE) / den;
-    if(val > TA_TRUST_SCALE) {
-      val = TA_TRUST_SCALE;
-    }
-    return ta_sharpen_tfwd((uint16_t)val);
-  }
-#else
-  (void)e;
-  return TA_TRUST_INIT;
-#endif
-}
-
-static uint16_t
 compute_t_fwd(const ta_trust_entry_t *e)
 {
-#if TA_TRUST_FWD_WINDOW_ENABLE
-  return compute_t_fwd_window(e);
-#else
   const linkaddr_t *lladdr = find_lladdr_by_node_id(e->node_id);
   uint32_t prr = ta_estimate_prr(lladdr);
+
+  /* Use PRR as proxy when this neighbour was NOT actively used as a
+   * parent in the CURRENT update window (fwd_sent_new == 0).
+   *
+   * fwd_sent_new counts only fresh sends this window (reset each cycle,
+   * never halved).  This distinguishes two cases that the old condition
+   * (fwd_observed_new == 0 OR fwd_sent < threshold) conflated:
+   *
+   * (a) Node NOT being used as parent this window (fwd_sent_new = 0):
+   *     No active traffic → no reliable echo evidence → PRR fallback.
+   *     Handles both bootstrapping and post-churn idle windows without
+   *     penalising honest nodes that simply aren't on the active path.
+   *
+   * (b) Node IS current parent this window (fwd_sent_new > 0) but
+   *     produces zero echoes:
+   *     Packets sent and acknowledged at MAC layer, yet root never
+   *     received them → classic IP-layer blackhole signature.
+   *     Fall through to echo-based formula → low T_fwd → attacker
+   *     excluded within 2-3 update windows.
+   *
+   * This fixes the prior inversion where attackers (always observed=0)
+   * received PRR ≈ 1000 while honest nodes with 70% echo delivery
+   * received T_fwd ≈ 0.63, causing TA-BRPL to score worse than RPL. */
+  if(e->fwd_sent_new == 0) {
+    return (uint16_t)prr;
+  }
+
   uint32_t expected = (e->fwd_sent * prr + 500) / TA_TRUST_SCALE;
 
   uint32_t num = e->fwd_observed + TA_TRUST_FWD_ALPHA;
@@ -657,7 +558,6 @@ compute_t_fwd(const ta_trust_entry_t *e)
     val = TA_TRUST_SCALE;
   }
   return ta_sharpen_tfwd((uint16_t)val);
-#endif
 }
 
 /* ------------------------------------------------------------------ */
@@ -770,6 +670,18 @@ ewma_update(uint16_t t_old, uint16_t t_new_obs)
   return (uint16_t)(result > TA_TRUST_SCALE ? TA_TRUST_SCALE : result);
 }
 
+static uint16_t
+ewma_update_fwd(uint16_t t_old, uint16_t t_new_obs)
+{
+  uint32_t lambda = (t_new_obs < t_old)
+    ? TA_TRUST_LAMBDA_DECREASE_FWD
+    : TA_TRUST_LAMBDA_NORMAL;
+
+  uint32_t result = (lambda * t_old + (TA_TRUST_SCALE - lambda) * t_new_obs)
+                    / TA_TRUST_SCALE;
+  return (uint16_t)(result > TA_TRUST_SCALE ? TA_TRUST_SCALE : result);
+}
+
 /* ------------------------------------------------------------------ */
 /* Blacklist management                                                */
 /* ------------------------------------------------------------------ */
@@ -777,18 +689,15 @@ static void
 check_blacklist(ta_trust_entry_t *e)
 {
   clock_time_t now = clock_time();
-  uint8_t black_min_updates =
-    (TA_TRUST_BLACK_MIN_DURATION_SECONDS + TA_TRUST_UPDATE_INTERVAL - 1)
-    / TA_TRUST_UPDATE_INTERVAL;
 
   if(e->blacklisted) {
     /* Release after quarantine period */
     if(now >= e->blacklist_until) {
       e->blacklisted = 0;
       e->trust = TA_TRUST_RESTORE_ON_RELEASE;
-      e->below_join_updates = 0;
-      e->below_black_updates = 0;
-      e->low_trust_updates = 0;
+      e->trust_fwd = TA_TRUST_RESTORE_ON_RELEASE;
+      e->low_tfwd_streak = 0;
+      reset_review_state(e);
       e->release_active = 1;
       e->release_redrop_armed = 1;
       e->release_started_at = now;
@@ -802,20 +711,18 @@ check_blacklist(ta_trust_entry_t *e)
     return;
   }
 
-  if(e->trust < TA_TRUST_TAU_BLACK) {
-    if(e->below_black_updates < 0xff) {
-      e->below_black_updates++;
-    }
-  } else {
-    e->below_black_updates = 0;
-  }
-
-  if(e->trust < TA_TRUST_TAU_BLACK &&
-     e->below_black_updates >= (black_min_updates == 0 ? 1 : black_min_updates)) {
+  /* Hard exclude is controlled by the validation model only.
+   * Trust model remains for routing penalty/escape, not blacklist. */
+  if((e->review_windows_seen >= TA_TRUST_BLACKLIST_MIN_WINDOWS &&
+      e->review_score >= TA_TRUST_REVIEW_SCORE_BLACKLIST &&
+      e->review_bad_windows >= TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST) ||
+     (e->review_windows_seen >= TA_TRUST_BLACKLIST_MIN_WINDOWS &&
+      e->low_tfwd_streak >= TA_TRUST_FINAL_TFWD_STREAK)) {
     e->blacklisted = 1;
+    reset_review_state(e);
+    e->low_tfwd_streak = 0;
     e->release_active = 0;
     e->release_redrop_armed = 0;
-    e->below_black_updates = 0;
     e->blacklist_until = now + (clock_time_t)(TA_TRUST_BLACKLIST_DURATION
                                               * CLOCK_SECOND);
     printf("CSV,TRUST_BLACKLIST,%u,%u,%lu\n",
@@ -887,6 +794,7 @@ ta_trust_init(void)
 {
   memset(trust_table, 0, sizeof(trust_table));
   trust_table_size = 0;
+  memset(trust_index_by_node_id, 0xff, sizeof(trust_index_by_node_id));
   netstack_ip_packet_processor_add(&ta_ip_processor);
   LOG_INFO("TA-BRPL trust module initialised\n");
 }
@@ -897,7 +805,7 @@ ta_trust_notify_sent(uint16_t node_id)
   ta_trust_entry_t *e = get_or_create(node_id);
   if(e == NULL) return;
   e->fwd_sent++;
-  ta_fwd_window_note_sent(e);
+  e->fwd_sent_new++;
 }
 
 void
@@ -906,7 +814,7 @@ ta_trust_notify_forwarded(uint16_t node_id)
   ta_trust_entry_t *e = get_or_create(node_id);
   if(e == NULL) return;
   e->fwd_observed++;
-  ta_fwd_window_note_credit(e);
+  e->fwd_observed_new++;
 }
 
 void
@@ -969,18 +877,6 @@ void
 ta_trust_update_all(void)
 {
   int escape_triggered = 0;
-#if TA_TRUST_RELATIVE_FILTER_ENABLE || TA_TRUST_RELATIVE_PENALTY_ENABLE
-  uint16_t median = ta_trust_median_snapshot();
-  uint16_t rel_floor = ta_trust_relative_floor(median);
-#endif
-
-#if TA_TRUST_RELATIVE_FILTER_ENABLE || TA_TRUST_RELATIVE_PENALTY_ENABLE
-  printf("CSV,TRUST_RELATIVE,%u,%lu,%u,%u\n",
-         (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
-         (unsigned long)clock_time(),
-         (unsigned)median,
-         (unsigned)rel_floor);
-#endif
 
   for(uint8_t i = 0; i < trust_table_size; i++) {
     ta_trust_entry_t *e = &trust_table[i];
@@ -1020,28 +916,153 @@ ta_trust_update_all(void)
     uint16_t t_hon  = compute_t_hon(e);
     uint16_t t_agg  = aggregate_trust(t_fwd, t_ctrl, t_hon);
 
-    e->last_t_fwd = t_fwd;
-    e->last_t_ctrl = t_ctrl;
-    e->last_t_hon = t_hon;
-    e->last_t_agg = t_agg;
-
     uint16_t t_old = e->trust;
-    e->trust = ewma_update(t_old, t_agg);
-    if(e->trust < TA_TRUST_ESCAPE_TRUST_THRESHOLD) {
+    e->trust     = ewma_update(t_old,        t_agg);
+    e->trust_fwd = ewma_update_fwd(e->trust_fwd, t_fwd);
+
+    /* Validation model (separate from trust model):
+     * hard-exclude is decided ONLY from forwarding evidence persistence.
+     * trust/trust_fwd are not used in blacklist decisions. */
+    {
+      uint8_t prev_review_state = e->review_state;
+      uint8_t parent_changed = (e->review_parent_since != 0 &&
+                                e->review_parent_since != current_parent_since);
+      uint8_t parent_matured = (current_parent_elapsed() >=
+        (clock_time_t)TA_TRUST_VALIDATION_MIN_PARENT_AGE_SECONDS * CLOCK_SECOND);
+      uint8_t review_window = (e->node_id == current_parent_id &&
+                               e->fwd_sent_new >= TA_TRUST_VALIDATION_MIN_SENT &&
+                               parent_matured);
+      uint8_t bad_signal = 0;
+      uint8_t strong_bad = 0;
+      uint8_t good_signal = 0;
+      uint16_t success_pm = 1000;
+
+      if(parent_changed) {
+        reset_review_state(e);
+      }
+
+      if(review_window) {
+        if(e->review_parent_since == 0) {
+          e->review_parent_since = current_parent_since;
+        }
+        if(e->review_windows_seen < 0xff) {
+          e->review_windows_seen++;
+        }
+
+        /* Accumulate forwarding evidence in the same parent session.
+         * This is independent from trust_fwd/trust and gives validation
+         * a conservative, statistically smoother signal. */
+        {
+          uint32_t ns = (uint32_t)e->val_sent_acc + e->fwd_sent_new;
+          uint32_t no = (uint32_t)e->val_obs_acc + e->fwd_observed_new;
+          e->val_sent_acc = (ns > 65535u) ? 65535u : (uint16_t)ns;
+          e->val_obs_acc  = (no > 65535u) ? 65535u : (uint16_t)no;
+        }
+
+        if(e->val_sent_acc > 0) {
+          success_pm = (uint16_t)(((uint32_t)e->val_obs_acc * 1000u) / e->val_sent_acc);
+        }
+        if(e->trust_fwd <= TA_TRUST_FINAL_TFWD_MAX) {
+          if(e->low_tfwd_streak < 0xff) {
+            e->low_tfwd_streak++;
+          }
+        } else if(e->low_tfwd_streak > 0) {
+          e->low_tfwd_streak--;
+        }
+        bad_signal = (e->val_sent_acc >= TA_TRUST_VALIDATION_MIN_ACC_SENT &&
+                      success_pm <= TA_TRUST_VALIDATION_BAD_SUCCESS_MAX);
+        strong_bad = (e->val_sent_acc >= (TA_TRUST_VALIDATION_MIN_ACC_SENT + 2) &&
+                      success_pm <= TA_TRUST_VALIDATION_STRONG_SUCCESS_MAX);
+        good_signal = (e->val_sent_acc >= TA_TRUST_VALIDATION_MIN_ACC_SENT &&
+                       success_pm >= TA_TRUST_VALIDATION_GOOD_SUCCESS_MIN);
+
+        if(bad_signal) {
+          uint8_t delta = TA_TRUST_VALIDATION_BAD_INC;
+          if((uint16_t)e->review_score + delta > 255) {
+            e->review_score = 255;
+          } else {
+            e->review_score += delta;
+          }
+          if(e->review_bad_windows < 0xff) {
+            e->review_bad_windows++;
+          }
+          if(strong_bad &&
+             e->review_bad_windows >= TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST) {
+            uint8_t bonus = TA_TRUST_VALIDATION_STRONG_BONUS;
+            if((uint16_t)e->review_score + bonus > 255) {
+              e->review_score = 255;
+            } else {
+              e->review_score += bonus;
+            }
+          }
+          e->review_good_windows = 0;
+        } else {
+          uint8_t delta = TA_TRUST_VALIDATION_GOOD_DEC;
+          if(!good_signal && delta > 1) {
+            delta = 1;
+          }
+          if(e->review_score > delta) {
+            e->review_score -= delta;
+          } else {
+            e->review_score = 0;
+          }
+          if(e->review_bad_windows > 0) {
+            e->review_bad_windows--;
+          }
+          if(e->review_good_windows < 0xff) {
+            e->review_good_windows++;
+          }
+        }
+      } else {
+        if(e->review_score > 0) {
+          uint8_t delta = TA_TRUST_VALIDATION_IDLE_DEC;
+          e->review_score = (e->review_score > delta) ? (e->review_score - delta) : 0;
+        }
+        if(e->review_bad_windows > 0) e->review_bad_windows--;
+        if(e->low_tfwd_streak > 0) {
+          e->low_tfwd_streak--;
+        }
+        e->val_sent_acc >>= 1;
+        e->val_obs_acc  >>= 1;
+      }
+
+      if(e->review_score >= TA_TRUST_REVIEW_SCORE_PENALIZED) {
+        e->review_state = TA_REVIEW_STATE_PENALIZED;
+      } else if(e->review_score >= TA_TRUST_REVIEW_SCORE_UNDER) {
+        e->review_state = TA_REVIEW_STATE_UNDER;
+      } else {
+        e->review_state = TA_REVIEW_STATE_NORMAL;
+      }
+
+      if(e->review_state != prev_review_state) {
+        printf("CSV,VAL_STATE,%u,%u,%lu,%u,%u,%u,%u,%u\n",
+               (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+               (unsigned)e->node_id,
+               (unsigned long)clock_time(),
+               (unsigned)prev_review_state,
+               (unsigned)e->review_state,
+               (unsigned)e->review_score,
+               (unsigned)e->review_bad_windows,
+               (unsigned)e->blacklisted);
+      }
+
+      if(e->review_windows_seen < TA_TRUST_VALIDATION_MIN_WINDOWS &&
+         e->review_score > 0) {
+        e->review_score--;
+      }
+    }
+
+    if(e->node_id == current_parent_id &&
+       e->fwd_sent_new >= 2 &&
+       e->trust_fwd < TA_TRUST_TAU_JOIN) {
       if(e->low_trust_updates < 0xff) {
         e->low_trust_updates++;
       }
     } else {
       e->low_trust_updates = 0;
     }
-    if(e->trust < TA_TRUST_TAU_JOIN) {
-      if(e->below_join_updates < 0xff) {
-        e->below_join_updates++;
-      }
-      e->below_join_ever = 1;
-    } else {
-      e->below_join_updates = 0;
-    }
+    e->fwd_observed_new = 0;
+    e->fwd_sent_new     = 0;
 
     check_blacklist(e);
 
@@ -1101,14 +1122,15 @@ ta_trust_update_all(void)
       }
     }
 
-    printf("CSV,TRUST,%u,%u,%u,%u,%u,%u,%u\n",
+    printf("CSV,TRUST,%u,%u,%u,%u,%u,%u,%u,%u\n",
            (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
            (unsigned)e->node_id,
            (unsigned)t_fwd,
            (unsigned)t_ctrl,
            (unsigned)t_hon,
            (unsigned)t_agg,
-           (unsigned)e->trust);
+           (unsigned)e->trust,
+           (unsigned)e->trust_fwd);
 
     /* Halving decay instead of hard reset.
      *
@@ -1138,8 +1160,6 @@ ta_trust_update_all(void)
     }
     dis_output(NULL);
   }
-
-  log_parent_candidate_summary();
 }
 
 uint16_t
@@ -1159,12 +1179,10 @@ ta_trust_status_t
 ta_trust_get_status(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  uint16_t floor = ta_trust_relative_floor(ta_trust_median_snapshot());
   if(e == NULL) return TA_TRUST_NORMAL;
   if(e->blacklisted) return TA_TRUST_BLACKLISTED;
   if(e->trust >= TA_TRUST_TAU_WARN)   return TA_TRUST_NORMAL;
-  if(e->trust >= floor)               return TA_TRUST_SUSPECT;
-  if(!ta_parent_exclusion_ready(e, floor)) return TA_TRUST_SUSPECT;
+  if(e->trust >= TA_TRUST_TAU_JOIN)   return TA_TRUST_SUSPECT;
   if(e->trust >= TA_TRUST_TAU_BLACK)  return TA_TRUST_UNTRUSTED;
   return TA_TRUST_BLACKLISTED;
 }
@@ -1173,23 +1191,8 @@ int
 ta_trust_is_parent_candidate(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  uint16_t floor = ta_trust_relative_floor(ta_trust_median_snapshot());
   if(e == NULL) return 1; /* unknown: give benefit of the doubt        */
-  if(e->blacklisted) return 0;
-  if(e->trust < TA_TRUST_TAU_BLACK) {
-    return 0;
-  }
-  /* Anti-oscillation gate: once a node's trust has dropped below tau_join
-   * (below_join_ever=1), block re-admission while fwd evidence is stale
-   * (fwd_sent halved to near 0 during exclusion).  Honest nodes remain
-   * unaffected because they stay as active parents (fwd_sent stays high). */
-  if(e->below_join_ever && e->fwd_sent < TA_TRUST_FWD_FRESH_THRESHOLD) {
-    return 0;
-  }
-  if(e->trust >= floor) {
-    return 1;
-  }
-  return !ta_parent_exclusion_ready(e, floor);
+  return e->blacklisted ? 0 : 1;
 }
 
 void
@@ -1212,7 +1215,7 @@ ta_trust_log_all(void)
 uint16_t
 brpl_trust_get(uint16_t node_id)
 {
-  return ta_trust_effective_for_penalty(node_id);
+  return ta_trust_get(node_id);
 }
 
 uint16_t
@@ -1220,6 +1223,26 @@ brpl_penalty_scale_get(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
   return penalty_scale_for_entry(e);
+}
+
+uint16_t
+brpl_validation_penalty_scale_get(uint16_t node_id)
+{
+  ta_trust_entry_t *e = find_entry(node_id);
+
+  if(e == NULL) {
+    return 1000;
+  }
+  if(e->blacklisted) {
+    return 3000;
+  }
+  if(e->review_state == TA_REVIEW_STATE_PENALIZED) {
+    return 2200;
+  }
+  if(e->review_state == TA_REVIEW_STATE_UNDER) {
+    return 1600;
+  }
+  return 1000;
 }
 
 int
@@ -1233,34 +1256,11 @@ int
 brpl_trust_parent_allowed(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  uint16_t floor = ta_trust_relative_floor(ta_trust_median_snapshot());
 
   if(e == NULL) {
     return 1;
   }
-  if(e->blacklisted) {
-    return 0;
-  }
-
-  /* Anti-oscillation gate: once a node's trust has ever been below
-   * tau_join (below_join_ever set), block re-admission while fwd
-   * evidence is stale (fwd_sent halved toward 0 during exclusion).
-   * When fwd_sent is stale, compute_t_fwd() returns ~500 (neutral
-   * Bayesian prior), which would let trust drift above tau_join and
-   * re-admit attackers.  This gate prevents that.  Honest nodes keep
-   * fwd_sent high as long as they are used as parents, so they are
-   * never blocked by this condition. */
-  if(e->below_join_ever && e->fwd_sent < TA_TRUST_FWD_FRESH_THRESHOLD) {
-    return 0;
-  }
-
-  /* Exclude nodes only after low trust persists long enough.
-   * This keeps transient congestion/loss dips from pruning benign parents. */
-  if(ta_parent_exclusion_ready(e, floor)) {
-    return 0;
-  }
-
-  return 1;
+  return e->blacklisted ? 0 : 1;
 }
 
 void

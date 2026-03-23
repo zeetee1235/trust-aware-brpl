@@ -270,6 +270,7 @@ schedule_congestion_timer(struct etimer *timer, uint16_t node_id)
   clock_time_t end_t;
 
   if(!is_congestion_node(node_id)) {
+    etimer_stop(timer);
     return;
   }
 
@@ -283,6 +284,8 @@ schedule_congestion_timer(struct etimer *timer, uint16_t node_id)
     clock_time_t to_end = end_t - now_t;
     etimer_set(timer, to_end < CONGESTION_SEND_INTERVAL ? to_end
                                                         : CONGESTION_SEND_INTERVAL);
+  } else {
+    etimer_stop(timer);
   }
 }
 #endif
@@ -540,7 +543,7 @@ PROCESS_THREAD(sender_process, ev, data)
       }
     }
 
-    if(etimer_expired(&congestion_tx_timer)) {
+    if(is_congestion_node(self_id) && etimer_expired(&congestion_tx_timer)) {
       if(routing_ready) {
         send_data_packet(self_id);
       }

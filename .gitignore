@@ -42,9 +42,7 @@ COOJA.testlog
 *.run.xml
 docs/paper/paper_draft.pdf
 
-# Generated figures (reproducible from SVG/scripts)
-figures/fig0_topology_grid6x6.pdf
-figures/fig0_topology_grid6x6.png
+
 
 # =============================================================
 # Python

@@ -57,14 +57,6 @@
 #define TA_TRUST_LAMBDA_DECREASE 200
 #endif
 
-/* Symmetric lambda for per-window T_fwd EWMA.
- * 500 = 50/50 blend: tolerates a single transient bad window
- * (t_fwd_ewma: 500→375 after 1 bad window, T_agg=488>tau_join, no FP)
- * while detecting 2+ consecutive bad windows within 120 s. */
-#ifndef TA_TRUST_FWD_EWMA_LAMBDA
-#define TA_TRUST_FWD_EWMA_LAMBDA 500
-#endif
-
 /* ------------------------------------------------------------------ */
 /* T_fwd Bayesian smoothing params (alpha, beta)                      */
 /* ------------------------------------------------------------------ */
@@ -84,9 +76,6 @@
 #ifndef TA_PRR_BLEND_WEIGHT
 #define TA_PRR_BLEND_WEIGHT   1000
 #endif
-#ifndef TA_PRR_MAX
-#define TA_PRR_MAX            1000
-#endif
 #ifndef TA_PRR_FALLBACK
 #define TA_PRR_FALLBACK       1000
 #endif
@@ -98,44 +87,12 @@
 #define TA_TFWD_SHARPEN_SCALE 1000
 #endif
 
-/* Relative trust filtering/penalty.
- * When enabled, parent admission and/or soft penalty are derived from the
- * current neighbour trust distribution rather than an absolute tau_join cut.
- * This is intended for lossy regimes where all neighbours shift downward
- * together and absolute thresholds become too brittle. */
-#ifndef TA_TRUST_RELATIVE_FILTER_ENABLE
-#define TA_TRUST_RELATIVE_FILTER_ENABLE 0
-#endif
-#ifndef TA_TRUST_RELATIVE_PENALTY_ENABLE
-#define TA_TRUST_RELATIVE_PENALTY_ENABLE 0
-#endif
-#ifndef TA_TRUST_REL_MARGIN
-#define TA_TRUST_REL_MARGIN 25
-#endif
-#ifndef TA_TRUST_REL_PENALTY_SCALE
-#define TA_TRUST_REL_PENALTY_SCALE 1000
-#endif
-#ifndef TA_TRUST_REL_MAX_SOFT_PENALTY
-#define TA_TRUST_REL_MAX_SOFT_PENALTY 400
-#endif
-
 /* Minimum fwd_sent count to consider T_fwd evidence "fresh".
  * When fwd_sent < this threshold (counters are mostly halvings of old
  * data with no new sends), T_fwd uses MIN(stale_compute, cached_prev)
  * to prevent artificial trust recovery for nodes not currently used. */
 #ifndef TA_TRUST_FWD_FRESH_THRESHOLD
 #define TA_TRUST_FWD_FRESH_THRESHOLD 3
-#endif
-
-/* Optional sliding-window forwarding model.
- * When enabled, T_fwd is computed over the most recent per-parent send
- * opportunities instead of the cumulative ETX-normalized counters.
- * This lets pre-attack forwarding credits expire deterministically. */
-#ifndef TA_TRUST_FWD_WINDOW_ENABLE
-#define TA_TRUST_FWD_WINDOW_ENABLE 0
-#endif
-#ifndef TA_TRUST_FWD_WINDOW_SIZE
-#define TA_TRUST_FWD_WINDOW_SIZE 5
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -155,13 +112,13 @@
 /* Aggregation weights (wf + wc + wh = 10)                            */
 /* ------------------------------------------------------------------ */
 #ifndef TA_TRUST_W_FWD
-#define TA_TRUST_W_FWD  7   /* 0.7 */
+#define TA_TRUST_W_FWD  5   /* 0.5 */
 #endif
 #ifndef TA_TRUST_W_CTRL
-#define TA_TRUST_W_CTRL 2   /* 0.2 */
+#define TA_TRUST_W_CTRL 3   /* 0.3 */
 #endif
 #ifndef TA_TRUST_W_HON
-#define TA_TRUST_W_HON  1   /* 0.1 */
+#define TA_TRUST_W_HON  2   /* 0.2 */
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -226,25 +183,6 @@
 #endif
 #ifndef TA_TRUST_ESCAPE_BETTER_PATH_MARGIN
 #define TA_TRUST_ESCAPE_BETTER_PATH_MARGIN 0
-#endif
-
-/* Escape is only justified when low trust is primarily driven by
- * forwarding failure while backlog honesty still looks healthy.
- * This suppresses escape on benign congestion/loss-induced trust dips. */
-#ifndef TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD
-#define TA_TRUST_ESCAPE_FWD_SUSPECT_THRESHOLD 450
-#endif
-#ifndef TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD
-#define TA_TRUST_ESCAPE_HON_HEALTHY_THRESHOLD 850
-#endif
-
-/* Require sustained low trust before hard exclusion/blacklist.
- * This reduces transient pruning during congestion bursts. */
-#ifndef TA_TRUST_JOIN_MIN_DURATION_SECONDS
-#define TA_TRUST_JOIN_MIN_DURATION_SECONDS 150
-#endif
-#ifndef TA_TRUST_BLACK_MIN_DURATION_SECONDS
-#define TA_TRUST_BLACK_MIN_DURATION_SECONDS 300
 #endif
 
 /* Max number of neighbours tracked */
@@ -353,6 +291,9 @@ uint16_t brpl_trust_get(uint16_t node_id);
  * Returns 1000 in steady state and a larger value during post-release cooldown.
  */
 uint16_t brpl_penalty_scale_get(uint16_t node_id);
+
+/* Validation-gated BRPL cost boost scale (1000 = neutral). */
+uint16_t brpl_validation_penalty_scale_get(uint16_t node_id);
 
 /*
  * Returns 1 if node_id is currently in escape mode and should not
