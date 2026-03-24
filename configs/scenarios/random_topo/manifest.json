@@ -6,15 +6,1699 @@
   "attacker_count": 3,
   "tx_range": 50.0,
   "protocols": [
+    "RPL",
+    "BRPL",
+    "SMTRUST",
     "TABRPL"
   ],
   "densities": [
-    "medium"
+    "sparse",
+    "medium",
+    "dense"
   ],
   "topology_seeds": [
-    1
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80
   ],
   "topologies": [
+    {
+      "density": "sparse",
+      "topology_seed": 1,
+      "topology_name": "topo_001",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2778,
+      "avg_hop_root": 3.6571,
+      "attacker_ids": [
+        4,
+        14,
+        19
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_001/RT_RPL_sparse_topo_001.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_001/RT_BRPL_sparse_topo_001.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_001/RT_SMTRUST_sparse_topo_001.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_001/RT_TABRPL_sparse_topo_001.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 2,
+      "topology_name": "topo_002",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 2.6857,
+      "attacker_ids": [
+        8,
+        12,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_002/RT_RPL_sparse_topo_002.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_002/RT_BRPL_sparse_topo_002.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_002/RT_SMTRUST_sparse_topo_002.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_002/RT_TABRPL_sparse_topo_002.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 3.0857,
+      "attacker_ids": [
+        27,
+        30,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_003/RT_RPL_sparse_topo_003.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_003/RT_BRPL_sparse_topo_003.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_003/RT_SMTRUST_sparse_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_003/RT_TABRPL_sparse_topo_003.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 4,
+      "topology_name": "topo_004",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 3.1143,
+      "attacker_ids": [
+        7,
+        9,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_004/RT_RPL_sparse_topo_004.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_004/RT_BRPL_sparse_topo_004.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_004/RT_SMTRUST_sparse_topo_004.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_004/RT_TABRPL_sparse_topo_004.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 5,
+      "topology_name": "topo_005",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 2.9143,
+      "attacker_ids": [
+        4,
+        5,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_005/RT_RPL_sparse_topo_005.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_005/RT_BRPL_sparse_topo_005.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_005/RT_SMTRUST_sparse_topo_005.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_005/RT_TABRPL_sparse_topo_005.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 6,
+      "topology_name": "topo_006",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.6667,
+      "avg_hop_root": 2.9429,
+      "attacker_ids": [
+        2,
+        27,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_006/RT_RPL_sparse_topo_006.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_006/RT_BRPL_sparse_topo_006.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_006/RT_SMTRUST_sparse_topo_006.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_006/RT_TABRPL_sparse_topo_006.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 7,
+      "topology_name": "topo_007",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 3.4,
+      "attacker_ids": [
+        25,
+        30,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_007/RT_RPL_sparse_topo_007.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_007/RT_BRPL_sparse_topo_007.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_007/RT_SMTRUST_sparse_topo_007.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_007/RT_TABRPL_sparse_topo_007.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 8,
+      "topology_name": "topo_008",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5,
+      "avg_hop_root": 3.0286,
+      "attacker_ids": [
+        16,
+        31,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_008/RT_RPL_sparse_topo_008.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_008/RT_BRPL_sparse_topo_008.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_008/RT_SMTRUST_sparse_topo_008.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_008/RT_TABRPL_sparse_topo_008.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 9,
+      "topology_name": "topo_009",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1667,
+      "avg_hop_root": 3.2857,
+      "attacker_ids": [
+        5,
+        7,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_009/RT_RPL_sparse_topo_009.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_009/RT_BRPL_sparse_topo_009.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_009/RT_SMTRUST_sparse_topo_009.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_009/RT_TABRPL_sparse_topo_009.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 10,
+      "topology_name": "topo_010",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.8286,
+      "attacker_ids": [
+        17,
+        25,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_010/RT_RPL_sparse_topo_010.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_010/RT_BRPL_sparse_topo_010.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_010/RT_SMTRUST_sparse_topo_010.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_010/RT_TABRPL_sparse_topo_010.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 11,
+      "topology_name": "topo_011",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.9714,
+      "attacker_ids": [
+        11,
+        12,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_011/RT_RPL_sparse_topo_011.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_011/RT_BRPL_sparse_topo_011.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_011/RT_SMTRUST_sparse_topo_011.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_011/RT_TABRPL_sparse_topo_011.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 12,
+      "topology_name": "topo_012",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 3.5143,
+      "attacker_ids": [
+        13,
+        22,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_012/RT_RPL_sparse_topo_012.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_012/RT_BRPL_sparse_topo_012.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_012/RT_SMTRUST_sparse_topo_012.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_012/RT_TABRPL_sparse_topo_012.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 13,
+      "topology_name": "topo_013",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 3.1143,
+      "attacker_ids": [
+        10,
+        14,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_013/RT_RPL_sparse_topo_013.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_013/RT_BRPL_sparse_topo_013.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_013/RT_SMTRUST_sparse_topo_013.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_013/RT_TABRPL_sparse_topo_013.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 14,
+      "topology_name": "topo_014",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 2.4571,
+      "attacker_ids": [
+        26,
+        27,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_014/RT_RPL_sparse_topo_014.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_014/RT_BRPL_sparse_topo_014.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_014/RT_SMTRUST_sparse_topo_014.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_014/RT_TABRPL_sparse_topo_014.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 15,
+      "topology_name": "topo_015",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1667,
+      "avg_hop_root": 2.8857,
+      "attacker_ids": [
+        6,
+        17,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_015/RT_RPL_sparse_topo_015.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_015/RT_BRPL_sparse_topo_015.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_015/RT_SMTRUST_sparse_topo_015.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_015/RT_TABRPL_sparse_topo_015.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 16,
+      "topology_name": "topo_016",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.7778,
+      "avg_hop_root": 3.3143,
+      "attacker_ids": [
+        12,
+        19,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_016/RT_RPL_sparse_topo_016.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_016/RT_BRPL_sparse_topo_016.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_016/RT_SMTRUST_sparse_topo_016.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_016/RT_TABRPL_sparse_topo_016.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 17,
+      "topology_name": "topo_017",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 2.4571,
+      "attacker_ids": [
+        7,
+        21,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_017/RT_RPL_sparse_topo_017.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_017/RT_BRPL_sparse_topo_017.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_017/RT_SMTRUST_sparse_topo_017.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_017/RT_TABRPL_sparse_topo_017.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 18,
+      "topology_name": "topo_018",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2778,
+      "avg_hop_root": 3.1143,
+      "attacker_ids": [
+        18,
+        19,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_018/RT_RPL_sparse_topo_018.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_018/RT_BRPL_sparse_topo_018.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_018/RT_SMTRUST_sparse_topo_018.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_018/RT_TABRPL_sparse_topo_018.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 19,
+      "topology_name": "topo_019",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 3.5429,
+      "attacker_ids": [
+        20,
+        25,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_019/RT_RPL_sparse_topo_019.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_019/RT_BRPL_sparse_topo_019.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_019/RT_SMTRUST_sparse_topo_019.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_019/RT_TABRPL_sparse_topo_019.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 20,
+      "topology_name": "topo_020",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 3.4857,
+      "attacker_ids": [
+        16,
+        24,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_020/RT_RPL_sparse_topo_020.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_020/RT_BRPL_sparse_topo_020.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_020/RT_SMTRUST_sparse_topo_020.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_020/RT_TABRPL_sparse_topo_020.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 21,
+      "topology_name": "topo_021",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 4.0286,
+      "attacker_ids": [
+        3,
+        17,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_021/RT_RPL_sparse_topo_021.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_021/RT_BRPL_sparse_topo_021.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_021/RT_SMTRUST_sparse_topo_021.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_021/RT_TABRPL_sparse_topo_021.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 22,
+      "topology_name": "topo_022",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 2.8857,
+      "attacker_ids": [
+        25,
+        30,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_022/RT_RPL_sparse_topo_022.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_022/RT_BRPL_sparse_topo_022.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_022/RT_SMTRUST_sparse_topo_022.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_022/RT_TABRPL_sparse_topo_022.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 23,
+      "topology_name": "topo_023",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.9714,
+      "attacker_ids": [
+        4,
+        13,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_023/RT_RPL_sparse_topo_023.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_023/RT_BRPL_sparse_topo_023.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_023/RT_SMTRUST_sparse_topo_023.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_023/RT_TABRPL_sparse_topo_023.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 24,
+      "topology_name": "topo_024",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 2.8286,
+      "attacker_ids": [
+        3,
+        30,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_024/RT_RPL_sparse_topo_024.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_024/RT_BRPL_sparse_topo_024.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_024/RT_SMTRUST_sparse_topo_024.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_024/RT_TABRPL_sparse_topo_024.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 25,
+      "topology_name": "topo_025",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.7222,
+      "avg_hop_root": 3.3714,
+      "attacker_ids": [
+        12,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_025/RT_RPL_sparse_topo_025.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_025/RT_BRPL_sparse_topo_025.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_025/RT_SMTRUST_sparse_topo_025.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_025/RT_TABRPL_sparse_topo_025.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 26,
+      "topology_name": "topo_026",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 2.6857,
+      "attacker_ids": [
+        5,
+        6,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_026/RT_RPL_sparse_topo_026.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_026/RT_BRPL_sparse_topo_026.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_026/RT_SMTRUST_sparse_topo_026.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_026/RT_TABRPL_sparse_topo_026.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 27,
+      "topology_name": "topo_027",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 2.6857,
+      "attacker_ids": [
+        2,
+        8,
+        13
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_027/RT_RPL_sparse_topo_027.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_027/RT_BRPL_sparse_topo_027.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_027/RT_SMTRUST_sparse_topo_027.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_027/RT_TABRPL_sparse_topo_027.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 28,
+      "topology_name": "topo_028",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5,
+      "avg_hop_root": 2.8571,
+      "attacker_ids": [
+        9,
+        20,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_028/RT_RPL_sparse_topo_028.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_028/RT_BRPL_sparse_topo_028.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_028/RT_SMTRUST_sparse_topo_028.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_028/RT_TABRPL_sparse_topo_028.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 29,
+      "topology_name": "topo_029",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3333,
+      "avg_hop_root": 2.8571,
+      "attacker_ids": [
+        4,
+        12,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_029/RT_RPL_sparse_topo_029.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_029/RT_BRPL_sparse_topo_029.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_029/RT_SMTRUST_sparse_topo_029.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_029/RT_TABRPL_sparse_topo_029.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 30,
+      "topology_name": "topo_030",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 3.6857,
+      "attacker_ids": [
+        5,
+        29,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_030/RT_RPL_sparse_topo_030.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_030/RT_BRPL_sparse_topo_030.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_030/RT_SMTRUST_sparse_topo_030.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_030/RT_TABRPL_sparse_topo_030.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 31,
+      "topology_name": "topo_031",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 2.8286,
+      "attacker_ids": [
+        8,
+        32,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_031/RT_RPL_sparse_topo_031.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_031/RT_BRPL_sparse_topo_031.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_031/RT_SMTRUST_sparse_topo_031.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_031/RT_TABRPL_sparse_topo_031.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 32,
+      "topology_name": "topo_032",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 2.7143,
+      "attacker_ids": [
+        4,
+        13,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_032/RT_RPL_sparse_topo_032.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_032/RT_BRPL_sparse_topo_032.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_032/RT_SMTRUST_sparse_topo_032.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_032/RT_TABRPL_sparse_topo_032.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 33,
+      "topology_name": "topo_033",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 3.0286,
+      "attacker_ids": [
+        10,
+        29,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_033/RT_RPL_sparse_topo_033.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_033/RT_BRPL_sparse_topo_033.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_033/RT_SMTRUST_sparse_topo_033.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_033/RT_TABRPL_sparse_topo_033.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 34,
+      "topology_name": "topo_034",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 3.3143,
+      "attacker_ids": [
+        2,
+        4,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_034/RT_RPL_sparse_topo_034.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_034/RT_BRPL_sparse_topo_034.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_034/RT_SMTRUST_sparse_topo_034.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_034/RT_TABRPL_sparse_topo_034.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 35,
+      "topology_name": "topo_035",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.7222,
+      "avg_hop_root": 3.2571,
+      "attacker_ids": [
+        28,
+        30,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_035/RT_RPL_sparse_topo_035.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_035/RT_BRPL_sparse_topo_035.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_035/RT_SMTRUST_sparse_topo_035.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_035/RT_TABRPL_sparse_topo_035.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 36,
+      "topology_name": "topo_036",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 2.6,
+      "attacker_ids": [
+        3,
+        18,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_036/RT_RPL_sparse_topo_036.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_036/RT_BRPL_sparse_topo_036.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_036/RT_SMTRUST_sparse_topo_036.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_036/RT_TABRPL_sparse_topo_036.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 37,
+      "topology_name": "topo_037",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 4.3714,
+      "attacker_ids": [
+        12,
+        25,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_037/RT_RPL_sparse_topo_037.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_037/RT_BRPL_sparse_topo_037.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_037/RT_SMTRUST_sparse_topo_037.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_037/RT_TABRPL_sparse_topo_037.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 38,
+      "topology_name": "topo_038",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 3.5143,
+      "attacker_ids": [
+        16,
+        22,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_038/RT_RPL_sparse_topo_038.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_038/RT_BRPL_sparse_topo_038.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_038/RT_SMTRUST_sparse_topo_038.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_038/RT_TABRPL_sparse_topo_038.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 39,
+      "topology_name": "topo_039",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 3.1143,
+      "attacker_ids": [
+        12,
+        13,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_039/RT_RPL_sparse_topo_039.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_039/RT_BRPL_sparse_topo_039.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_039/RT_SMTRUST_sparse_topo_039.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_039/RT_TABRPL_sparse_topo_039.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 40,
+      "topology_name": "topo_040",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2778,
+      "avg_hop_root": 2.4571,
+      "attacker_ids": [
+        27,
+        33,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_040/RT_RPL_sparse_topo_040.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_040/RT_BRPL_sparse_topo_040.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_040/RT_SMTRUST_sparse_topo_040.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_040/RT_TABRPL_sparse_topo_040.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 41,
+      "topology_name": "topo_041",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 3.8571,
+      "attacker_ids": [
+        9,
+        12,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_041/RT_RPL_sparse_topo_041.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_041/RT_BRPL_sparse_topo_041.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_041/RT_SMTRUST_sparse_topo_041.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_041/RT_TABRPL_sparse_topo_041.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 42,
+      "topology_name": "topo_042",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 2.6,
+      "attacker_ids": [
+        2,
+        3,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_042/RT_RPL_sparse_topo_042.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_042/RT_BRPL_sparse_topo_042.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_042/RT_SMTRUST_sparse_topo_042.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_042/RT_TABRPL_sparse_topo_042.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 43,
+      "topology_name": "topo_043",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.6667,
+      "avg_hop_root": 3.7429,
+      "attacker_ids": [
+        2,
+        7,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_043/RT_RPL_sparse_topo_043.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_043/RT_BRPL_sparse_topo_043.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_043/RT_SMTRUST_sparse_topo_043.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_043/RT_TABRPL_sparse_topo_043.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 44,
+      "topology_name": "topo_044",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 3.8286,
+      "attacker_ids": [
+        21,
+        25,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_044/RT_RPL_sparse_topo_044.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_044/RT_BRPL_sparse_topo_044.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_044/RT_SMTRUST_sparse_topo_044.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_044/RT_TABRPL_sparse_topo_044.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 45,
+      "topology_name": "topo_045",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 2.5143,
+      "attacker_ids": [
+        5,
+        15,
+        17
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_045/RT_RPL_sparse_topo_045.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_045/RT_BRPL_sparse_topo_045.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_045/RT_SMTRUST_sparse_topo_045.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_045/RT_TABRPL_sparse_topo_045.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 46,
+      "topology_name": "topo_046",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 3.4857,
+      "attacker_ids": [
+        2,
+        3,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_046/RT_RPL_sparse_topo_046.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_046/RT_BRPL_sparse_topo_046.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_046/RT_SMTRUST_sparse_topo_046.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_046/RT_TABRPL_sparse_topo_046.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 47,
+      "topology_name": "topo_047",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 3.1714,
+      "attacker_ids": [
+        4,
+        20,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_047/RT_RPL_sparse_topo_047.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_047/RT_BRPL_sparse_topo_047.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_047/RT_SMTRUST_sparse_topo_047.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_047/RT_TABRPL_sparse_topo_047.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 48,
+      "topology_name": "topo_048",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 2.4,
+      "attacker_ids": [
+        16,
+        29,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_048/RT_RPL_sparse_topo_048.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_048/RT_BRPL_sparse_topo_048.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_048/RT_SMTRUST_sparse_topo_048.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_048/RT_TABRPL_sparse_topo_048.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 49,
+      "topology_name": "topo_049",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5,
+      "avg_hop_root": 3.6286,
+      "attacker_ids": [
+        7,
+        15,
+        20
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_049/RT_RPL_sparse_topo_049.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_049/RT_BRPL_sparse_topo_049.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_049/RT_SMTRUST_sparse_topo_049.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_049/RT_TABRPL_sparse_topo_049.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 50,
+      "topology_name": "topo_050",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 6.3429,
+      "attacker_ids": [
+        3,
+        13,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_050/RT_RPL_sparse_topo_050.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_050/RT_BRPL_sparse_topo_050.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_050/RT_SMTRUST_sparse_topo_050.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_050/RT_TABRPL_sparse_topo_050.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 51,
+      "topology_name": "topo_051",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.7143,
+      "attacker_ids": [
+        4,
+        9,
+        19
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_051/RT_RPL_sparse_topo_051.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_051/RT_BRPL_sparse_topo_051.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_051/RT_SMTRUST_sparse_topo_051.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_051/RT_TABRPL_sparse_topo_051.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 52,
+      "topology_name": "topo_052",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.6571,
+      "attacker_ids": [
+        4,
+        14,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_052/RT_RPL_sparse_topo_052.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_052/RT_BRPL_sparse_topo_052.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_052/RT_SMTRUST_sparse_topo_052.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_052/RT_TABRPL_sparse_topo_052.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 53,
+      "topology_name": "topo_053",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 2.4857,
+      "attacker_ids": [
+        3,
+        12,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_053/RT_RPL_sparse_topo_053.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_053/RT_BRPL_sparse_topo_053.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_053/RT_SMTRUST_sparse_topo_053.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_053/RT_TABRPL_sparse_topo_053.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 54,
+      "topology_name": "topo_054",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3333,
+      "avg_hop_root": 3.3714,
+      "attacker_ids": [
+        23,
+        30,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_054/RT_RPL_sparse_topo_054.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_054/RT_BRPL_sparse_topo_054.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_054/RT_SMTRUST_sparse_topo_054.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_054/RT_TABRPL_sparse_topo_054.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 55,
+      "topology_name": "topo_055",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 2.9143,
+      "attacker_ids": [
+        7,
+        10,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_055/RT_RPL_sparse_topo_055.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_055/RT_BRPL_sparse_topo_055.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_055/RT_SMTRUST_sparse_topo_055.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_055/RT_TABRPL_sparse_topo_055.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 56,
+      "topology_name": "topo_056",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 3.1714,
+      "attacker_ids": [
+        9,
+        21,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_056/RT_RPL_sparse_topo_056.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_056/RT_BRPL_sparse_topo_056.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_056/RT_SMTRUST_sparse_topo_056.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_056/RT_TABRPL_sparse_topo_056.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 57,
+      "topology_name": "topo_057",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.5556,
+      "avg_hop_root": 3.2571,
+      "attacker_ids": [
+        4,
+        12,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_057/RT_RPL_sparse_topo_057.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_057/RT_BRPL_sparse_topo_057.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_057/RT_SMTRUST_sparse_topo_057.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_057/RT_TABRPL_sparse_topo_057.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 58,
+      "topology_name": "topo_058",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 3.2571,
+      "attacker_ids": [
+        4,
+        20,
+        21
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_058/RT_RPL_sparse_topo_058.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_058/RT_BRPL_sparse_topo_058.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_058/RT_SMTRUST_sparse_topo_058.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_058/RT_TABRPL_sparse_topo_058.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 59,
+      "topology_name": "topo_059",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 2.6857,
+      "attacker_ids": [
+        19,
+        32,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_059/RT_RPL_sparse_topo_059.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_059/RT_BRPL_sparse_topo_059.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_059/RT_SMTRUST_sparse_topo_059.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_059/RT_TABRPL_sparse_topo_059.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 60,
+      "topology_name": "topo_060",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 2.8,
+      "attacker_ids": [
+        12,
+        23,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_060/RT_RPL_sparse_topo_060.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_060/RT_BRPL_sparse_topo_060.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_060/RT_SMTRUST_sparse_topo_060.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_060/RT_TABRPL_sparse_topo_060.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 61,
+      "topology_name": "topo_061",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 2.8857,
+      "attacker_ids": [
+        10,
+        29,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_061/RT_RPL_sparse_topo_061.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_061/RT_BRPL_sparse_topo_061.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_061/RT_SMTRUST_sparse_topo_061.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_061/RT_TABRPL_sparse_topo_061.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 62,
+      "topology_name": "topo_062",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.7778,
+      "avg_hop_root": 4.2857,
+      "attacker_ids": [
+        3,
+        10,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_062/RT_RPL_sparse_topo_062.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_062/RT_BRPL_sparse_topo_062.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_062/RT_SMTRUST_sparse_topo_062.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_062/RT_TABRPL_sparse_topo_062.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 63,
+      "topology_name": "topo_063",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 7.0286,
+      "attacker_ids": [
+        15,
+        20,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_063/RT_RPL_sparse_topo_063.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_063/RT_BRPL_sparse_topo_063.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_063/RT_SMTRUST_sparse_topo_063.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_063/RT_TABRPL_sparse_topo_063.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 64,
+      "topology_name": "topo_064",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 2.8,
+      "attacker_ids": [
+        6,
+        15,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_064/RT_RPL_sparse_topo_064.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_064/RT_BRPL_sparse_topo_064.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_064/RT_SMTRUST_sparse_topo_064.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_064/RT_TABRPL_sparse_topo_064.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 65,
+      "topology_name": "topo_065",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 7.3429,
+      "attacker_ids": [
+        12,
+        15,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_065/RT_RPL_sparse_topo_065.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_065/RT_BRPL_sparse_topo_065.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_065/RT_SMTRUST_sparse_topo_065.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_065/RT_TABRPL_sparse_topo_065.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 66,
+      "topology_name": "topo_066",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5,
+      "avg_hop_root": 2.5714,
+      "attacker_ids": [
+        12,
+        20,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_066/RT_RPL_sparse_topo_066.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_066/RT_BRPL_sparse_topo_066.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_066/RT_SMTRUST_sparse_topo_066.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_066/RT_TABRPL_sparse_topo_066.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 67,
+      "topology_name": "topo_067",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 3.5143,
+      "attacker_ids": [
+        15,
+        26,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_067/RT_RPL_sparse_topo_067.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_067/RT_BRPL_sparse_topo_067.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_067/RT_SMTRUST_sparse_topo_067.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_067/RT_TABRPL_sparse_topo_067.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 68,
+      "topology_name": "topo_068",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 3.2,
+      "attacker_ids": [
+        9,
+        10,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_068/RT_RPL_sparse_topo_068.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_068/RT_BRPL_sparse_topo_068.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_068/RT_SMTRUST_sparse_topo_068.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_068/RT_TABRPL_sparse_topo_068.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 69,
+      "topology_name": "topo_069",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5,
+      "avg_hop_root": 3.7714,
+      "attacker_ids": [
+        15,
+        26,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_069/RT_RPL_sparse_topo_069.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_069/RT_BRPL_sparse_topo_069.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_069/RT_SMTRUST_sparse_topo_069.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_069/RT_TABRPL_sparse_topo_069.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 70,
+      "topology_name": "topo_070",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 3.2571,
+      "attacker_ids": [
+        14,
+        22,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_070/RT_RPL_sparse_topo_070.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_070/RT_BRPL_sparse_topo_070.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_070/RT_SMTRUST_sparse_topo_070.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_070/RT_TABRPL_sparse_topo_070.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 71,
+      "topology_name": "topo_071",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.4444,
+      "avg_hop_root": 4.4286,
+      "attacker_ids": [
+        7,
+        10,
+        20
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_071/RT_RPL_sparse_topo_071.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_071/RT_BRPL_sparse_topo_071.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_071/RT_SMTRUST_sparse_topo_071.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_071/RT_TABRPL_sparse_topo_071.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 72,
+      "topology_name": "topo_072",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.9444,
+      "avg_hop_root": 3.2286,
+      "attacker_ids": [
+        18,
+        19,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_072/RT_RPL_sparse_topo_072.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_072/RT_BRPL_sparse_topo_072.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_072/RT_SMTRUST_sparse_topo_072.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_072/RT_TABRPL_sparse_topo_072.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 73,
+      "topology_name": "topo_073",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 4.2,
+      "attacker_ids": [
+        12,
+        22,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_073/RT_RPL_sparse_topo_073.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_073/RT_BRPL_sparse_topo_073.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_073/RT_SMTRUST_sparse_topo_073.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_073/RT_TABRPL_sparse_topo_073.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 74,
+      "topology_name": "topo_074",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 3.9143,
+      "attacker_ids": [
+        3,
+        16,
+        18
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_074/RT_RPL_sparse_topo_074.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_074/RT_BRPL_sparse_topo_074.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_074/RT_SMTRUST_sparse_topo_074.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_074/RT_TABRPL_sparse_topo_074.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 75,
+      "topology_name": "topo_075",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.1111,
+      "avg_hop_root": 2.6286,
+      "attacker_ids": [
+        6,
+        9,
+        19
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_075/RT_RPL_sparse_topo_075.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_075/RT_BRPL_sparse_topo_075.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_075/RT_SMTRUST_sparse_topo_075.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_075/RT_TABRPL_sparse_topo_075.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 76,
+      "topology_name": "topo_076",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2222,
+      "avg_hop_root": 3.0857,
+      "attacker_ids": [
+        6,
+        7,
+        8
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_076/RT_RPL_sparse_topo_076.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_076/RT_BRPL_sparse_topo_076.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_076/RT_SMTRUST_sparse_topo_076.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_076/RT_TABRPL_sparse_topo_076.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 77,
+      "topology_name": "topo_077",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.5556,
+      "avg_hop_root": 3.3429,
+      "attacker_ids": [
+        7,
+        14,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_077/RT_RPL_sparse_topo_077.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_077/RT_BRPL_sparse_topo_077.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_077/RT_SMTRUST_sparse_topo_077.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_077/RT_TABRPL_sparse_topo_077.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 78,
+      "topology_name": "topo_078",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.3889,
+      "avg_hop_root": 3.3714,
+      "attacker_ids": [
+        5,
+        6,
+        12
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_078/RT_RPL_sparse_topo_078.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_078/RT_BRPL_sparse_topo_078.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_078/RT_SMTRUST_sparse_topo_078.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_078/RT_TABRPL_sparse_topo_078.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 79,
+      "topology_name": "topo_079",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.0556,
+      "avg_hop_root": 5.9714,
+      "attacker_ids": [
+        10,
+        13,
+        17
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_079/RT_RPL_sparse_topo_079.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_079/RT_BRPL_sparse_topo_079.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_079/RT_SMTRUST_sparse_topo_079.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_079/RT_TABRPL_sparse_topo_079.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 80,
+      "topology_name": "topo_080",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4,
+      "avg_hop_root": 3.2,
+      "attacker_ids": [
+        26,
+        27,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/sparse/topo_080/RT_RPL_sparse_topo_080.csc",
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_080/RT_BRPL_sparse_topo_080.csc",
+        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_080/RT_SMTRUST_sparse_topo_080.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_080/RT_TABRPL_sparse_topo_080.csc"
+      }
+    },
     {
       "density": "medium",
       "topology_seed": 1,
@@ -29,7 +1713,3190 @@
         25
       ],
       "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_001/RT_RPL_medium_topo_001.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_001/RT_BRPL_medium_topo_001.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_001/RT_SMTRUST_medium_topo_001.csc",
         "TABRPL": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_medium_topo_001.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 2,
+      "topology_name": "topo_002",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.0857,
+      "attacker_ids": [
+        4,
+        21,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_002/RT_RPL_medium_topo_002.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_002/RT_BRPL_medium_topo_002.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_002/RT_SMTRUST_medium_topo_002.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_002/RT_TABRPL_medium_topo_002.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.9444,
+      "avg_hop_root": 2.6571,
+      "attacker_ids": [
+        20,
+        26,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_003/RT_RPL_medium_topo_003.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_003/RT_BRPL_medium_topo_003.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_003/RT_SMTRUST_medium_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_003/RT_TABRPL_medium_topo_003.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 4,
+      "topology_name": "topo_004",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.8857,
+      "attacker_ids": [
+        2,
+        17,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_004/RT_RPL_medium_topo_004.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_004/RT_BRPL_medium_topo_004.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_004/RT_SMTRUST_medium_topo_004.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_004/RT_TABRPL_medium_topo_004.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 5,
+      "topology_name": "topo_005",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        9,
+        14,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_005/RT_RPL_medium_topo_005.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_005/RT_BRPL_medium_topo_005.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_005/RT_SMTRUST_medium_topo_005.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_005/RT_TABRPL_medium_topo_005.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 6,
+      "topology_name": "topo_006",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.8889,
+      "avg_hop_root": 2.1714,
+      "attacker_ids": [
+        6,
+        16,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_006/RT_RPL_medium_topo_006.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_006/RT_BRPL_medium_topo_006.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_006/RT_SMTRUST_medium_topo_006.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_006/RT_TABRPL_medium_topo_006.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 7,
+      "topology_name": "topo_007",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5,
+      "avg_hop_root": 1.8571,
+      "attacker_ids": [
+        22,
+        26,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_007/RT_RPL_medium_topo_007.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_007/RT_BRPL_medium_topo_007.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_007/RT_SMTRUST_medium_topo_007.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_007/RT_TABRPL_medium_topo_007.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 8,
+      "topology_name": "topo_008",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6111,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        9,
+        26,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_008/RT_RPL_medium_topo_008.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_008/RT_BRPL_medium_topo_008.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_008/RT_SMTRUST_medium_topo_008.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_008/RT_TABRPL_medium_topo_008.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 9,
+      "topology_name": "topo_009",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2778,
+      "avg_hop_root": 2.2571,
+      "attacker_ids": [
+        14,
+        15,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_009/RT_RPL_medium_topo_009.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_009/RT_BRPL_medium_topo_009.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_009/RT_SMTRUST_medium_topo_009.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_009/RT_TABRPL_medium_topo_009.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 10,
+      "topology_name": "topo_010",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        15,
+        27,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_010/RT_RPL_medium_topo_010.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_010/RT_BRPL_medium_topo_010.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_010/RT_SMTRUST_medium_topo_010.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_010/RT_TABRPL_medium_topo_010.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 11,
+      "topology_name": "topo_011",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3333,
+      "avg_hop_root": 2.1143,
+      "attacker_ids": [
+        3,
+        6,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_011/RT_RPL_medium_topo_011.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_011/RT_BRPL_medium_topo_011.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_011/RT_SMTRUST_medium_topo_011.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_011/RT_TABRPL_medium_topo_011.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 12,
+      "topology_name": "topo_012",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.2222,
+      "avg_hop_root": 2.4286,
+      "attacker_ids": [
+        3,
+        26,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_012/RT_RPL_medium_topo_012.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_012/RT_BRPL_medium_topo_012.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_012/RT_SMTRUST_medium_topo_012.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_012/RT_TABRPL_medium_topo_012.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 13,
+      "topology_name": "topo_013",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6111,
+      "avg_hop_root": 2.2571,
+      "attacker_ids": [
+        3,
+        27,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_013/RT_RPL_medium_topo_013.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_013/RT_BRPL_medium_topo_013.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_013/RT_SMTRUST_medium_topo_013.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_013/RT_TABRPL_medium_topo_013.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 14,
+      "topology_name": "topo_014",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7778,
+      "avg_hop_root": 2.1143,
+      "attacker_ids": [
+        18,
+        19,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_014/RT_RPL_medium_topo_014.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_014/RT_BRPL_medium_topo_014.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_014/RT_SMTRUST_medium_topo_014.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_014/RT_TABRPL_medium_topo_014.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 15,
+      "topology_name": "topo_015",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7222,
+      "avg_hop_root": 2.3429,
+      "attacker_ids": [
+        24,
+        26,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_015/RT_RPL_medium_topo_015.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_015/RT_BRPL_medium_topo_015.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_015/RT_SMTRUST_medium_topo_015.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_015/RT_TABRPL_medium_topo_015.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 16,
+      "topology_name": "topo_016",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 4.8333,
+      "avg_hop_root": 2.4857,
+      "attacker_ids": [
+        25,
+        28,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_016/RT_RPL_medium_topo_016.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_016/RT_BRPL_medium_topo_016.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_016/RT_SMTRUST_medium_topo_016.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_016/RT_TABRPL_medium_topo_016.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 17,
+      "topology_name": "topo_017",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5,
+      "avg_hop_root": 2.0286,
+      "attacker_ids": [
+        11,
+        19,
+        20
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_017/RT_RPL_medium_topo_017.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_017/RT_BRPL_medium_topo_017.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_017/RT_SMTRUST_medium_topo_017.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_017/RT_TABRPL_medium_topo_017.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 18,
+      "topology_name": "topo_018",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        8,
+        12,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_018/RT_RPL_medium_topo_018.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_018/RT_BRPL_medium_topo_018.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_018/RT_SMTRUST_medium_topo_018.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_018/RT_TABRPL_medium_topo_018.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 19,
+      "topology_name": "topo_019",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5,
+      "avg_hop_root": 2.6286,
+      "attacker_ids": [
+        11,
+        24,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_019/RT_RPL_medium_topo_019.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_019/RT_BRPL_medium_topo_019.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_019/RT_SMTRUST_medium_topo_019.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_019/RT_TABRPL_medium_topo_019.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 20,
+      "topology_name": "topo_020",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2778,
+      "avg_hop_root": 2.0571,
+      "attacker_ids": [
+        12,
+        27,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_020/RT_RPL_medium_topo_020.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_020/RT_BRPL_medium_topo_020.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_020/RT_SMTRUST_medium_topo_020.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_020/RT_TABRPL_medium_topo_020.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 21,
+      "topology_name": "topo_021",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2222,
+      "avg_hop_root": 2,
+      "attacker_ids": [
+        13,
+        16,
+        19
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_021/RT_RPL_medium_topo_021.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_021/RT_BRPL_medium_topo_021.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_021/RT_SMTRUST_medium_topo_021.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_021/RT_TABRPL_medium_topo_021.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 22,
+      "topology_name": "topo_022",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.0857,
+      "attacker_ids": [
+        3,
+        10,
+        13
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_022/RT_RPL_medium_topo_022.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_022/RT_BRPL_medium_topo_022.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_022/RT_SMTRUST_medium_topo_022.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_022/RT_TABRPL_medium_topo_022.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 23,
+      "topology_name": "topo_023",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3889,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        8,
+        11,
+        22
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_023/RT_RPL_medium_topo_023.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_023/RT_BRPL_medium_topo_023.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_023/RT_SMTRUST_medium_topo_023.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_023/RT_TABRPL_medium_topo_023.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 24,
+      "topology_name": "topo_024",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.5,
+      "avg_hop_root": 2.6571,
+      "attacker_ids": [
+        29,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_024/RT_RPL_medium_topo_024.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_024/RT_BRPL_medium_topo_024.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_024/RT_SMTRUST_medium_topo_024.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_024/RT_TABRPL_medium_topo_024.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 25,
+      "topology_name": "topo_025",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.9444,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        21,
+        27,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_025/RT_RPL_medium_topo_025.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_025/RT_BRPL_medium_topo_025.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_025/RT_SMTRUST_medium_topo_025.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_025/RT_TABRPL_medium_topo_025.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 26,
+      "topology_name": "topo_026",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7778,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        2,
+        3,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_026/RT_RPL_medium_topo_026.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_026/RT_BRPL_medium_topo_026.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_026/RT_SMTRUST_medium_topo_026.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_026/RT_TABRPL_medium_topo_026.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 27,
+      "topology_name": "topo_027",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7778,
+      "avg_hop_root": 2.0857,
+      "attacker_ids": [
+        3,
+        21,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_027/RT_RPL_medium_topo_027.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_027/RT_BRPL_medium_topo_027.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_027/RT_SMTRUST_medium_topo_027.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_027/RT_TABRPL_medium_topo_027.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 28,
+      "topology_name": "topo_028",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.9444,
+      "avg_hop_root": 2.4571,
+      "attacker_ids": [
+        5,
+        6,
+        9
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_028/RT_RPL_medium_topo_028.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_028/RT_BRPL_medium_topo_028.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_028/RT_SMTRUST_medium_topo_028.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_028/RT_TABRPL_medium_topo_028.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 29,
+      "topology_name": "topo_029",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.8889,
+      "avg_hop_root": 2.0286,
+      "attacker_ids": [
+        5,
+        13,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_029/RT_RPL_medium_topo_029.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_029/RT_BRPL_medium_topo_029.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_029/RT_SMTRUST_medium_topo_029.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_029/RT_TABRPL_medium_topo_029.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 30,
+      "topology_name": "topo_030",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.8333,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        14,
+        17,
+        19
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_030/RT_RPL_medium_topo_030.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_030/RT_BRPL_medium_topo_030.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_030/RT_SMTRUST_medium_topo_030.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_030/RT_TABRPL_medium_topo_030.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 31,
+      "topology_name": "topo_031",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.7222,
+      "avg_hop_root": 2.4286,
+      "attacker_ids": [
+        17,
+        20,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_031/RT_RPL_medium_topo_031.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_031/RT_BRPL_medium_topo_031.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_031/RT_SMTRUST_medium_topo_031.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_031/RT_TABRPL_medium_topo_031.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 32,
+      "topology_name": "topo_032",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2.4571,
+      "attacker_ids": [
+        4,
+        15,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_032/RT_RPL_medium_topo_032.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_032/RT_BRPL_medium_topo_032.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_032/RT_SMTRUST_medium_topo_032.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_032/RT_TABRPL_medium_topo_032.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 33,
+      "topology_name": "topo_033",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        10,
+        15,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_033/RT_RPL_medium_topo_033.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_033/RT_BRPL_medium_topo_033.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_033/RT_SMTRUST_medium_topo_033.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_033/RT_TABRPL_medium_topo_033.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 34,
+      "topology_name": "topo_034",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6111,
+      "avg_hop_root": 2.1143,
+      "attacker_ids": [
+        4,
+        20,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_034/RT_RPL_medium_topo_034.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_034/RT_BRPL_medium_topo_034.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_034/RT_SMTRUST_medium_topo_034.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_034/RT_TABRPL_medium_topo_034.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 35,
+      "topology_name": "topo_035",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6111,
+      "avg_hop_root": 2.7429,
+      "attacker_ids": [
+        18,
+        22,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_035/RT_RPL_medium_topo_035.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_035/RT_BRPL_medium_topo_035.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_035/RT_SMTRUST_medium_topo_035.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_035/RT_TABRPL_medium_topo_035.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 36,
+      "topology_name": "topo_036",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.4444,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        11,
+        18,
+        20
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_036/RT_RPL_medium_topo_036.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_036/RT_BRPL_medium_topo_036.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_036/RT_SMTRUST_medium_topo_036.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_036/RT_TABRPL_medium_topo_036.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 37,
+      "topology_name": "topo_037",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3333,
+      "avg_hop_root": 2.2286,
+      "attacker_ids": [
+        9,
+        26,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_037/RT_RPL_medium_topo_037.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_037/RT_BRPL_medium_topo_037.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_037/RT_SMTRUST_medium_topo_037.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_037/RT_TABRPL_medium_topo_037.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 38,
+      "topology_name": "topo_038",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.5429,
+      "attacker_ids": [
+        5,
+        28,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_038/RT_RPL_medium_topo_038.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_038/RT_BRPL_medium_topo_038.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_038/RT_SMTRUST_medium_topo_038.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_038/RT_TABRPL_medium_topo_038.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 39,
+      "topology_name": "topo_039",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.7222,
+      "avg_hop_root": 2.6857,
+      "attacker_ids": [
+        8,
+        11,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_039/RT_RPL_medium_topo_039.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_039/RT_BRPL_medium_topo_039.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_039/RT_SMTRUST_medium_topo_039.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_039/RT_TABRPL_medium_topo_039.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 40,
+      "topology_name": "topo_040",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2,
+      "attacker_ids": [
+        6,
+        26,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_040/RT_RPL_medium_topo_040.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_040/RT_BRPL_medium_topo_040.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_040/RT_SMTRUST_medium_topo_040.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_040/RT_TABRPL_medium_topo_040.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 41,
+      "topology_name": "topo_041",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        6,
+        24,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_041/RT_RPL_medium_topo_041.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_041/RT_BRPL_medium_topo_041.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_041/RT_SMTRUST_medium_topo_041.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_041/RT_TABRPL_medium_topo_041.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 42,
+      "topology_name": "topo_042",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1111,
+      "avg_hop_root": 2.0286,
+      "attacker_ids": [
+        5,
+        10,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_042/RT_RPL_medium_topo_042.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_042/RT_BRPL_medium_topo_042.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_042/RT_SMTRUST_medium_topo_042.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_042/RT_TABRPL_medium_topo_042.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 43,
+      "topology_name": "topo_043",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.7222,
+      "avg_hop_root": 2.5429,
+      "attacker_ids": [
+        7,
+        22,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_043/RT_RPL_medium_topo_043.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_043/RT_BRPL_medium_topo_043.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_043/RT_SMTRUST_medium_topo_043.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_043/RT_TABRPL_medium_topo_043.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 44,
+      "topology_name": "topo_044",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.4444,
+      "avg_hop_root": 2.2857,
+      "attacker_ids": [
+        15,
+        18,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_044/RT_RPL_medium_topo_044.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_044/RT_BRPL_medium_topo_044.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_044/RT_SMTRUST_medium_topo_044.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_044/RT_TABRPL_medium_topo_044.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 45,
+      "topology_name": "topo_045",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3333,
+      "avg_hop_root": 2.1714,
+      "attacker_ids": [
+        14,
+        22,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_045/RT_RPL_medium_topo_045.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_045/RT_BRPL_medium_topo_045.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_045/RT_SMTRUST_medium_topo_045.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_045/RT_TABRPL_medium_topo_045.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 46,
+      "topology_name": "topo_046",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5556,
+      "avg_hop_root": 2.0571,
+      "attacker_ids": [
+        17,
+        23,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_046/RT_RPL_medium_topo_046.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_046/RT_BRPL_medium_topo_046.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_046/RT_SMTRUST_medium_topo_046.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_046/RT_TABRPL_medium_topo_046.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 47,
+      "topology_name": "topo_047",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6111,
+      "avg_hop_root": 5.4,
+      "attacker_ids": [
+        9,
+        17,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_047/RT_RPL_medium_topo_047.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_047/RT_BRPL_medium_topo_047.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_047/RT_SMTRUST_medium_topo_047.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_047/RT_TABRPL_medium_topo_047.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 48,
+      "topology_name": "topo_048",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7222,
+      "avg_hop_root": 1.9143,
+      "attacker_ids": [
+        2,
+        6,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_048/RT_RPL_medium_topo_048.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_048/RT_BRPL_medium_topo_048.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_048/RT_SMTRUST_medium_topo_048.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_048/RT_TABRPL_medium_topo_048.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 49,
+      "topology_name": "topo_049",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2222,
+      "avg_hop_root": 2.3429,
+      "attacker_ids": [
+        20,
+        23,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_049/RT_RPL_medium_topo_049.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_049/RT_BRPL_medium_topo_049.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_049/RT_SMTRUST_medium_topo_049.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_049/RT_TABRPL_medium_topo_049.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 50,
+      "topology_name": "topo_050",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.7778,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        24,
+        27,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_050/RT_RPL_medium_topo_050.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_050/RT_BRPL_medium_topo_050.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_050/RT_SMTRUST_medium_topo_050.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_050/RT_TABRPL_medium_topo_050.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 51,
+      "topology_name": "topo_051",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.3143,
+      "attacker_ids": [
+        8,
+        32,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_051/RT_RPL_medium_topo_051.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_051/RT_BRPL_medium_topo_051.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_051/RT_SMTRUST_medium_topo_051.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_051/RT_TABRPL_medium_topo_051.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 52,
+      "topology_name": "topo_052",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.4444,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        19,
+        27,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_052/RT_RPL_medium_topo_052.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_052/RT_BRPL_medium_topo_052.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_052/RT_SMTRUST_medium_topo_052.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_052/RT_TABRPL_medium_topo_052.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 53,
+      "topology_name": "topo_053",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7778,
+      "avg_hop_root": 2,
+      "attacker_ids": [
+        9,
+        12,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_053/RT_RPL_medium_topo_053.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_053/RT_BRPL_medium_topo_053.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_053/RT_SMTRUST_medium_topo_053.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_053/RT_TABRPL_medium_topo_053.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 54,
+      "topology_name": "topo_054",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3889,
+      "avg_hop_root": 2.4,
+      "attacker_ids": [
+        6,
+        7,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_054/RT_RPL_medium_topo_054.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_054/RT_BRPL_medium_topo_054.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_054/RT_SMTRUST_medium_topo_054.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_054/RT_TABRPL_medium_topo_054.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 55,
+      "topology_name": "topo_055",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.2778,
+      "avg_hop_root": 3.1429,
+      "attacker_ids": [
+        8,
+        15,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_055/RT_RPL_medium_topo_055.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_055/RT_BRPL_medium_topo_055.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_055/RT_SMTRUST_medium_topo_055.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_055/RT_TABRPL_medium_topo_055.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 56,
+      "topology_name": "topo_056",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3889,
+      "avg_hop_root": 1.9143,
+      "attacker_ids": [
+        6,
+        7,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_056/RT_RPL_medium_topo_056.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_056/RT_BRPL_medium_topo_056.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_056/RT_SMTRUST_medium_topo_056.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_056/RT_TABRPL_medium_topo_056.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 57,
+      "topology_name": "topo_057",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7222,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        14,
+        21,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_057/RT_RPL_medium_topo_057.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_057/RT_BRPL_medium_topo_057.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_057/RT_SMTRUST_medium_topo_057.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_057/RT_TABRPL_medium_topo_057.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 58,
+      "topology_name": "topo_058",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2778,
+      "avg_hop_root": 2.3429,
+      "attacker_ids": [
+        17,
+        26,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_058/RT_RPL_medium_topo_058.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_058/RT_BRPL_medium_topo_058.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_058/RT_SMTRUST_medium_topo_058.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_058/RT_TABRPL_medium_topo_058.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 59,
+      "topology_name": "topo_059",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2.2286,
+      "attacker_ids": [
+        6,
+        22,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_059/RT_RPL_medium_topo_059.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_059/RT_BRPL_medium_topo_059.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_059/RT_SMTRUST_medium_topo_059.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_059/RT_TABRPL_medium_topo_059.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 60,
+      "topology_name": "topo_060",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6667,
+      "avg_hop_root": 1.9143,
+      "attacker_ids": [
+        5,
+        6,
+        15
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_060/RT_RPL_medium_topo_060.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_060/RT_BRPL_medium_topo_060.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_060/RT_SMTRUST_medium_topo_060.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_060/RT_TABRPL_medium_topo_060.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 61,
+      "topology_name": "topo_061",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6667,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        15,
+        20,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_061/RT_RPL_medium_topo_061.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_061/RT_BRPL_medium_topo_061.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_061/RT_SMTRUST_medium_topo_061.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_061/RT_TABRPL_medium_topo_061.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 62,
+      "topology_name": "topo_062",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2.3429,
+      "attacker_ids": [
+        13,
+        16,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_062/RT_RPL_medium_topo_062.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_062/RT_BRPL_medium_topo_062.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_062/RT_SMTRUST_medium_topo_062.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_062/RT_TABRPL_medium_topo_062.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 63,
+      "topology_name": "topo_063",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3889,
+      "avg_hop_root": 2.0286,
+      "attacker_ids": [
+        12,
+        15,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_063/RT_RPL_medium_topo_063.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_063/RT_BRPL_medium_topo_063.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_063/RT_SMTRUST_medium_topo_063.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_063/RT_TABRPL_medium_topo_063.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 64,
+      "topology_name": "topo_064",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6667,
+      "avg_hop_root": 2.2286,
+      "attacker_ids": [
+        3,
+        15,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_064/RT_RPL_medium_topo_064.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_064/RT_BRPL_medium_topo_064.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_064/RT_SMTRUST_medium_topo_064.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_064/RT_TABRPL_medium_topo_064.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 65,
+      "topology_name": "topo_065",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6111,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        4,
+        9,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_065/RT_RPL_medium_topo_065.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_065/RT_BRPL_medium_topo_065.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_065/RT_SMTRUST_medium_topo_065.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_065/RT_TABRPL_medium_topo_065.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 66,
+      "topology_name": "topo_066",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.2778,
+      "avg_hop_root": 2.7429,
+      "attacker_ids": [
+        8,
+        10,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_066/RT_RPL_medium_topo_066.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_066/RT_BRPL_medium_topo_066.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_066/RT_SMTRUST_medium_topo_066.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_066/RT_TABRPL_medium_topo_066.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 67,
+      "topology_name": "topo_067",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5556,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        5,
+        9,
+        18
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_067/RT_RPL_medium_topo_067.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_067/RT_BRPL_medium_topo_067.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_067/RT_SMTRUST_medium_topo_067.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_067/RT_TABRPL_medium_topo_067.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 68,
+      "topology_name": "topo_068",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.4444,
+      "avg_hop_root": 2.0286,
+      "attacker_ids": [
+        15,
+        32,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_068/RT_RPL_medium_topo_068.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_068/RT_BRPL_medium_topo_068.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_068/RT_SMTRUST_medium_topo_068.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_068/RT_TABRPL_medium_topo_068.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 69,
+      "topology_name": "topo_069",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.2778,
+      "avg_hop_root": 2.3143,
+      "attacker_ids": [
+        4,
+        17,
+        21
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_069/RT_RPL_medium_topo_069.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_069/RT_BRPL_medium_topo_069.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_069/RT_SMTRUST_medium_topo_069.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_069/RT_TABRPL_medium_topo_069.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 70,
+      "topology_name": "topo_070",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.1429,
+      "attacker_ids": [
+        6,
+        26,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_070/RT_RPL_medium_topo_070.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_070/RT_BRPL_medium_topo_070.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_070/RT_SMTRUST_medium_topo_070.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_070/RT_TABRPL_medium_topo_070.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 71,
+      "topology_name": "topo_071",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.8889,
+      "avg_hop_root": 2.5143,
+      "attacker_ids": [
+        3,
+        5,
+        12
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_071/RT_RPL_medium_topo_071.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_071/RT_BRPL_medium_topo_071.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_071/RT_SMTRUST_medium_topo_071.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_071/RT_TABRPL_medium_topo_071.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 72,
+      "topology_name": "topo_072",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.0556,
+      "avg_hop_root": 2.1143,
+      "attacker_ids": [
+        11,
+        23,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_072/RT_RPL_medium_topo_072.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_072/RT_BRPL_medium_topo_072.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_072/RT_SMTRUST_medium_topo_072.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_072/RT_TABRPL_medium_topo_072.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 73,
+      "topology_name": "topo_073",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.7778,
+      "avg_hop_root": 2,
+      "attacker_ids": [
+        7,
+        31,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_073/RT_RPL_medium_topo_073.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_073/RT_BRPL_medium_topo_073.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_073/RT_SMTRUST_medium_topo_073.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_073/RT_TABRPL_medium_topo_073.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 74,
+      "topology_name": "topo_074",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.5,
+      "avg_hop_root": 2.0857,
+      "attacker_ids": [
+        4,
+        7,
+        11
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_074/RT_RPL_medium_topo_074.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_074/RT_BRPL_medium_topo_074.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_074/RT_SMTRUST_medium_topo_074.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_074/RT_TABRPL_medium_topo_074.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 75,
+      "topology_name": "topo_075",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6,
+      "avg_hop_root": 2.2,
+      "attacker_ids": [
+        2,
+        6,
+        21
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_075/RT_RPL_medium_topo_075.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_075/RT_BRPL_medium_topo_075.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_075/RT_SMTRUST_medium_topo_075.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_075/RT_TABRPL_medium_topo_075.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 76,
+      "topology_name": "topo_076",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.3889,
+      "avg_hop_root": 2.1714,
+      "attacker_ids": [
+        6,
+        21,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_076/RT_RPL_medium_topo_076.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_076/RT_BRPL_medium_topo_076.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_076/RT_SMTRUST_medium_topo_076.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_076/RT_TABRPL_medium_topo_076.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 77,
+      "topology_name": "topo_077",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.6667,
+      "avg_hop_root": 2.1714,
+      "attacker_ids": [
+        11,
+        16,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_077/RT_RPL_medium_topo_077.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_077/RT_BRPL_medium_topo_077.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_077/RT_SMTRUST_medium_topo_077.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_077/RT_TABRPL_medium_topo_077.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 78,
+      "topology_name": "topo_078",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.6667,
+      "avg_hop_root": 2.2571,
+      "attacker_ids": [
+        11,
+        30,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_078/RT_RPL_medium_topo_078.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_078/RT_BRPL_medium_topo_078.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_078/RT_SMTRUST_medium_topo_078.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_078/RT_TABRPL_medium_topo_078.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 79,
+      "topology_name": "topo_079",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 6.1667,
+      "avg_hop_root": 2.3714,
+      "attacker_ids": [
+        11,
+        20,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_079/RT_RPL_medium_topo_079.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_079/RT_BRPL_medium_topo_079.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_079/RT_SMTRUST_medium_topo_079.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_079/RT_TABRPL_medium_topo_079.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 80,
+      "topology_name": "topo_080",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.3333,
+      "avg_hop_root": 2.7143,
+      "attacker_ids": [
+        2,
+        24,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/medium/topo_080/RT_RPL_medium_topo_080.csc",
+        "BRPL": "configs/scenarios/random_topo/medium/topo_080/RT_BRPL_medium_topo_080.csc",
+        "SMTRUST": "configs/scenarios/random_topo/medium/topo_080/RT_SMTRUST_medium_topo_080.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_080/RT_TABRPL_medium_topo_080.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 1,
+      "topology_name": "topo_001",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        8,
+        26,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_001/RT_RPL_dense_topo_001.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_001/RT_BRPL_dense_topo_001.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_001/RT_SMTRUST_dense_topo_001.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_001/RT_TABRPL_dense_topo_001.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 2,
+      "topology_name": "topo_002",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8333,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        3,
+        12,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_002/RT_RPL_dense_topo_002.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_002/RT_BRPL_dense_topo_002.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_002/RT_SMTRUST_dense_topo_002.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_002/RT_TABRPL_dense_topo_002.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        7,
+        25,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_003/RT_RPL_dense_topo_003.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_003/RT_BRPL_dense_topo_003.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_003/RT_SMTRUST_dense_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_003/RT_TABRPL_dense_topo_003.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 4,
+      "topology_name": "topo_004",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        3,
+        11,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_004/RT_RPL_dense_topo_004.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_004/RT_BRPL_dense_topo_004.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_004/RT_SMTRUST_dense_topo_004.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_004/RT_TABRPL_dense_topo_004.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 5,
+      "topology_name": "topo_005",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.1111,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        9,
+        12,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_005/RT_RPL_dense_topo_005.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_005/RT_BRPL_dense_topo_005.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_005/RT_SMTRUST_dense_topo_005.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_005/RT_TABRPL_dense_topo_005.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 6,
+      "topology_name": "topo_006",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7778,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        8,
+        19,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_006/RT_RPL_dense_topo_006.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_006/RT_BRPL_dense_topo_006.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_006/RT_SMTRUST_dense_topo_006.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_006/RT_TABRPL_dense_topo_006.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 7,
+      "topology_name": "topo_007",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.7222,
+      "avg_hop_root": 1.8571,
+      "attacker_ids": [
+        7,
+        30,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_007/RT_RPL_dense_topo_007.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_007/RT_BRPL_dense_topo_007.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_007/RT_SMTRUST_dense_topo_007.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_007/RT_TABRPL_dense_topo_007.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 8,
+      "topology_name": "topo_008",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7222,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        4,
+        13,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_008/RT_RPL_dense_topo_008.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_008/RT_BRPL_dense_topo_008.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_008/RT_SMTRUST_dense_topo_008.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_008/RT_TABRPL_dense_topo_008.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 9,
+      "topology_name": "topo_009",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        5,
+        14,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_009/RT_RPL_dense_topo_009.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_009/RT_BRPL_dense_topo_009.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_009/RT_SMTRUST_dense_topo_009.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_009/RT_TABRPL_dense_topo_009.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 10,
+      "topology_name": "topo_010",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 7.8889,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        28,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_010/RT_RPL_dense_topo_010.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_010/RT_BRPL_dense_topo_010.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_010/RT_SMTRUST_dense_topo_010.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_010/RT_TABRPL_dense_topo_010.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 11,
+      "topology_name": "topo_011",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.9444,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        4,
+        5,
+        11
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_011/RT_RPL_dense_topo_011.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_011/RT_BRPL_dense_topo_011.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_011/RT_SMTRUST_dense_topo_011.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_011/RT_TABRPL_dense_topo_011.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 12,
+      "topology_name": "topo_012",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.6111,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        18,
+        24,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_012/RT_RPL_dense_topo_012.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_012/RT_BRPL_dense_topo_012.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_012/RT_SMTRUST_dense_topo_012.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_012/RT_TABRPL_dense_topo_012.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 13,
+      "topology_name": "topo_013",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.6667,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        17,
+        32,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_013/RT_RPL_dense_topo_013.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_013/RT_BRPL_dense_topo_013.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_013/RT_SMTRUST_dense_topo_013.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_013/RT_TABRPL_dense_topo_013.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 14,
+      "topology_name": "topo_014",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1667,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        14,
+        32,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_014/RT_RPL_dense_topo_014.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_014/RT_BRPL_dense_topo_014.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_014/RT_SMTRUST_dense_topo_014.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_014/RT_TABRPL_dense_topo_014.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 15,
+      "topology_name": "topo_015",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        3,
+        5,
+        9
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_015/RT_RPL_dense_topo_015.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_015/RT_BRPL_dense_topo_015.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_015/RT_SMTRUST_dense_topo_015.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_015/RT_TABRPL_dense_topo_015.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 16,
+      "topology_name": "topo_016",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.5,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        5,
+        7,
+        10
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_016/RT_RPL_dense_topo_016.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_016/RT_BRPL_dense_topo_016.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_016/RT_SMTRUST_dense_topo_016.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_016/RT_TABRPL_dense_topo_016.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 17,
+      "topology_name": "topo_017",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1667,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        5,
+        22,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_017/RT_RPL_dense_topo_017.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_017/RT_BRPL_dense_topo_017.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_017/RT_SMTRUST_dense_topo_017.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_017/RT_TABRPL_dense_topo_017.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 18,
+      "topology_name": "topo_018",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5556,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        15,
+        24,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_018/RT_RPL_dense_topo_018.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_018/RT_BRPL_dense_topo_018.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_018/RT_SMTRUST_dense_topo_018.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_018/RT_TABRPL_dense_topo_018.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 19,
+      "topology_name": "topo_019",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.6111,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        2,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_019/RT_RPL_dense_topo_019.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_019/RT_BRPL_dense_topo_019.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_019/RT_SMTRUST_dense_topo_019.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_019/RT_TABRPL_dense_topo_019.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 20,
+      "topology_name": "topo_020",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.7778,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        7,
+        23,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_020/RT_RPL_dense_topo_020.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_020/RT_BRPL_dense_topo_020.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_020/RT_SMTRUST_dense_topo_020.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_020/RT_TABRPL_dense_topo_020.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 21,
+      "topology_name": "topo_021",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1111,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        6,
+        23,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_021/RT_RPL_dense_topo_021.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_021/RT_BRPL_dense_topo_021.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_021/RT_SMTRUST_dense_topo_021.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_021/RT_TABRPL_dense_topo_021.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 22,
+      "topology_name": "topo_022",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.0556,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        4,
+        5,
+        8
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_022/RT_RPL_dense_topo_022.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_022/RT_BRPL_dense_topo_022.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_022/RT_SMTRUST_dense_topo_022.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_022/RT_TABRPL_dense_topo_022.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 23,
+      "topology_name": "topo_023",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.9444,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        22,
+        27,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_023/RT_RPL_dense_topo_023.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_023/RT_BRPL_dense_topo_023.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_023/RT_SMTRUST_dense_topo_023.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_023/RT_TABRPL_dense_topo_023.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 24,
+      "topology_name": "topo_024",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7222,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        3,
+        6,
+        8
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_024/RT_RPL_dense_topo_024.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_024/RT_BRPL_dense_topo_024.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_024/RT_SMTRUST_dense_topo_024.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_024/RT_TABRPL_dense_topo_024.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 25,
+      "topology_name": "topo_025",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        10,
+        22,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_025/RT_RPL_dense_topo_025.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_025/RT_BRPL_dense_topo_025.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_025/RT_SMTRUST_dense_topo_025.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_025/RT_TABRPL_dense_topo_025.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 26,
+      "topology_name": "topo_026",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5556,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        14,
+        15,
+        22
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_026/RT_RPL_dense_topo_026.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_026/RT_BRPL_dense_topo_026.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_026/RT_SMTRUST_dense_topo_026.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_026/RT_TABRPL_dense_topo_026.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 27,
+      "topology_name": "topo_027",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        8,
+        25,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_027/RT_RPL_dense_topo_027.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_027/RT_BRPL_dense_topo_027.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_027/RT_SMTRUST_dense_topo_027.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_027/RT_TABRPL_dense_topo_027.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 28,
+      "topology_name": "topo_028",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 7.8889,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        4,
+        31,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_028/RT_RPL_dense_topo_028.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_028/RT_BRPL_dense_topo_028.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_028/RT_SMTRUST_dense_topo_028.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_028/RT_TABRPL_dense_topo_028.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 29,
+      "topology_name": "topo_029",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        14,
+        20,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_029/RT_RPL_dense_topo_029.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_029/RT_BRPL_dense_topo_029.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_029/RT_SMTRUST_dense_topo_029.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_029/RT_TABRPL_dense_topo_029.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 30,
+      "topology_name": "topo_030",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7778,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        22,
+        31,
+        34
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_030/RT_RPL_dense_topo_030.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_030/RT_BRPL_dense_topo_030.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_030/RT_SMTRUST_dense_topo_030.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_030/RT_TABRPL_dense_topo_030.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 31,
+      "topology_name": "topo_031",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.7778,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        11,
+        14,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_031/RT_RPL_dense_topo_031.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_031/RT_BRPL_dense_topo_031.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_031/RT_SMTRUST_dense_topo_031.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_031/RT_TABRPL_dense_topo_031.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 32,
+      "topology_name": "topo_032",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.6111,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        11,
+        15,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_032/RT_RPL_dense_topo_032.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_032/RT_BRPL_dense_topo_032.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_032/RT_SMTRUST_dense_topo_032.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_032/RT_TABRPL_dense_topo_032.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 33,
+      "topology_name": "topo_033",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.6111,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        3,
+        14,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_033/RT_RPL_dense_topo_033.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_033/RT_BRPL_dense_topo_033.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_033/RT_SMTRUST_dense_topo_033.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_033/RT_TABRPL_dense_topo_033.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 34,
+      "topology_name": "topo_034",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        16,
+        26,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_034/RT_RPL_dense_topo_034.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_034/RT_BRPL_dense_topo_034.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_034/RT_SMTRUST_dense_topo_034.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_034/RT_TABRPL_dense_topo_034.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 35,
+      "topology_name": "topo_035",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.9444,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        3,
+        14,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_035/RT_RPL_dense_topo_035.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_035/RT_BRPL_dense_topo_035.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_035/RT_SMTRUST_dense_topo_035.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_035/RT_TABRPL_dense_topo_035.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 36,
+      "topology_name": "topo_036",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1667,
+      "avg_hop_root": 1.6,
+      "attacker_ids": [
+        19,
+        20,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_036/RT_RPL_dense_topo_036.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_036/RT_BRPL_dense_topo_036.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_036/RT_SMTRUST_dense_topo_036.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_036/RT_TABRPL_dense_topo_036.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 37,
+      "topology_name": "topo_037",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.5,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        3,
+        22,
+        30
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_037/RT_RPL_dense_topo_037.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_037/RT_BRPL_dense_topo_037.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_037/RT_SMTRUST_dense_topo_037.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_037/RT_TABRPL_dense_topo_037.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 38,
+      "topology_name": "topo_038",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.5,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        8,
+        16,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_038/RT_RPL_dense_topo_038.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_038/RT_BRPL_dense_topo_038.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_038/RT_SMTRUST_dense_topo_038.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_038/RT_TABRPL_dense_topo_038.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 39,
+      "topology_name": "topo_039",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        12,
+        24,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_039/RT_RPL_dense_topo_039.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_039/RT_BRPL_dense_topo_039.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_039/RT_SMTRUST_dense_topo_039.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_039/RT_TABRPL_dense_topo_039.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 40,
+      "topology_name": "topo_040",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8333,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        31,
+        32,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_040/RT_RPL_dense_topo_040.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_040/RT_BRPL_dense_topo_040.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_040/RT_SMTRUST_dense_topo_040.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_040/RT_TABRPL_dense_topo_040.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 41,
+      "topology_name": "topo_041",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 7.5556,
+      "avg_hop_root": 1.9143,
+      "attacker_ids": [
+        10,
+        23,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_041/RT_RPL_dense_topo_041.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_041/RT_BRPL_dense_topo_041.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_041/RT_SMTRUST_dense_topo_041.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_041/RT_TABRPL_dense_topo_041.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 42,
+      "topology_name": "topo_042",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        7,
+        12,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_042/RT_RPL_dense_topo_042.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_042/RT_BRPL_dense_topo_042.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_042/RT_SMTRUST_dense_topo_042.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_042/RT_TABRPL_dense_topo_042.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 43,
+      "topology_name": "topo_043",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.5714,
+      "attacker_ids": [
+        7,
+        12,
+        16
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_043/RT_RPL_dense_topo_043.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_043/RT_BRPL_dense_topo_043.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_043/RT_SMTRUST_dense_topo_043.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_043/RT_TABRPL_dense_topo_043.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 44,
+      "topology_name": "topo_044",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2778,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        5,
+        21,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_044/RT_RPL_dense_topo_044.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_044/RT_BRPL_dense_topo_044.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_044/RT_SMTRUST_dense_topo_044.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_044/RT_TABRPL_dense_topo_044.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 45,
+      "topology_name": "topo_045",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7222,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        18,
+        22,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_045/RT_RPL_dense_topo_045.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_045/RT_BRPL_dense_topo_045.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_045/RT_SMTRUST_dense_topo_045.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_045/RT_TABRPL_dense_topo_045.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 46,
+      "topology_name": "topo_046",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.6667,
+      "avg_hop_root": 1.9714,
+      "attacker_ids": [
+        4,
+        8,
+        27
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_046/RT_RPL_dense_topo_046.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_046/RT_BRPL_dense_topo_046.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_046/RT_SMTRUST_dense_topo_046.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_046/RT_TABRPL_dense_topo_046.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 47,
+      "topology_name": "topo_047",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        25,
+        27,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_047/RT_RPL_dense_topo_047.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_047/RT_BRPL_dense_topo_047.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_047/RT_SMTRUST_dense_topo_047.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_047/RT_TABRPL_dense_topo_047.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 48,
+      "topology_name": "topo_048",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.1111,
+      "avg_hop_root": 1.8571,
+      "attacker_ids": [
+        16,
+        19,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_048/RT_RPL_dense_topo_048.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_048/RT_BRPL_dense_topo_048.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_048/RT_SMTRUST_dense_topo_048.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_048/RT_TABRPL_dense_topo_048.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 49,
+      "topology_name": "topo_049",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.9714,
+      "attacker_ids": [
+        2,
+        19,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_049/RT_RPL_dense_topo_049.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_049/RT_BRPL_dense_topo_049.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_049/RT_SMTRUST_dense_topo_049.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_049/RT_TABRPL_dense_topo_049.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 50,
+      "topology_name": "topo_050",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.0556,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        6,
+        22,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_050/RT_RPL_dense_topo_050.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_050/RT_BRPL_dense_topo_050.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_050/RT_SMTRUST_dense_topo_050.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_050/RT_TABRPL_dense_topo_050.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 51,
+      "topology_name": "topo_051",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.9444,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        6,
+        11,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_051/RT_RPL_dense_topo_051.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_051/RT_BRPL_dense_topo_051.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_051/RT_SMTRUST_dense_topo_051.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_051/RT_TABRPL_dense_topo_051.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 52,
+      "topology_name": "topo_052",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1111,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        24,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_052/RT_RPL_dense_topo_052.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_052/RT_BRPL_dense_topo_052.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_052/RT_SMTRUST_dense_topo_052.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_052/RT_TABRPL_dense_topo_052.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 53,
+      "topology_name": "topo_053",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.5556,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        8,
+        19,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_053/RT_RPL_dense_topo_053.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_053/RT_BRPL_dense_topo_053.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_053/RT_SMTRUST_dense_topo_053.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_053/RT_TABRPL_dense_topo_053.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 54,
+      "topology_name": "topo_054",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.6667,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        4,
+        32,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_054/RT_RPL_dense_topo_054.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_054/RT_BRPL_dense_topo_054.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_054/RT_SMTRUST_dense_topo_054.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_054/RT_TABRPL_dense_topo_054.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 55,
+      "topology_name": "topo_055",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5556,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        12,
+        26,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_055/RT_RPL_dense_topo_055.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_055/RT_BRPL_dense_topo_055.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_055/RT_SMTRUST_dense_topo_055.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_055/RT_TABRPL_dense_topo_055.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 56,
+      "topology_name": "topo_056",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.2222,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        22,
+        27,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_056/RT_RPL_dense_topo_056.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_056/RT_BRPL_dense_topo_056.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_056/RT_SMTRUST_dense_topo_056.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_056/RT_TABRPL_dense_topo_056.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 57,
+      "topology_name": "topo_057",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5556,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        17,
+        23,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_057/RT_RPL_dense_topo_057.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_057/RT_BRPL_dense_topo_057.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_057/RT_SMTRUST_dense_topo_057.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_057/RT_TABRPL_dense_topo_057.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 58,
+      "topology_name": "topo_058",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.3889,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        11,
+        26,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_058/RT_RPL_dense_topo_058.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_058/RT_BRPL_dense_topo_058.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_058/RT_SMTRUST_dense_topo_058.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_058/RT_TABRPL_dense_topo_058.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 59,
+      "topology_name": "topo_059",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        2,
+        7,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_059/RT_RPL_dense_topo_059.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_059/RT_BRPL_dense_topo_059.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_059/RT_SMTRUST_dense_topo_059.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_059/RT_TABRPL_dense_topo_059.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 60,
+      "topology_name": "topo_060",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2778,
+      "avg_hop_root": 1.7429,
+      "attacker_ids": [
+        10,
+        25,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_060/RT_RPL_dense_topo_060.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_060/RT_BRPL_dense_topo_060.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_060/RT_SMTRUST_dense_topo_060.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_060/RT_TABRPL_dense_topo_060.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 61,
+      "topology_name": "topo_061",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        22,
+        23,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_061/RT_RPL_dense_topo_061.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_061/RT_BRPL_dense_topo_061.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_061/RT_SMTRUST_dense_topo_061.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_061/RT_TABRPL_dense_topo_061.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 62,
+      "topology_name": "topo_062",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        12,
+        17,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_062/RT_RPL_dense_topo_062.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_062/RT_BRPL_dense_topo_062.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_062/RT_SMTRUST_dense_topo_062.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_062/RT_TABRPL_dense_topo_062.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 63,
+      "topology_name": "topo_063",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.1667,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        4,
+        8,
+        14
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_063/RT_RPL_dense_topo_063.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_063/RT_BRPL_dense_topo_063.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_063/RT_SMTRUST_dense_topo_063.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_063/RT_TABRPL_dense_topo_063.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 64,
+      "topology_name": "topo_064",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.6111,
+      "avg_hop_root": 1.6,
+      "attacker_ids": [
+        14,
+        16,
+        24
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_064/RT_RPL_dense_topo_064.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_064/RT_BRPL_dense_topo_064.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_064/RT_SMTRUST_dense_topo_064.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_064/RT_TABRPL_dense_topo_064.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 65,
+      "topology_name": "topo_065",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2778,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        13,
+        17,
+        22
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_065/RT_RPL_dense_topo_065.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_065/RT_BRPL_dense_topo_065.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_065/RT_SMTRUST_dense_topo_065.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_065/RT_TABRPL_dense_topo_065.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 66,
+      "topology_name": "topo_066",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        2,
+        25,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_066/RT_RPL_dense_topo_066.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_066/RT_BRPL_dense_topo_066.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_066/RT_SMTRUST_dense_topo_066.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_066/RT_TABRPL_dense_topo_066.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 67,
+      "topology_name": "topo_067",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.7222,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        10,
+        30,
+        32
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_067/RT_RPL_dense_topo_067.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_067/RT_BRPL_dense_topo_067.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_067/RT_SMTRUST_dense_topo_067.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_067/RT_TABRPL_dense_topo_067.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 68,
+      "topology_name": "topo_068",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8333,
+      "avg_hop_root": 1.8,
+      "attacker_ids": [
+        24,
+        31,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_068/RT_RPL_dense_topo_068.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_068/RT_BRPL_dense_topo_068.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_068/RT_SMTRUST_dense_topo_068.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_068/RT_TABRPL_dense_topo_068.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 69,
+      "topology_name": "topo_069",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8333,
+      "avg_hop_root": 1.7143,
+      "attacker_ids": [
+        3,
+        4,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_069/RT_RPL_dense_topo_069.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_069/RT_BRPL_dense_topo_069.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_069/RT_SMTRUST_dense_topo_069.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_069/RT_TABRPL_dense_topo_069.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 70,
+      "topology_name": "topo_070",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.8889,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        6,
+        17,
+        25
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_070/RT_RPL_dense_topo_070.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_070/RT_BRPL_dense_topo_070.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_070/RT_SMTRUST_dense_topo_070.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_070/RT_TABRPL_dense_topo_070.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 71,
+      "topology_name": "topo_071",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        16,
+        23,
+        26
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_071/RT_RPL_dense_topo_071.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_071/RT_BRPL_dense_topo_071.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_071/RT_SMTRUST_dense_topo_071.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_071/RT_TABRPL_dense_topo_071.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 72,
+      "topology_name": "topo_072",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        20,
+        22,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_072/RT_RPL_dense_topo_072.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_072/RT_BRPL_dense_topo_072.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_072/RT_SMTRUST_dense_topo_072.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_072/RT_TABRPL_dense_topo_072.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 73,
+      "topology_name": "topo_073",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5556,
+      "avg_hop_root": 1.8571,
+      "attacker_ids": [
+        18,
+        22,
+        31
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_073/RT_RPL_dense_topo_073.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_073/RT_BRPL_dense_topo_073.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_073/RT_SMTRUST_dense_topo_073.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_073/RT_TABRPL_dense_topo_073.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 74,
+      "topology_name": "topo_074",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.7222,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        11,
+        23,
+        28
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_074/RT_RPL_dense_topo_074.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_074/RT_BRPL_dense_topo_074.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_074/RT_SMTRUST_dense_topo_074.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_074/RT_TABRPL_dense_topo_074.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 75,
+      "topology_name": "topo_075",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.7714,
+      "attacker_ids": [
+        3,
+        6,
+        8
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_075/RT_RPL_dense_topo_075.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_075/RT_BRPL_dense_topo_075.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_075/RT_SMTRUST_dense_topo_075.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_075/RT_TABRPL_dense_topo_075.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 76,
+      "topology_name": "topo_076",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.9444,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        6,
+        15,
+        35
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_076/RT_RPL_dense_topo_076.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_076/RT_BRPL_dense_topo_076.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_076/RT_SMTRUST_dense_topo_076.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_076/RT_TABRPL_dense_topo_076.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 77,
+      "topology_name": "topo_077",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.4444,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        9,
+        14,
+        29
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_077/RT_RPL_dense_topo_077.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_077/RT_BRPL_dense_topo_077.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_077/RT_SMTRUST_dense_topo_077.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_077/RT_TABRPL_dense_topo_077.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 78,
+      "topology_name": "topo_078",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.6286,
+      "attacker_ids": [
+        12,
+        18,
+        23
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_078/RT_RPL_dense_topo_078.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_078/RT_BRPL_dense_topo_078.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_078/RT_SMTRUST_dense_topo_078.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_078/RT_TABRPL_dense_topo_078.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 79,
+      "topology_name": "topo_079",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 8.5,
+      "avg_hop_root": 1.8286,
+      "attacker_ids": [
+        26,
+        27,
+        36
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_079/RT_RPL_dense_topo_079.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_079/RT_BRPL_dense_topo_079.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_079/RT_SMTRUST_dense_topo_079.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_079/RT_TABRPL_dense_topo_079.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 80,
+      "topology_name": "topo_080",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.6667,
+      "avg_hop_root": 1.6857,
+      "attacker_ids": [
+        12,
+        31,
+        33
+      ],
+      "scenarios": {
+        "RPL": "configs/scenarios/random_topo/dense/topo_080/RT_RPL_dense_topo_080.csc",
+        "BRPL": "configs/scenarios/random_topo/dense/topo_080/RT_BRPL_dense_topo_080.csc",
+        "SMTRUST": "configs/scenarios/random_topo/dense/topo_080/RT_SMTRUST_dense_topo_080.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_080/RT_TABRPL_dense_topo_080.csc"
       }
     }
   ]

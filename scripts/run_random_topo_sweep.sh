@@ -15,13 +15,14 @@ DEFAULT_GRADLE_HOME="${HOME}/.gradle"
 
 PROTOCOLS="RPL BRPL SMTRUST TABRPL"
 DENSITIES="sparse,medium,dense"
-TOPOLOGY_SEEDS="1-10"
+TOPOLOGY_SEEDS="1-80"
 RUN_SEEDS="1-5"
 PARALLEL_JOBS=12
 FORCE_RERUN=0
 MONITOR_INTERVAL=20
 ERROR_TAIL_LINES=40
 DRY_RUN=0
+KEEP_RUN_ROOT=0
 
 RUN_ROOT=""
 QUEUE_FILE=""
@@ -39,6 +40,7 @@ while [[ $# -gt 0 ]]; do
     --jobs) PARALLEL_JOBS="$2"; shift 2 ;;
     --rerun|--force-rerun) FORCE_RERUN=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --keep-run-root) KEEP_RUN_ROOT=1; shift ;;
     --results-dir) RESULTS_DIR="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
@@ -362,4 +364,14 @@ fi
 echo "Completed: $DONE_COUNT / $TOTAL"
 echo "Failed   : $FAIL_COUNT / $TOTAL"
 echo "Results  : $RESULTS_DIR"
+
+if [[ "$KEEP_RUN_ROOT" -eq 1 ]]; then
+  echo "Run root kept: $RUN_ROOT"
+elif [[ "$STATUS" -eq 0 ]]; then
+  rm -rf "$RUN_ROOT"
+  echo "Run root cleaned: $RUN_ROOT"
+else
+  echo "Run root kept for failure debug: $RUN_ROOT"
+fi
+
 exit "$STATUS"

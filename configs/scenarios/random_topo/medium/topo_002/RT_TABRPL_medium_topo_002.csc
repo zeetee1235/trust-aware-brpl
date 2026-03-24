@@ -18,7 +18,7 @@
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>root_type</identifier>
       <description>Root Node</description>
-      <source>[CONFIG_DIR]/../../motes/receiver_root.c</source>
+      <source>[CONFIG_DIR]/../../../../../motes/receiver_root.c</source>
       <commands>$(MAKE) -f Makefile.receiver_brpl TARGET=cooja clean
 $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
@@ -43,7 +43,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>sender_type</identifier>
       <description>Sender (TABRPL)</description>
-      <source>[CONFIG_DIR]/../../motes/sender.c</source>
+      <source>[CONFIG_DIR]/../../../../../motes/sender.c</source>
       <commands>$(MAKE) -f Makefile.tabrpl TARGET=cooja clean
       $(MAKE) -f Makefile.tabrpl TARGET=cooja WERROR=0 sender.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
@@ -68,7 +68,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>attacker_type</identifier>
       <description>Selective Forwarding Attacker</description>
-      <source>[CONFIG_DIR]/../../motes/attacker.c</source>
+      <source>[CONFIG_DIR]/../../../../../motes/attacker.c</source>
       <commands>$(MAKE) -f Makefile.attacker TARGET=cooja WERROR=0 attacker.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
@@ -92,7 +92,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>sinkhole_type</identifier>
       <description>Sinkhole Attacker (BRPL)</description>
-      <source>[CONFIG_DIR]/../../motes/sinkhole_attacker.c</source>
+      <source>[CONFIG_DIR]/../../../../../motes/sinkhole_attacker.c</source>
       <commands>$(MAKE) -f Makefile.sinkhole_brpl TARGET=cooja clean
       $(MAKE) -f Makefile.sinkhole_brpl TARGET=cooja WERROR=0 sinkhole_attacker.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>

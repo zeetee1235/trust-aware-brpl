@@ -78,8 +78,8 @@ Rscript scripts/plot_main_figures.R
 
 - 랜덤 토폴로지 스윕 실행:
   - `./scripts/run_random_topo_sweep.sh --jobs 12 --rerun`
-  - 기본값: `protocols=4`, `densities=3`, `topology-seeds=1-10`, `run-seeds=1-5`
-  - 총 run 수: `4 x 3 x 10 x 5 = 600`
+  - 기본값: `protocols=4`, `densities=3`, `topology-seeds=1-80`, `run-seeds=1-5`
+  - 총 run 수: `4 x 3 x 80 x 5 = 4800`
 
 - 파라미터 스윕 번들 실행:
   - `./scripts/run_param_sweep_bundle.sh --jobs 12 --rerun`

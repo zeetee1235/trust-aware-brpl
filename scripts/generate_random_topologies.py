@@ -327,7 +327,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Generate controlled random topology scenarios")
     ap.add_argument("--protocols", default=",".join(DEFAULT_PROTOCOLS), help="Comma-separated protocols")
     ap.add_argument("--densities", default=",".join(DEFAULT_DENSITIES), help="Comma-separated density groups")
-    ap.add_argument("--topology-seeds", default="1-10", help="Topology seed range/list (e.g., 1-25 or 1,3,7)")
+    ap.add_argument("--topology-seeds", default="1-80", help="Topology seed range/list (e.g., 1-25 or 1,3,7)")
     ap.add_argument("--out-dir", default=str(SCENARIOS_DIR / "random_topo"))
     ap.add_argument("--manifest", default=str(SCENARIOS_DIR / "random_topo" / "manifest.json"))
     ap.add_argument("--min-distance", type=float, default=8.0)

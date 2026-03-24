@@ -36,6 +36,7 @@ RESULTS_DIR="${ROOT_DIR}/results"
 WORKER_BASE_ROOT="${ROOT_DIR}/.parallel_worker_env"
 RUN_ROOT=""
 DEFAULT_GRADLE_HOME="${HOME}/.gradle"
+KEEP_RUN_ROOT=0
 
 # ------------------------------------------------------------------ #
 # Argument parsing
@@ -52,6 +53,7 @@ while [[ $# -gt 0 ]]; do
     --jobs)       PARALLEL_JOBS="$2"; shift 2;;
     --monitor-interval) MONITOR_INTERVAL="$2"; shift 2;;
     --suffix)     SCENARIO_SUFFIX="$2"; RESULTS_DIR="${ROOT_DIR}/results/results${2}"; shift 2;;
+    --keep-run-root) KEEP_RUN_ROOT=1; shift;;
     *) echo "Unknown option: $1" >&2; exit 1;;
   esac
 done
@@ -384,4 +386,14 @@ fi
 echo "Completed: $DONE_COUNT / $TOTAL"
 echo "Failed   : $FAIL_COUNT / $TOTAL"
 echo "Results in: $RESULTS_DIR"
+
+if [[ "$KEEP_RUN_ROOT" -eq 1 ]]; then
+  echo "Run root kept: $RUN_ROOT"
+elif [[ "$STATUS" -eq 0 ]]; then
+  rm -rf "$RUN_ROOT"
+  echo "Run root cleaned: $RUN_ROOT"
+else
+  echo "Run root kept for failure debug: $RUN_ROOT"
+fi
+
 exit "$STATUS"
