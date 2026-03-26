@@ -1,0 +1,23 @@
+# Makefile.tabrpl_tau650
+# TA-BRPL with conservative thresholds: tau_warn=0.65, tau_join=0.47, tau_black=0.30
+# Used for threshold sensitivity analysis (parameter sweep for SCI paper).
+
+CONTIKI_PROJECT = sender
+all: $(CONTIKI_PROJECT)
+
+CONTIKI = ../contiki-ng-brpl
+MAKE_ROUTING = MAKE_ROUTING_RPL_CLASSIC
+
+PROJECT_SOURCEFILES += ta-brpl-trust.c
+
+CFLAGS += -DPROJECT_CONF_PATH=\"../project-conf.h\"
+CFLAGS += -DBRPL_MODE=1
+CFLAGS += -DTABRPL_MODE=1
+CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
+CFLAGS += -DCSV_VERBOSE_LOGGING=1
+CFLAGS += -DTA_TRUST_TAU_WARN=650
+CFLAGS += -DTA_TRUST_TAU_JOIN=470
+CFLAGS += -DTA_TRUST_TAU_BLACK=300
+LDLIBS += -lm
+
+include $(CONTIKI)/Makefile.include

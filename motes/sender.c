@@ -543,7 +543,7 @@ PROCESS_THREAD(sender_process, ev, data)
       }
     }
 
-    if(is_congestion_node(self_id) && etimer_expired(&congestion_tx_timer)) {
+    if(congestion_active && is_congestion_node(self_id) && etimer_expired(&congestion_tx_timer)) {
       if(routing_ready) {
         send_data_packet(self_id);
       }

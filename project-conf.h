@@ -116,7 +116,7 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_TAU_WARN         600
 #endif
 #ifndef TA_TRUST_TAU_JOIN
-#define TA_TRUST_TAU_JOIN         350
+#define TA_TRUST_TAU_JOIN         520
 #endif
 #ifndef TA_TRUST_TAU_BLACK
 #define TA_TRUST_TAU_BLACK        200
@@ -207,7 +207,7 @@ extern rpl_of_t rpl_brpl;
 /* --- Escape mechanism --- */
 /* Seconds with low-trust current parent before escape triggers */
 #ifndef TA_TRUST_ESCAPE_TRIGGER_SECONDS
-#define TA_TRUST_ESCAPE_TRIGGER_SECONDS 420
+#define TA_TRUST_ESCAPE_TRIGGER_SECONDS 720
 #endif
 /* Additional penalty scale applied on escape (basis 1000) */
 #ifndef TA_TRUST_ESCAPE_PENALTY_SCALE
@@ -218,7 +218,7 @@ extern rpl_of_t rpl_brpl;
 #define TA_TRUST_ESCAPE_TRUST_THRESHOLD 600
 #endif
 #ifndef TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES
-#define TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES 2
+#define TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES 4
 #endif
 #ifndef TA_TRUST_ESCAPE_COOLDOWN_SECONDS
 #define TA_TRUST_ESCAPE_COOLDOWN_SECONDS 0
@@ -247,7 +247,7 @@ extern rpl_of_t rpl_brpl;
 
 /* Minimum trust value for parent candidate (= tau_join) */
 #ifndef TRUST_MIN
-#define TRUST_MIN                 350
+#define TRUST_MIN                 TA_TRUST_TAU_JOIN
 #endif
 
 /* EWMA penalty applied inside BRPL scoring (basis 1000) */
@@ -263,13 +263,13 @@ extern rpl_of_t rpl_brpl;
 /* Parent switch hysteresis:
  * switch from current preferred parent only when improvement is meaningful. */
 #ifndef BRPL_CONF_SWITCH_MARGIN_PPM
-#define BRPL_CONF_SWITCH_MARGIN_PPM 110
+#define BRPL_CONF_SWITCH_MARGIN_PPM 170
 #endif
 #ifndef BRPL_CONF_SWITCH_MARGIN_ABS
-#define BRPL_CONF_SWITCH_MARGIN_ABS 45
+#define BRPL_CONF_SWITCH_MARGIN_ABS 90
 #endif
 #ifndef BRPL_CONF_PARENT_DWELL_SECONDS
-#define BRPL_CONF_PARENT_DWELL_SECONDS 75
+#define BRPL_CONF_PARENT_DWELL_SECONDS 180
 #endif
 
 /* ================================================================== */

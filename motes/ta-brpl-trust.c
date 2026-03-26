@@ -108,6 +108,33 @@
 #ifndef TA_TRUST_VALIDATION_IDLE_DEC
 #define TA_TRUST_VALIDATION_IDLE_DEC 1
 #endif
+#ifndef TA_TRUST_CTRL_LOW_RANK_FACTOR
+#define TA_TRUST_CTRL_LOW_RANK_FACTOR 2
+#endif
+#ifndef TA_TRUST_CTRL_LOW_RANK_MIN_STREAK
+#define TA_TRUST_CTRL_LOW_RANK_MIN_STREAK 3
+#endif
+#ifndef TA_TRUST_CTRL_LOW_RANK_STREAK_BONUS
+#define TA_TRUST_CTRL_LOW_RANK_STREAK_BONUS 2
+#endif
+#ifndef TA_TRUST_CTRL_LOW_RANK_PENALTY_MAX
+#define TA_TRUST_CTRL_LOW_RANK_PENALTY_MAX 350
+#endif
+#ifndef TA_ADMISSION_WARN_STREAK
+#define TA_ADMISSION_WARN_STREAK 2
+#endif
+#ifndef TA_ADMISSION_BLOCK_STREAK
+#define TA_ADMISSION_BLOCK_STREAK 4
+#endif
+#ifndef TA_ADMISSION_WARN_COUNT
+#define TA_ADMISSION_WARN_COUNT 3
+#endif
+#ifndef TA_ADMISSION_BLOCK_COUNT
+#define TA_ADMISSION_BLOCK_COUNT 6
+#endif
+#ifndef TA_ADMISSION_WARN_JOIN_PENALTY_SCALE
+#define TA_ADMISSION_WARN_JOIN_PENALTY_SCALE 1400
+#endif
 #ifndef TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST
 #define TA_TRUST_VALIDATION_BAD_STREAK_FOR_BLACKLIST 1
 #endif
@@ -145,6 +172,8 @@ typedef struct {
   uint8_t  ctrl_version_last;      /* last seen RPL version             */
   uint8_t  ctrl_version_seen;      /* whether we have a baseline        */
   uint16_t ctrl_version_mismatch;  /* version inconsistency count       */
+  uint16_t ctrl_low_rank_count;    /* sustained near-root rank lure     */
+  uint8_t  ctrl_low_rank_streak;   /* consecutive suspicious DIOs        */
 
   /* T_hon */
   uint16_t hon_q_adv;      /* advertised backlog (0..q_max)            */
@@ -194,6 +223,29 @@ static uint8_t current_parent_escape_armed;
 static clock_time_t current_parent_escape_cooldown_until;
 
 static ta_trust_entry_t *find_entry(uint16_t node_id);
+
+/* Admission suspicion level for non-current parent candidates.
+ * 0: normal, 1: warning (allowed but heavier join penalty), 2: block. */
+static uint8_t
+admission_suspicion_level(const ta_trust_entry_t *e)
+{
+  if(e == NULL) {
+    return 0;
+  }
+
+  if(e->ctrl_low_rank_streak >= TA_ADMISSION_BLOCK_STREAK ||
+     e->ctrl_low_rank_count >= TA_ADMISSION_BLOCK_COUNT) {
+    return 2;
+  }
+
+  if(e->ctrl_low_rank_streak >= TA_ADMISSION_WARN_STREAK ||
+     e->ctrl_low_rank_count >= TA_ADMISSION_WARN_COUNT ||
+     e->ctrl_rank_dev_count > 0) {
+    return 1;
+  }
+
+  return 0;
+}
 
 static void
 reset_review_state(ta_trust_entry_t *e)
@@ -590,10 +642,21 @@ compute_t_ctrl(const ta_trust_entry_t *e)
     : 0;
   if(a_ver > TA_TRUST_SCALE) a_ver = TA_TRUST_SCALE;
 
+  /* A_lure: sustained "too-good" low-rank advertising.
+   * Sinkholes repeatedly advertise near-root rank (e.g., 257) while
+   * remaining non-root nodes. We track persistent occurrences and add
+   * an extra control-plane penalty on top of rank/dio/version signals. */
+  uint16_t a_lure = (total_dio > 0)
+    ? (uint16_t)((uint32_t)e->ctrl_low_rank_count * TA_TRUST_SCALE / total_dio)
+    : 0;
+  if(a_lure > TA_TRUST_SCALE) a_lure = TA_TRUST_SCALE;
+
   /* Weighted sum (weights sum to 10)                                  */
   uint32_t anomaly = ((uint32_t)TA_TRUST_CTRL_W_RANK * a_rank
                     + (uint32_t)TA_TRUST_CTRL_W_DIO  * a_dio
                     + (uint32_t)TA_TRUST_CTRL_W_VER  * a_ver) / 10;
+  anomaly += ((uint32_t)TA_TRUST_CTRL_LOW_RANK_PENALTY_MAX * a_lure)
+             / TA_TRUST_SCALE;
   if(anomaly > TA_TRUST_SCALE) anomaly = TA_TRUST_SCALE;
 
   return (uint16_t)(TA_TRUST_SCALE - anomaly);
@@ -828,6 +891,10 @@ ta_trust_notify_dio(uint16_t node_id, uint16_t rank, uint8_t version)
   rpl_dag_t *dag = rpl_get_any_dag();
   if(dag != NULL && dag->instance != NULL && rank != 0) {
     uint16_t min_inc = dag->instance->min_hoprankinc;
+    uint16_t root_rank = ROOT_RANK(dag->instance);
+    uint32_t low_rank_threshold = (uint32_t)root_rank
+                                + (uint32_t)TA_TRUST_CTRL_LOW_RANK_FACTOR * min_inc;
+    uint8_t sustained_low_rank = 0;
 
     /* Case 1: blatant sinkhole — rank below root level */
     if(rank < min_inc) {
@@ -843,6 +910,25 @@ ta_trust_notify_dio(uint16_t node_id, uint16_t rank, uint8_t version)
               (uint32_t)(e->ctrl_rank_last - rank) > (uint32_t)(min_inc / 2) &&
               version == e->ctrl_version_last) {
       e->ctrl_rank_dev_count++;
+    }
+
+    if(e->ctrl_version_seen &&
+       version == e->ctrl_version_last &&
+       rank <= low_rank_threshold) {
+      if(e->ctrl_low_rank_streak < 0xff) {
+        e->ctrl_low_rank_streak++;
+      }
+      if(e->ctrl_low_rank_streak >= TA_TRUST_CTRL_LOW_RANK_MIN_STREAK) {
+        sustained_low_rank = 1;
+      }
+    } else if(e->ctrl_low_rank_streak > 0) {
+      e->ctrl_low_rank_streak--;
+    }
+
+    if(sustained_low_rank) {
+      uint32_t next = (uint32_t)e->ctrl_low_rank_count
+                    + TA_TRUST_CTRL_LOW_RANK_STREAK_BONUS;
+      e->ctrl_low_rank_count = (next > 0xffffu) ? 0xffffu : (uint16_t)next;
     }
   }
 
@@ -1132,6 +1218,27 @@ ta_trust_update_all(void)
            (unsigned)e->trust,
            (unsigned)e->trust_fwd);
 
+    {
+      /* Policy-layer state log:
+       *   - soft_penalized: suspicious, still routable
+       *   - below_join: below join threshold (still soft in current policy)
+       *   - hard_blocked: blacklisted (hard exclusion) */
+      uint8_t soft_penalized = (!e->blacklisted && e->trust < TA_TRUST_TAU_WARN) ? 1 : 0;
+      uint8_t below_join = (!e->blacklisted && e->trust < TA_TRUST_TAU_JOIN) ? 1 : 0;
+      uint8_t hard_blocked = e->blacklisted ? 1 : 0;
+      uint8_t policy_state = hard_blocked ? 3 : (below_join ? 2 : (soft_penalized ? 1 : 0));
+
+      printf("CSV,TRUST_POLICY,%u,%u,%u,%u,%u,%u,%u,%u\n",
+             (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+             (unsigned)e->node_id,
+             (unsigned)e->trust,
+             (unsigned)policy_state,
+             (unsigned)soft_penalized,
+             (unsigned)below_join,
+             (unsigned)hard_blocked,
+             (unsigned)e->review_state);
+    }
+
     /* Halving decay instead of hard reset.
      *
      * Previously counters were zeroed each window, which caused
@@ -1151,6 +1258,10 @@ ta_trust_update_all(void)
     e->ctrl_rank_dev_count   = e->ctrl_rank_dev_count   >> 1;
     e->ctrl_version_mismatch = e->ctrl_version_mismatch >> 1;
     e->ctrl_dio_excess   = e->ctrl_dio_excess >> 1;
+    e->ctrl_low_rank_count = e->ctrl_low_rank_count >> 1;
+    if(e->ctrl_low_rank_streak > 0) {
+      e->ctrl_low_rank_streak--;
+    }
   }
 
   if(escape_triggered) {
@@ -1222,7 +1333,19 @@ uint16_t
 brpl_penalty_scale_get(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  return penalty_scale_for_entry(e);
+  uint16_t scale = penalty_scale_for_entry(e);
+
+  /* Policy v3: candidate-side admission pressure.
+   * Keep current parent stable; only tighten admission for non-current
+   * suspicious candidates to reduce attacker capture without re-adding churn. */
+  if(e != NULL && node_id != current_parent_id) {
+    uint8_t level = admission_suspicion_level(e);
+    if(level >= 1 && scale < TA_ADMISSION_WARN_JOIN_PENALTY_SCALE) {
+      scale = TA_ADMISSION_WARN_JOIN_PENALTY_SCALE;
+    }
+  }
+
+  return scale;
 }
 
 uint16_t
@@ -1260,7 +1383,23 @@ brpl_trust_parent_allowed(uint16_t node_id)
   if(e == NULL) {
     return 1;
   }
-  return e->blacklisted ? 0 : 1;
+  /* Decision policy split:
+   * - Hard exclusion: blacklist always blocks.
+   * - Admission control: low-trust candidates are blocked only for
+   *   new parent adoption; keep current parent eligible to avoid churn. */
+  if(e->blacklisted) {
+    return 0;
+  }
+  if(node_id != current_parent_id && e->trust < TA_TRUST_TAU_JOIN) {
+    return 0;
+  }
+  if(node_id != current_parent_id && e->review_state == TA_REVIEW_STATE_PENALIZED) {
+    return 0;
+  }
+  if(node_id != current_parent_id && admission_suspicion_level(e) >= 2) {
+    return 0;
+  }
+  return 1;
 }
 
 void

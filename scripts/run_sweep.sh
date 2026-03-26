@@ -122,18 +122,28 @@ with open('${TMP_CSC}', 'w') as f:
   mark_status running "$PROTO" "$SEED" "$WORKER_ID"
   echo "[W${WORKER_ID}] [RUN ] ${PROTO} seed=${SEED}"
 
-  if JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${JAVA_NET_OPTS}" \
-      JAVA_OPTS="${JAVA_OPTS:-} ${JAVA_NET_OPTS}" \
-      GRADLE_OPTS="${GRADLE_OPTS:-} ${JAVA_NET_OPTS}" \
-      GRADLE_USER_HOME="$GRADLE_HOME" "$COOJA_GRADLEW" \
-      --no-daemon --no-watch-fs --parallel --build-cache \
-      -p "$(dirname "$COOJA_GRADLEW")" \
-      run --args="--no-gui --autostart --logdir=${TMP_LOGDIR} ${TMP_CSC}" \
-      > "$WORKER_LOG" 2>&1; then
-    :
-  else
-    echo "[W${WORKER_ID}] [WARN] Cooja exited non-zero for ${PROTO} seed=${SEED}" >&2
-  fi
+  local GRADLE_RETRIES=2
+  local GRADLE_OK=0
+  for _attempt in $(seq 1 $((GRADLE_RETRIES + 1))); do
+    if JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} ${JAVA_NET_OPTS}" \
+        JAVA_OPTS="${JAVA_OPTS:-} ${JAVA_NET_OPTS}" \
+        GRADLE_OPTS="${GRADLE_OPTS:-} ${JAVA_NET_OPTS}" \
+        GRADLE_USER_HOME="$GRADLE_HOME" "$COOJA_GRADLEW" \
+        --no-daemon --no-watch-fs --parallel --build-cache \
+        -p "$(dirname "$COOJA_GRADLEW")" \
+        run --args="--no-gui --autostart --logdir=${TMP_LOGDIR} ${TMP_CSC}" \
+        > "$WORKER_LOG" 2>&1; then
+      GRADLE_OK=1
+      break
+    else
+      if [[ "$_attempt" -le "$GRADLE_RETRIES" ]]; then
+        echo "[W${WORKER_ID}] [RETRY ${_attempt}/${GRADLE_RETRIES}] Gradle failed for ${PROTO} seed=${SEED}, retrying in 5s..." >&2
+        sleep 5
+      else
+        echo "[W${WORKER_ID}] [WARN] Cooja exited non-zero for ${PROTO} seed=${SEED} (all retries exhausted)" >&2
+      fi
+    fi
+  done
 
   if [[ -f "${TMP_LOGDIR}/COOJA.testlog" ]]; then
     grep -E "^[0-9]+:(CSV,|ROUTING_READY|SIMULATION_DONE)" \

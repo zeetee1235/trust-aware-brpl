@@ -31,7 +31,7 @@
 \title{\textbf{TA-BRPL: Trust-Aware Backpressure RPL}\\
 \large Blackhole + Sinkhole 복합 공격 환경에서의\\
 온-노드 신뢰 모델 설계, 구현 및 검증\\[0.5em]
-\normalsize 연구 노트 v0.3.6 (최종 수정: 2026-03-24)}
+\normalsize 연구 노트 v0.4.0 (최종 수정: 2026-03-27)}
 
 \author{TA-BRPL Research Group\\
 Contiki-NG / Cooja 기반 구현}
@@ -51,23 +51,56 @@ backpressure 기반 혼잡 인식 라우팅과 온-노드 신뢰 관리를 결�
 $T_\text{hon}$(혼잡 정직성 신뢰)을 직접 결합하며,
 별도의 2단계 검증 모델이 하드 격리(blacklist) 결정을 독립적으로 담당한다.
 
-실험 환경은 Contiki-NG/Cooja 시뮬레이터 기반의 $6\times6$ GRID 토폴로지이며,
-blackhole 공격자 3개(node 2, 3, 4)와 sinkhole 공격자 1개(node 18)가
-동시에 동작하는 복합 공격 시나리오이다. 전체 30개 random seed 실험에서
-TA-BRPL은 공격 구간(350--650초) PDR \textbf{0.8892}와
-회복 구간(650--900초) PDR \textbf{0.8809}를 달성하였다.
-동일 조건의 비교군: RPL 0.8726/0.8690, BRPL 0.8820/0.8702,
-SMTrust 0.8693/0.8610(유효 21 seed)이며,
-무공격 환경에서 TA-BRPL의 과오탐(false positive)은 관찰되지 않았다.
+v0.4.0에서는 sinkhole 중심 2-시나리오 실험
+(Sinkhole-only / Sinkhole+Drop50, $2\times2\times2\times5=40$ runs)을
+정식 반영하였다. 또한 decision policy를
+``신규 parent 채택(admission) 억제 강화 + 기존 parent 유지/탈출 신중화''로 재구성하였다.
+최신 policy v3 결과에서 TA-BRPL은 baseline(v0.3.x 설정) 대비
+churn을 크게 줄이면서, Sinkhole+Drop50 구간에서
+GRID의 PDR(0.768$\rightarrow$0.801), attacker share(0.165$\rightarrow$0.147),
+hit ratio(0.200$\rightarrow$0.147)를 개선했고,
+BOTTLE에서도 PDR(0.738$\rightarrow$0.745), attacker share(0.149$\rightarrow$0.122),
+hit ratio(0.263$\rightarrow$0.188) 개선을 보였다.
+다만 BRPL 절대 성능 대비 격차가 남아 있어,
+본 문서는 이를 ``policy refinement stage''로 명시한다.
 
 본 문서는 TA-BRPL의 모든 구성 요소, 설계 의도, 구현 세부 사항,
 동작 원리, 실험 설정 및 결과를 한국어로 총정리한 기술 참조 문서이다.
-본 버전의 정량 결과는 고정 GRID 실험에 한정되며,
-통제된 랜덤 토폴로지 분포 실험은 실행 프레임워크 구현까지 완료된 상태이다(미실행).
+본 버전(v0.4.0)은 고정 GRID 중심 결과에 더해
+GRID/BOTTLE 비교 스윕 결과와 정책 변경 이력을 함께 포함한다.
 
 \textbf{키워드:} IoT, LLN, RPL, BRPL, 신뢰 관리, Blackhole 공격,
 Sinkhole 공격, 선택적 포워딩, Cooja, Contiki-NG
 \end{abstract}
+
+% ============================================================
+\section*{v0.4.0 업데이트 요약}
+% ============================================================
+\addcontentsline{toc}{section}{v0.4.0 업데이트 요약}
+
+\begin{itemize}
+  \item \textbf{평가 프레임 갱신}: Sinkhole-only / Sinkhole+Drop50 2시나리오,
+  GRID/BOTTLE 2토폴로지, BRPL/TA-BRPL 2프로토콜, seed 5개(총 40-run).
+  \item \textbf{정책 축 재정의}: ``soft suspicion vs hard evidence'' 계층을 유지하면서,
+  \textbf{신규 parent admission 억제}를 직접 강화하고
+  기존 parent 유지/탈출은 보수적으로 운영.
+  \item \textbf{정책 v3 성과}: baseline 대비 churn 재악화 없이
+  attacker dependency(att\_share, hit\_ratio)와 during PDR의 동시 개선을 확인.
+\end{itemize}
+
+\begin{table}[h]
+  \centering
+  \caption{Sinkhole+Drop50에서 policy v3 vs baseline (TA-BRPL)}
+  \label{tab:v040_policy_v3}
+  \begin{tabular}{lcccc}
+    \toprule
+    Topology & PDR$_\text{dur}$ & att\_share & hit\_ratio & churn \\
+    \midrule
+    GRID   & 0.768 $\rightarrow$ \textbf{0.801} & 0.165 $\rightarrow$ \textbf{0.147} & 0.200 $\rightarrow$ \textbf{0.147} & 2.1 $\rightarrow$ \textbf{0.6} \\
+    BOTTLE & 0.738 $\rightarrow$ \textbf{0.745} & 0.149 $\rightarrow$ \textbf{0.122} & 0.263 $\rightarrow$ \textbf{0.188} & 2.7 $\rightarrow$ \textbf{0.8} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 % ============================================================
 \section{연구 목표와 설계 철학}
@@ -368,7 +401,8 @@ $T_\text{fwd}$를 중립값(500) 기준으로 확장하여 honest/attacker 간 �
 $T_\text{ctrl}$은 이웃 노드의 RPL 제어 메시지 동작에서
 이상 징후를 탐지하는 성분이다.
 IP 입력 훅에서 DIO ICMPv6 메시지(type=155, code=0x02)를 파싱하여
-세 가지 이상 지표를 갱신한다.
+기본 3개 이상 지표($A_\text{rank}, A_\text{DIO}, A_\text{ver}$)와
+지속 저-rank 유인 지표($A_\text{lure}$)를 갱신한다.
 
 \subsubsection{Rank 이상 지표 ($A_\text{rank}$)}
 
@@ -399,15 +433,28 @@ Root에서 전파되지 않은 RPL DODAG version 번호의 증가는
 동일 version 맥락에서 rank가 급감하면 rank 이상으로 처리하고,
 version이 변경되면 새 baseline으로 업데이트하여 합법적인 DODAG 재시작을 허용한다.
 
-\subsubsection{가중합 집계}
+\subsubsection{지속 저-rank 유인 지표 ($A_\text{lure}$)}
+
+sinkhole은 root 근처 rank를 반복 광고하여 신규 parent 채택을 유도한다.
+v0.4.0에서는 이 패턴을 직접 반영하기 위해
+``low-rank streak''와 ``low-rank count''를 별도로 누적한다.
+동일 DODAG version에서 near-root rank 광고가 연속적으로 관찰되면
+$A_\text{lure}$를 증가시키고, 시간이 지나면 할빙(decay)으로 완만히 감쇠시킨다.
+
+\subsubsection{가중합 + lure 보정 집계}
 
 \begin{equation}
-  A_{ij} = \frac{w_1 \cdot A_\text{rank} + w_2 \cdot A_\text{DIO} + w_3 \cdot A_\text{ver}}{10}
+  A_{ij}^{(\text{base})} =
+  \frac{w_1 \cdot A_\text{rank} + w_2 \cdot A_\text{DIO} + w_3 \cdot A_\text{ver}}{10}
+\end{equation}
+\begin{equation}
+  A_{ij} = \min\!\left(1,\; A_{ij}^{(\text{base})} + \kappa_\text{lure}\cdot A_\text{lure}\right)
 \end{equation}
 \begin{equation}
   T_\text{ctrl}(i,j) = 1 - A_{ij}
 \end{equation}
 기본 가중치: $w_1=5$ (rank), $w_2=3$ (DIO), $w_3=2$ (version).
+\(\kappa_\text{lure}\)는 low-rank 유인 보정 강도(코드에서는 penalty scale 상수)이다.
 
 카운터는 매 업데이트 주기마다 할빙되어 과거 이상의 영향이 시간에 따라 감쇠한다.
 데이터가 없는 경우($\texttt{ctrl\_dio\_count}=0$) $A_x=0$을 적용하여
@@ -430,7 +477,9 @@ on_window_update_ctrl(j):
   A_rank = normalize(rank_anomaly[j], ctrl_dio_count[j])
   A_dio  = max(0, ctrl_dio_count[j] - dio_normal_rate) / max(1, ctrl_dio_count[j])
   A_ver  = normalize(ver_anomaly[j], ctrl_dio_count[j])
-  A = (5*A_rank + 3*A_dio + 2*A_ver) / 10
+  A_lure = normalize(low_rank_lure_count[j], ctrl_dio_count[j])
+  A_base = (5*A_rank + 3*A_dio + 2*A_ver) / 10
+  A = min(1, A_base + k_lure*A_lure)
   tctrl = 1000 * (1 - A)
   halve_ctrl_counters(j)
 \end{lstlisting}
