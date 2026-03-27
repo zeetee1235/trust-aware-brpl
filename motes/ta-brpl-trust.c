@@ -32,6 +32,7 @@
 #include "net/link-stats.h"
 #include "net/routing/rpl-classic/rpl-private.h"
 #include "net/routing/rpl-classic/brpl-queue.h"
+#include "net/routing/rpl-classic/brpl-switch-policy.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -207,6 +208,16 @@ typedef struct {
   uint8_t       review_score;
   uint16_t      val_sent_acc;
   uint16_t      val_obs_acc;
+  clock_time_t  reentry_block_until;
+  clock_time_t  recent_attacker_parent_until;
+
+  /* Admission accounting (new-parent candidates only). */
+  uint32_t adm_new_eval;
+  uint32_t adm_new_allow;
+  uint32_t adm_new_block_blacklist;
+  uint32_t adm_new_block_trust;
+  uint32_t adm_new_block_review;
+  uint32_t adm_new_block_severe;
 
 } ta_trust_entry_t;
 
@@ -221,6 +232,11 @@ static uint16_t current_parent_id = 0xffff;
 static clock_time_t current_parent_since;
 static uint8_t current_parent_escape_armed;
 static clock_time_t current_parent_escape_cooldown_until;
+static clock_time_t current_parent_cond_evict_cooldown_until;
+static uint8_t current_parent_soft_release_armed;
+static clock_time_t current_parent_soft_release_cooldown_until;
+static clock_time_t recent_switch_window_started_at;
+static uint8_t recent_switch_count;
 
 static ta_trust_entry_t *find_entry(uint16_t node_id);
 
@@ -267,6 +283,75 @@ current_parent_elapsed(void)
     return 0;
   }
   return clock_time() - current_parent_since;
+}
+
+static uint8_t
+is_attacker_like_entry(const ta_trust_entry_t *e)
+{
+  uint8_t suspicion;
+
+  if(e == NULL) {
+    return 0;
+  }
+  suspicion = admission_suspicion_level(e);
+
+  /* Switch-type classification is used for margin/guard behavior.
+   * In lossy phases, tfwd-only drops can mislabel benign relays as
+   * attacker-like and trigger normal-to-normal oscillation. */
+  if(suspicion >= 2) {
+    return 1;
+  }
+  if(e->review_state == TA_REVIEW_STATE_PENALIZED) {
+    return 1;
+  }
+  /* Require at least some control-plane suspicion for tfwd-based tagging. */
+  if(e->trust_fwd < TA_TRUST_TAU_JOIN && suspicion >= 1) {
+    return 1;
+  }
+  return 0;
+}
+
+static uint8_t
+is_current_parent_severe_attacker_like(void)
+{
+  ta_trust_entry_t *cur = find_entry(current_parent_id);
+
+  if(cur == NULL) {
+    return 0;
+  }
+  if(admission_suspicion_level(cur) >= 2) {
+    return 1;
+  }
+  if(cur->review_state == TA_REVIEW_STATE_PENALIZED) {
+    return 1;
+  }
+  if(cur->trust_fwd < TA_TRUST_TAU_JOIN) {
+    return 1;
+  }
+  return 0;
+}
+
+static uint8_t
+recent_switch_count_in_window(void)
+{
+  clock_time_t now = clock_time();
+  clock_time_t window =
+    (clock_time_t)TA_TRUST_RECENT_SWITCH_WINDOW_SECONDS * CLOCK_SECOND;
+
+  if(window == 0) {
+    return 0;
+  }
+  if(recent_switch_window_started_at == 0 || now <= recent_switch_window_started_at) {
+    recent_switch_window_started_at = now;
+    recent_switch_count = 0;
+    return 0;
+  }
+  if(now - recent_switch_window_started_at >= window) {
+    recent_switch_window_started_at = now;
+    recent_switch_count = 0;
+    return 0;
+  }
+  return recent_switch_count;
 }
 
 static uint16_t
@@ -329,7 +414,12 @@ ta_sharpen_tfwd(uint16_t trust)
 }
 
 static int
-ta_has_better_parent_candidate(uint16_t current_node_id, uint16_t current_trust)
+ta_has_better_parent_candidate(uint16_t current_node_id,
+                               uint16_t current_trust,
+                               uint16_t trust_margin,
+                               uint16_t path_margin,
+                               uint16_t min_trust,
+                               uint8_t require_clean_candidate)
 {
 #if TA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT
   rpl_dag_t *dag = rpl_get_any_dag();
@@ -377,16 +467,24 @@ ta_has_better_parent_candidate(uint16_t current_node_id, uint16_t current_trust)
       }
 
       trust = candidate != NULL ? candidate->trust : TA_TRUST_INIT;
-      if(trust < TA_TRUST_TAU_JOIN) {
+      if(trust < min_trust) {
         continue;
       }
-      if(trust + TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN < current_trust) {
+      if(require_clean_candidate) {
+        if(candidate == NULL ||
+           candidate->review_state != TA_REVIEW_STATE_NORMAL ||
+           admission_suspicion_level(candidate) != 0 ||
+           candidate->trust_fwd < TA_TRUST_TAU_WARN) {
+          continue;
+        }
+      }
+      if(trust + trust_margin < current_trust) {
         continue;
       }
 
       path_cost = (uint32_t)rpl_get_parent_link_metric(p) + (uint32_t)p->rank;
       if(current_path_cost != 0xffffffff &&
-         path_cost > current_path_cost + TA_TRUST_ESCAPE_BETTER_PATH_MARGIN) {
+         path_cost > current_path_cost + path_margin) {
         continue;
       }
 
@@ -398,7 +496,91 @@ ta_has_better_parent_candidate(uint16_t current_node_id, uint16_t current_trust)
 #else
   (void)current_node_id;
   (void)current_trust;
+  (void)trust_margin;
+  (void)path_margin;
+  (void)min_trust;
+  (void)require_clean_candidate;
   return 1;
+#endif
+}
+
+static int
+should_conditional_evict_current_parent(const ta_trust_entry_t *e)
+{
+#if TA_TRUST_COND_EVICT_ENABLE
+  clock_time_t now = clock_time();
+
+  if(e == NULL || e->node_id != current_parent_id) {
+    return 0;
+  }
+  if(current_parent_elapsed() <
+     (clock_time_t)TA_TRUST_COND_EVICT_MIN_PARENT_AGE_SECONDS * CLOCK_SECOND) {
+    return 0;
+  }
+  if(current_parent_cond_evict_cooldown_until != 0 &&
+     now < current_parent_cond_evict_cooldown_until) {
+    return 0;
+  }
+  if(e->low_trust_updates < TA_TRUST_COND_EVICT_LOW_UPDATES) {
+    return 0;
+  }
+  if(admission_suspicion_level(e) < 2) {
+    return 0;
+  }
+  if(!(e->review_state == TA_REVIEW_STATE_PENALIZED ||
+       e->trust_fwd < TA_TRUST_TAU_JOIN)) {
+    return 0;
+  }
+  if(!ta_has_better_parent_candidate(e->node_id,
+                                     e->trust,
+                                     TA_TRUST_COND_EVICT_BETTER_TRUST_MARGIN,
+                                     TA_TRUST_COND_EVICT_BETTER_PATH_MARGIN,
+                                     TA_TRUST_TAU_WARN,
+                                     1)) {
+    return 0;
+  }
+  return 1;
+#else
+  (void)e;
+  return 0;
+#endif
+}
+
+static int
+soft_release_mode_for_entry(const ta_trust_entry_t *e)
+{
+#if TA_TRUST_SOFT_RELEASE_ENABLE
+  clock_time_t now = clock_time();
+
+  if(e == NULL || e->node_id != current_parent_id) {
+    return 0;
+  }
+  if(current_parent_elapsed() <
+     (clock_time_t)TA_TRUST_SOFT_RELEASE_MIN_PARENT_AGE_SECONDS * CLOCK_SECOND) {
+    return 0;
+  }
+  if(current_parent_soft_release_cooldown_until != 0 &&
+     now < current_parent_soft_release_cooldown_until) {
+    return 0;
+  }
+  if(e->low_trust_updates < TA_TRUST_SOFT_RELEASE_LOW_UPDATES) {
+    return 0;
+  }
+  if(admission_suspicion_level(e) < TA_TRUST_SOFT_RELEASE_MIN_SUSPICION) {
+    return 0;
+  }
+  if(!ta_has_better_parent_candidate(e->node_id,
+                                     e->trust,
+                                     TA_TRUST_SOFT_RELEASE_BETTER_TRUST_MARGIN,
+                                     TA_TRUST_SOFT_RELEASE_BETTER_PATH_MARGIN,
+                                     TA_TRUST_TAU_WARN,
+                                     1)) {
+    return 0;
+  }
+  return 1;
+#else
+  (void)e;
+  return 0;
 #endif
 }
 
@@ -410,7 +592,59 @@ escape_mode_for_entry(const ta_trust_entry_t *e)
   if(e == NULL || e->node_id != current_parent_id) {
     return 0;
   }
-  if(e->trust_fwd >= TA_TRUST_TAU_JOIN) {
+
+  /* Never escape from the DODAG root: it is a sink and does not forward
+   * packets, so T_fwd naturally converges to 0 — this is not malicious. */
+  {
+    rpl_dag_t *dag = rpl_get_any_dag();
+    if(dag != NULL && dag->instance != NULL) {
+      rpl_parent_t *p;
+      extern nbr_table_t *rpl_parents;
+      for(p = nbr_table_head(rpl_parents); p != NULL;
+          p = nbr_table_next(rpl_parents, p)) {
+        const linkaddr_t *ll = rpl_get_parent_lladdr(p);
+        if(ll != NULL && ll->u8[LINKADDR_SIZE - 1] == e->node_id) {
+          if(p->rank <= ROOT_RANK(dag->instance)) {
+            return 0;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  /* Gate on T_ctrl rank-lure signal, NOT T_fwd.
+   *
+   * T_fwd has an upstream attribution problem: when an attacker drops
+   * packets, echo-based T_fwd falls for innocent relay nodes that route
+   * through the attacker, causing 80%+ false-positive escape cascades.
+   *
+   * ctrl_low_rank_streak is a direct per-hop DIO anomaly count: it rises
+   * only when THIS neighbour advertises a suspiciously low rank (sinkhole
+   * lure), with no blame transferred from upstream hops.  It is therefore
+   * accurate in both SINK_ONLY (rank lure, no drop — T_fwd stays high)
+   * and SINK_DROP50 (rank lure + drop — T_fwd cascades to innocent nodes).
+   *
+   * TA_TRUST_ESCAPE_CTRL_MIN_STREAK defaults to TA_TRUST_CTRL_LOW_RANK_MIN_STREAK
+   * (3 consecutive suspicious DIOs).  The low_trust_updates consecutive-
+   * window check is omitted here because the streak field already encodes
+   * consecutive bad DIO windows; it is still used by COND_EVICT / soft-
+   * release which remain T_fwd–driven. */
+#ifndef TA_TRUST_ESCAPE_CTRL_MIN_STREAK
+#define TA_TRUST_ESCAPE_CTRL_MIN_STREAK TA_TRUST_CTRL_LOW_RANK_MIN_STREAK
+#endif
+#ifndef TA_TRUST_ESCAPE_CTRL_RANK_DEV_MIN
+#define TA_TRUST_ESCAPE_CTRL_RANK_DEV_MIN 2
+#endif
+  if(e->ctrl_low_rank_streak < TA_TRUST_ESCAPE_CTRL_MIN_STREAK) {
+    return 0;
+  }
+  /* v8a: require an additional evidence signal to reduce false-positive
+   * escape cascades on GRID-like topologies.
+   * Escape fires only when rank-lure streak AND (validation under review
+   * OR rank deviation accumulation) are both present. */
+  if(!(e->review_state >= TA_REVIEW_STATE_UNDER ||
+       e->ctrl_rank_dev_count >= TA_TRUST_ESCAPE_CTRL_RANK_DEV_MIN)) {
     return 0;
   }
   if(current_parent_elapsed() < (clock_time_t)TA_TRUST_ESCAPE_TRIGGER_SECONDS * CLOCK_SECOND) {
@@ -419,10 +653,12 @@ escape_mode_for_entry(const ta_trust_entry_t *e)
   if(current_parent_escape_cooldown_until != 0 && now < current_parent_escape_cooldown_until) {
     return 0;
   }
-  if(e->low_trust_updates < TA_TRUST_ESCAPE_CONSECUTIVE_UPDATES) {
-    return 0;
-  }
-  if(!ta_has_better_parent_candidate(e->node_id, e->trust)) {
+  if(!ta_has_better_parent_candidate(e->node_id,
+                                     e->trust,
+                                     TA_TRUST_ESCAPE_BETTER_TRUST_MARGIN,
+                                     TA_TRUST_ESCAPE_BETTER_PATH_MARGIN,
+                                     TA_TRUST_TAU_JOIN,
+                                     0)) {
     return 0;
   }
 
@@ -858,6 +1094,12 @@ ta_trust_init(void)
   memset(trust_table, 0, sizeof(trust_table));
   trust_table_size = 0;
   memset(trust_index_by_node_id, 0xff, sizeof(trust_index_by_node_id));
+  current_parent_cond_evict_cooldown_until = 0;
+  current_parent_escape_armed = 1;
+  current_parent_soft_release_armed = 1;
+  current_parent_soft_release_cooldown_until = 0;
+  recent_switch_window_started_at = 0;
+  recent_switch_count = 0;
   netstack_ip_packet_processor_add(&ta_ip_processor);
   LOG_INFO("TA-BRPL trust module initialised\n");
 }
@@ -1187,24 +1429,46 @@ ta_trust_update_all(void)
     if(e->node_id == current_parent_id || e->trust < TA_TRUST_TAU_WARN) {
       uint16_t penalty_scale = penalty_scale_for_entry(e);
       int escape = escape_mode_for_entry(e);
+      int soft_release = soft_release_mode_for_entry(e);
       printf("CSV,TRUST_ROUTEGUARD,%u,%u,%lu,%u,%u,%u\n",
              (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
              (unsigned)e->node_id,
              (unsigned long)(current_parent_elapsed() / CLOCK_SECOND),
              (unsigned)e->trust,
              (unsigned)penalty_scale,
-             (unsigned)escape);
+             (unsigned)(escape || soft_release));
 
       if(escape && e->node_id == current_parent_id && current_parent_escape_armed) {
         current_parent_escape_armed = 0;
         current_parent_escape_cooldown_until =
           clock_time() + (clock_time_t)TA_TRUST_ESCAPE_COOLDOWN_SECONDS * CLOCK_SECOND;
+        if(admission_suspicion_level(e) >= 2 ||
+           e->review_state >= TA_REVIEW_STATE_UNDER) {
+          e->reentry_block_until =
+            clock_time() + (clock_time_t)TA_TRUST_REENTRY_COOLDOWN_SECONDS * CLOCK_SECOND;
+          printf("CSV,REENTRY_BLOCK_SET,%u,%u,%lu,%u\n",
+                 (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+                 (unsigned)e->node_id,
+                 (unsigned long)e->reentry_block_until,
+                 (unsigned)TA_TRUST_REENTRY_COOLDOWN_SECONDS);
+        }
         printf("CSV,TRUST_ESCAPE,%u,%u,%lu,%u\n",
                (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
                (unsigned)e->node_id,
                (unsigned long)clock_time(),
                (unsigned)e->trust);
         escape_triggered = 1;
+      }
+      if(soft_release && e->node_id == current_parent_id && current_parent_soft_release_armed) {
+        current_parent_soft_release_armed = 0;
+        current_parent_soft_release_cooldown_until =
+          clock_time() + (clock_time_t)TA_TRUST_SOFT_RELEASE_COOLDOWN_SECONDS * CLOCK_SECOND;
+        printf("CSV,TRUST_SOFT_RELEASE,%u,%u,%lu,%u,%u\n",
+               (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+               (unsigned)e->node_id,
+               (unsigned long)clock_time(),
+               (unsigned)e->trust,
+               (unsigned)e->trust_fwd);
       }
     }
 
@@ -1238,6 +1502,22 @@ ta_trust_update_all(void)
              (unsigned)hard_blocked,
              (unsigned)e->review_state);
     }
+
+    printf("CSV,ADMISSION,%u,%u,%u,%u,%u,%u,%u,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)e->node_id,
+           (unsigned)(e->node_id == current_parent_id ? 1 : 0),
+           (unsigned)admission_suspicion_level(e),
+           (unsigned)e->trust,
+           (unsigned)e->trust_fwd,
+           (unsigned)e->review_state,
+           (unsigned long)e->adm_new_eval,
+           (unsigned long)e->adm_new_allow,
+           (unsigned long)e->adm_new_block_blacklist,
+           (unsigned long)e->adm_new_block_trust,
+           (unsigned long)e->adm_new_block_review,
+           (unsigned long)e->adm_new_block_severe,
+           (unsigned long)clock_time());
 
     /* Halving decay instead of hard reset.
      *
@@ -1372,44 +1652,421 @@ int
 brpl_escape_mode_get(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
-  return escape_mode_for_entry(e);
+  return escape_mode_for_entry(e) || soft_release_mode_for_entry(e);
 }
 
 int
 brpl_trust_parent_allowed(uint16_t node_id)
 {
   ta_trust_entry_t *e = find_entry(node_id);
+  uint8_t is_new_candidate = 0;
+  uint8_t blocked = 0;
+  uint8_t reason = 0; /* 1 blacklist, 2 trust, 3 review, 4 severe, 5 cond_evict, 6 reentry */
 
   if(e == NULL) {
     return 1;
+  }
+  is_new_candidate = (node_id != current_parent_id) ? 1 : 0;
+  if(is_new_candidate) {
+    e->adm_new_eval++;
   }
   /* Decision policy split:
    * - Hard exclusion: blacklist always blocks.
    * - Admission control: low-trust candidates are blocked only for
    *   new parent adoption; keep current parent eligible to avoid churn. */
   if(e->blacklisted) {
-    return 0;
+    blocked = 1;
+    reason = 1;
+  } else if(node_id != current_parent_id &&
+            e->reentry_block_until != 0 &&
+            clock_time() < e->reentry_block_until) {
+    blocked = 1;
+    reason = 6;
+    printf("CSV,REENTRY_BLOCK_HIT,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)e->node_id,
+           (unsigned long)e->reentry_block_until);
+  } else if(node_id != current_parent_id && e->trust < TA_TRUST_TAU_JOIN) {
+    blocked = 1;
+    reason = 2;
+  } else if(node_id != current_parent_id && e->review_state == TA_REVIEW_STATE_PENALIZED) {
+    blocked = 1;
+    reason = 3;
+  } else if(node_id != current_parent_id && admission_suspicion_level(e) >= 2) {
+    blocked = 1;
+    reason = 4;
+  } else if(node_id == current_parent_id && should_conditional_evict_current_parent(e)) {
+    blocked = 1;
+    reason = 5;
+    current_parent_cond_evict_cooldown_until =
+      clock_time() + (clock_time_t)TA_TRUST_COND_EVICT_COOLDOWN_SECONDS * CLOCK_SECOND;
+    printf("CSV,TRUST_COND_EVICT,%u,%u,%lu,%u,%u,%u\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)e->node_id,
+           (unsigned long)clock_time(),
+           (unsigned)e->trust,
+           (unsigned)e->trust_fwd,
+           (unsigned)(current_parent_elapsed() / CLOCK_SECOND));
   }
-  if(node_id != current_parent_id && e->trust < TA_TRUST_TAU_JOIN) {
-    return 0;
+
+  if(is_new_candidate) {
+    if(blocked) {
+      if(reason == 1) {
+        e->adm_new_block_blacklist++;
+      } else if(reason == 2) {
+        e->adm_new_block_trust++;
+      } else if(reason == 3) {
+        e->adm_new_block_review++;
+      } else if(reason == 4) {
+        e->adm_new_block_severe++;
+      }
+    } else {
+      e->adm_new_allow++;
+    }
   }
-  if(node_id != current_parent_id && e->review_state == TA_REVIEW_STATE_PENALIZED) {
-    return 0;
+  return blocked ? 0 : 1;
+}
+
+enum {
+  TA_SWITCH_TYPE_NN = 1,
+  TA_SWITCH_TYPE_NA = 2,
+  TA_SWITCH_TYPE_AN = 3,
+  TA_SWITCH_TYPE_AA = 4
+};
+
+enum {
+  TA_SWITCH_REASON_OK = 0,
+  TA_SWITCH_REASON_MISSING_IN_LOSS = 10,
+  TA_SWITCH_REASON_BLACKLIST = 11,
+  TA_SWITCH_REASON_REENTRY_COOLDOWN = 12,
+  TA_SWITCH_REASON_REVIEW_CLEAN_REQ = 13,
+  TA_SWITCH_REASON_SUSPICION_CLEAN_REQ = 14,
+  TA_SWITCH_REASON_TFWD_MIN = 15,
+  TA_SWITCH_REASON_LOSS_LOW_SUCCESS = 20,
+  TA_SWITCH_REASON_LOSS_EVIDENCE_MISSING = 21,
+  TA_SWITCH_REASON_NN_HOLD = 30,
+  TA_SWITCH_REASON_REENTRY_GUARD = 31,
+  TA_SWITCH_REASON_NA_GUARD = 32
+};
+
+static uint8_t
+ta_switch_type(uint8_t pref_attacker_like, uint8_t cand_attacker_like)
+{
+  if(!pref_attacker_like && !cand_attacker_like) {
+    return TA_SWITCH_TYPE_NN;
   }
-  if(node_id != current_parent_id && admission_suspicion_level(e) >= 2) {
-    return 0;
+  if(!pref_attacker_like && cand_attacker_like) {
+    return TA_SWITCH_TYPE_NA;
   }
+  if(pref_attacker_like && !cand_attacker_like) {
+    return TA_SWITCH_TYPE_AN;
+  }
+  return TA_SWITCH_TYPE_AA;
+}
+
+static void
+ta_build_switch_policy(uint16_t preferred_id,
+                       uint16_t challenger_id,
+                       uint8_t preferred_allowed,
+                       brpl_switch_policy_decision_t *out)
+{
+  ta_trust_entry_t *pref = find_entry(preferred_id);
+  ta_trust_entry_t *cand = find_entry(challenger_id);
+  ta_trust_entry_t *cur = find_entry(current_parent_id);
+  uint8_t loss_mode = (cur != NULL && cur->trust_fwd < TA_TRUST_TAU_WARN) ? 1 : 0;
+  uint8_t severe_escape = is_current_parent_severe_attacker_like();
+  uint8_t pref_attacker_like = is_attacker_like_entry(pref);
+  uint8_t cand_attacker_like = is_attacker_like_entry(cand);
+  uint8_t cand_recent_attacker_parent = 0;
+  uint8_t rs_count = recent_switch_count_in_window();
+  uint8_t sw_type = ta_switch_type(pref_attacker_like, cand_attacker_like);
+  uint8_t relax_for_an = (sw_type == TA_SWITCH_TYPE_AN) ? 1 : 0;
+  uint16_t extra = 0;
+  uint8_t block_reason = TA_SWITCH_REASON_OK;
+  clock_time_t now = clock_time();
+
+  (void)preferred_allowed;
+
+  if(out == NULL) {
+    return;
+  }
+  out->extra_margin_abs = 0;
+  out->block_switch = 0;
+  out->bypass_dwell = 0;
+  out->reason_code = TA_SWITCH_REASON_OK;
+
+  if(cand == NULL) {
+    if(loss_mode) {
+      out->block_switch = 1;
+      out->reason_code = TA_SWITCH_REASON_MISSING_IN_LOSS;
+    }
+    goto done;
+  }
+
+  if(cand->recent_attacker_parent_until != 0 &&
+     now < cand->recent_attacker_parent_until) {
+    cand_recent_attacker_parent = 1;
+  }
+
+  if(cand->blacklisted) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_BLACKLIST;
+    goto done;
+  }
+  if(cand->reentry_block_until != 0 && now < cand->reentry_block_until) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_REENTRY_COOLDOWN;
+    goto done;
+  }
+#if TA_TRUST_SWITCH_REQUIRE_CLEAN
+  if(!relax_for_an && cand->review_state != TA_REVIEW_STATE_NORMAL) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_REVIEW_CLEAN_REQ;
+    goto done;
+  }
+  /* Do not bypass control-plane suspicion filtering even in AN mode.
+   * Otherwise attacker challengers can pass through the relaxed path when
+   * preferred parent is (possibly falsely) tagged attacker-like. */
+  if(admission_suspicion_level(cand) > 0) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_SUSPICION_CLEAN_REQ;
+    goto done;
+  }
+#endif
+  {
+    /* Keep AN relaxation only in non-loss conditions.
+     * In lossy phases, an attacker challenger can be misclassified as
+     * non-attacker-like (AN path), so we keep the stricter tfwd floor. */
+    uint16_t tfwd_min = TA_TRUST_SWITCH_CANDIDATE_TFWD_MIN;
+    if(relax_for_an && !loss_mode) {
+      tfwd_min = TA_TRUST_TAU_JOIN;
+    }
+    if(cand->trust_fwd < tfwd_min) {
+      out->block_switch = 1;
+      out->reason_code = TA_SWITCH_REASON_TFWD_MIN;
+      goto done;
+    }
+  }
+
+  if(loss_mode) {
+    uint16_t success_pm = 1000;
+
+    if(cand->val_sent_acc >= TA_TRUST_SWITCH_RECENT_SENT_MIN) {
+      success_pm = (uint16_t)(((uint32_t)cand->val_obs_acc * 1000u) / cand->val_sent_acc);
+      if(success_pm < TA_TRUST_SWITCH_RECENT_SUCCESS_MIN) {
+        out->block_switch = 1;
+        out->reason_code = TA_SWITCH_REASON_LOSS_LOW_SUCCESS;
+        goto done;
+      }
+    } else if(cand->ctrl_dio_count < TA_TRUST_SWITCH_RECENT_MIN_DIO ||
+              cand->trust < TA_TRUST_SWITCH_LOSS_MIN_TRUST) {
+      out->block_switch = 1;
+      out->reason_code = TA_SWITCH_REASON_LOSS_EVIDENCE_MISSING;
+      goto done;
+    }
+  }
+
+  if(!severe_escape &&
+     sw_type == TA_SWITCH_TYPE_NN &&
+     current_parent_elapsed() <
+       (clock_time_t)TA_TRUST_NN_HOLD_SECONDS * CLOCK_SECOND) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_NN_HOLD;
+    goto done;
+  }
+
+  /* v13.1: stronger non-att -> attacker-like suppression.
+   * If current parent is non-attacker-like, block transitions to
+   * attacker-like challengers during hold/cooldown windows. */
+  if(!severe_escape &&
+     sw_type == TA_SWITCH_TYPE_NA &&
+     (rs_count > 0 ||
+      current_parent_elapsed() <
+        (clock_time_t)TA_TRUST_NN_HOLD_SECONDS * CLOCK_SECOND)) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_NA_GUARD;
+    goto done;
+  }
+
+  if(!severe_escape &&
+     rs_count >= TA_TRUST_RECENT_SWITCH_BLOCK_COUNT &&
+     (cand_attacker_like || cand_recent_attacker_parent)) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_REENTRY_GUARD;
+    goto done;
+  }
+
+  if((pref != NULL && pref->trust_fwd < TA_TRUST_TAU_WARN) ||
+     (cand->trust_fwd < TA_TRUST_TAU_WARN)) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_LOSS_ADAPTIVE_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+  }
+
+  if(sw_type == TA_SWITCH_TYPE_NN) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_NN_EXTRA_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+    if(rs_count > 0) {
+      candidate = (uint32_t)extra + TA_TRUST_NN_RECENT_SWITCH_MARGIN;
+      extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+    }
+  } else if(sw_type == TA_SWITCH_TYPE_NA) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_NONATT_TO_ATT_EXTRA_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+  }
+
+  if(!severe_escape && rs_count > 0) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_RECENT_SWITCH_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+  }
+  if(!severe_escape && (cand_attacker_like || cand_recent_attacker_parent)) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_REENTRY_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+  }
+
+  if(sw_type == TA_SWITCH_TYPE_AN) {
+    /* v13.1: do not bypass dwell to avoid rapid AN<->NA oscillation. */
+    out->bypass_dwell = 0;
+    if(extra > TA_TRUST_ATT_TO_NONATT_MARGIN_RELAX) {
+      extra -= TA_TRUST_ATT_TO_NONATT_MARGIN_RELAX;
+    } else {
+      extra = 0;
+    }
+  }
+
+done:
+  out->extra_margin_abs = extra;
+  block_reason = out->reason_code;
+  if(out->block_switch && block_reason == TA_SWITCH_REASON_NN_HOLD) {
+    printf("CSV,NN_HOLD_BLOCK,%u,%u,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)challenger_id,
+           (unsigned)rs_count,
+           (unsigned)TA_TRUST_NN_HOLD_SECONDS,
+           (unsigned long)now);
+  } else if(out->block_switch && block_reason == TA_SWITCH_REASON_NA_GUARD) {
+    printf("CSV,NA_GUARD_BLOCK,%u,%u,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)challenger_id,
+           (unsigned)rs_count,
+           (unsigned)TA_TRUST_NN_HOLD_SECONDS,
+           (unsigned long)now);
+  } else if(out->block_switch && block_reason == TA_SWITCH_REASON_REENTRY_GUARD) {
+    printf("CSV,REENTRY_GUARD_BLOCK,%u,%u,%u,%u,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)challenger_id,
+           (unsigned)rs_count,
+           (unsigned)cand_attacker_like,
+           (unsigned)cand_recent_attacker_parent,
+           (unsigned)severe_escape,
+           (unsigned long)now);
+  } else if(out->block_switch &&
+            (block_reason == TA_SWITCH_REASON_LOSS_LOW_SUCCESS ||
+             block_reason == TA_SWITCH_REASON_LOSS_EVIDENCE_MISSING ||
+             block_reason == TA_SWITCH_REASON_MISSING_IN_LOSS)) {
+    uint16_t val_sent = cand != NULL ? cand->val_sent_acc : 0;
+    uint16_t success_pm = 0;
+    if(cand != NULL && cand->val_sent_acc > 0) {
+      success_pm = (uint16_t)(((uint32_t)cand->val_obs_acc * 1000u) / cand->val_sent_acc);
+    }
+    printf("CSV,SWITCH_QUALITY,%u,%u,%u,%u,%u,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)challenger_id,
+           (unsigned)loss_mode,
+           (unsigned)(block_reason == TA_SWITCH_REASON_MISSING_IN_LOSS ? 0 :
+                      (block_reason == TA_SWITCH_REASON_LOSS_LOW_SUCCESS ? 1 : 2)),
+           (unsigned)val_sent,
+           (unsigned)success_pm,
+           (unsigned)(cand != NULL ? cand->ctrl_dio_count : 0),
+           (unsigned long)now);
+  }
+
+  printf("CSV,SWITCH_POLICY,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%lu\n",
+         (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+         (unsigned)preferred_id,
+         (unsigned)challenger_id,
+         (unsigned)sw_type,
+         (unsigned)out->block_switch,
+         (unsigned)out->reason_code,
+         (unsigned)out->extra_margin_abs,
+         (unsigned)out->bypass_dwell,
+         (unsigned)rs_count,
+         (unsigned)loss_mode,
+         (unsigned)severe_escape,
+         (unsigned long)now);
+}
+
+int
+brpl_switch_policy_get(uint16_t preferred_id,
+                       uint16_t challenger_id,
+                       int32_t preferred_weight,
+                       int32_t challenger_weight,
+                       uint8_t preferred_allowed,
+                       brpl_switch_policy_decision_t *out)
+{
+  (void)preferred_weight;
+  (void)challenger_weight;
+  ta_build_switch_policy(preferred_id, challenger_id, preferred_allowed, out);
   return 1;
+}
+
+int
+brpl_switch_candidate_quality_ok(uint16_t node_id)
+{
+  brpl_switch_policy_decision_t d;
+  ta_build_switch_policy(current_parent_id, node_id, 1, &d);
+  return d.block_switch ? 0 : 1;
+}
+
+uint16_t
+brpl_switch_extra_margin_get(uint16_t preferred_id, uint16_t challenger_id)
+{
+  brpl_switch_policy_decision_t d;
+  ta_build_switch_policy(preferred_id, challenger_id, 1, &d);
+  return d.extra_margin_abs;
 }
 
 void
 brpl_preferred_parent_changed(uint16_t old_id, uint16_t new_id)
 {
-  (void)old_id;
+  clock_time_t now = clock_time();
+  clock_time_t switch_window =
+    (clock_time_t)TA_TRUST_RECENT_SWITCH_WINDOW_SECONDS * CLOCK_SECOND;
+
+  if(old_id != 0xffff && new_id != 0xffff && old_id != new_id) {
+    if(switch_window > 0) {
+      if(recent_switch_window_started_at == 0 ||
+         now <= recent_switch_window_started_at ||
+         now - recent_switch_window_started_at >= switch_window) {
+        recent_switch_window_started_at = now;
+        recent_switch_count = 1;
+      } else if(recent_switch_count < 0xff) {
+        recent_switch_count++;
+      }
+    }
+
+    /* Mark recently-detached attacker-like parent to suppress immediate
+     * re-entry as challenger in the next switch window. */
+    {
+      ta_trust_entry_t *old_e = find_entry(old_id);
+      if(old_e != NULL && is_attacker_like_entry(old_e)) {
+        old_e->recent_attacker_parent_until =
+          now + (clock_time_t)TA_TRUST_RECENT_ATTACKER_PARENT_WINDOW_SECONDS * CLOCK_SECOND;
+        printf("CSV,REENTRY_RECENT_PARENT_SET,%u,%u,%u,%lu\n",
+               (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+               (unsigned)old_id,
+               (unsigned)TA_TRUST_RECENT_ATTACKER_PARENT_WINDOW_SECONDS,
+               (unsigned long)old_e->recent_attacker_parent_until);
+      }
+    }
+  }
+
   current_parent_id = new_id;
-  current_parent_since = clock_time();
+  current_parent_since = now;
   current_parent_escape_armed = 1;
   current_parent_escape_cooldown_until = 0;
+  current_parent_cond_evict_cooldown_until = 0;
+  current_parent_soft_release_armed = 1;
+  current_parent_soft_release_cooldown_until = 0;
   printf("CSV,TRUST_PARENT,%u,%u,%lu\n",
          (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
          (unsigned)new_id,

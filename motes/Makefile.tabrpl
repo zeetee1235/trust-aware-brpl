@@ -17,11 +17,31 @@ CFLAGS += -DBRPL_MODE=1
 CFLAGS += -DTABRPL_MODE=1
 CFLAGS += -DBRPL_CONF_TRUST_ENABLE=1
 CFLAGS += -DCSV_VERBOSE_LOGGING=1
-# Escape anti-churn: require 3 consecutive bad trust windows, 2-min cooldown,
-# and a verified better parent candidate before triggering parent escape
+# Escape: require 3 consecutive bad trust windows, 2-min cooldown,
+# verified better parent before triggering parent escape
+# Trigger window reduced to 60s (default 180s) so escape fires ~590s
+# instead of ~780s, giving >300s of effect within 900s simulation
 CFLAGS += -DTA_TRUST_ESCAPE_CONSECUTIVE_UPDATES=3
 CFLAGS += -DTA_TRUST_ESCAPE_COOLDOWN_SECONDS=120
 CFLAGS += -DTA_TRUST_ESCAPE_REQUIRE_BETTER_PARENT=1
+CFLAGS += -DTA_TRUST_ESCAPE_TRIGGER_SECONDS=60
+# Allow alternatives up to 300 raw-path units worse than attacker
+# (attacker raw≈215, typical alt raw≈448, difference≈233 → 300 gives safe margin)
+CFLAGS += -DTA_TRUST_ESCAPE_BETTER_PATH_MARGIN=300
+# Conditional eviction: reduced from inert defaults (900s age / 6 updates / 900s cooldown)
+# to values achievable within 900s simulation with 350s attack warmup
+CFLAGS += -DTA_TRUST_COND_EVICT_MIN_PARENT_AGE_SECONDS=300
+CFLAGS += -DTA_TRUST_COND_EVICT_LOW_UPDATES=3
+CFLAGS += -DTA_TRUST_COND_EVICT_COOLDOWN_SECONDS=180
+# v13.3 stabilization: stronger non-attacker hold window to suppress
+# normal-to-normal score oscillation in GRID while keeping v13.2 logic.
+CFLAGS += -DTA_TRUST_NN_HOLD_SECONDS=300
+# v13.4 stabilization: raise non-attacker -> non-attacker switch margin.
+CFLAGS += -DTA_TRUST_NN_EXTRA_MARGIN=260
+# v13.7 gate sensitivity: raise early sinkhole suspicion so attacker
+# challenger is blocked in early attack window before capture settles.
+CFLAGS += -DTA_ADMISSION_WARN_STREAK=1
+CFLAGS += -DTA_ADMISSION_WARN_COUNT=1
 LDLIBS += -lm
 
 include $(CONTIKI)/Makefile.include
