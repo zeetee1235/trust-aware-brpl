@@ -46,11 +46,11 @@ IoT/LLN 환경에서 라우팅 보안의 실용적 목표는 단순히 PDR 최�
 그러나 실제 구현에서는 보안 반응을 강화할수록 경로 안정성이 악화될 수 있고,
 안정성을 우선할수록 공격 회피 압력이 약해지는 상충관계가 발생한다.
 
-본 연구의 출발점은 다음 관찰이다.
-기존 TA-BRPL 기준선(v3)은 BOTTLE 토폴로지에서는 공격자 경유 비율을 줄이지만,
-GRID에서는 BRPL 대비 여전히 열세가 남았다.
-이에 본 논문은 전체 구조를 바꾸지 않고,
-\textbf{admission 경계 단일 파라미터}를 조정하여 균형점을 찾는 것을 목표로 한다.
+본 연구는 메인실험 해석의 일관성을 위해 목표 함수를 먼저 고정한다.
+본 논문의 주목표는 \textbf{PDR 절대 우위}가 아니라,
+\textbf{attacker isolation with bounded stability cost}이다.
+즉, 공격자 의존도(att\_share, hit\_ratio/exposure)를 1순위로 개선하고,
+그 비용(churn, PDR)을 허용 가능한 범위로 제한하는 설계를 목표로 한다.
 
 \section{배경 및 문제 정의}
 \subsection{현재 TA-BRPL 구현}
@@ -109,10 +109,15 @@ $\Delta$churn=+0.69
 
 \subsection{평가지표}
 \begin{itemize}
-  \item PDR\_dur (공격 구간 전달률)
-  \item att\_share (공격자 부모 경유 비율)
-  \item hit\_ratio (공격자 직접 선택 비율)
-  \item churn (부모 교체 빈도)
+  \item \textbf{1순위 (Primary)}: att\_share, hit\_ratio (공격자 의존도)
+  \item \textbf{2순위 (Secondary)}: churn (안정성 비용)
+  \item \textbf{3순위 (Tertiary)}: PDR\_dur (공격 구간 전달률)
+\end{itemize}
+
+시나리오별 해석 규칙도 고정한다.
+\begin{itemize}
+  \item SINK\_ONLY: isolation 중심(att\_share, hit\_ratio) 우선 해석
+  \item SINK\_DROP50: isolation과 PDR\_dur을 동등 비중으로 해석
 \end{itemize}
 
 \section{결과}
@@ -211,5 +216,8 @@ PDR, attacker dependency, churn의 평균 격차를 동시에 완화했다.
   \texttt{results/sinkhole\_sweep\_policy\_v4\_tj510/admission\_gate.csv}
   \item figure 생성 스크립트: \texttt{docs/paper/generate\_figures.py}
 \end{itemize}
+
+\clearpage
+\input{generated/main/main_results_auto.tex}
 
 \end{document}
