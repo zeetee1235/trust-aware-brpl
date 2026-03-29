@@ -62,6 +62,9 @@ SINKHOLE_DROP_MAKEFILE_BY_PROTOCOL = {
     "SMTRUST": "Makefile.sinkhole_drop_rpl",
     "BRPL": "Makefile.sinkhole_drop_brpl",
     "TABRPL": "Makefile.sinkhole_drop_tabrpl",
+    # Ablation variants share the same sinkhole attacker build.
+    "TABRPL_FWD": "Makefile.sinkhole_drop_tabrpl",
+    "TABRPL_FWDCTRL": "Makefile.sinkhole_drop_tabrpl",
 }
 
 

@@ -93,8 +93,8 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
       <identifier>sinkhole_type</identifier>
       <description>Sinkhole+Drop Attacker (TABRPL)</description>
       <source>[CONFIG_DIR]/../../../../../motes/sinkhole_drop_attacker.c</source>
-      <commands>$(MAKE) -f Makefile.sinkhole_drop_tabrpl TARGET=cooja ATTACK_DROP_PCT=100 clean
-      $(MAKE) -f Makefile.sinkhole_drop_tabrpl TARGET=cooja ATTACK_DROP_PCT=100 WERROR=0 sinkhole_drop_attacker.cooja</commands>
+      <commands>$(MAKE) -f Makefile.sinkhole_drop_tabrpl TARGET=cooja ATTACK_DROP_PCT=50 clean
+      $(MAKE) -f Makefile.sinkhole_drop_tabrpl TARGET=cooja ATTACK_DROP_PCT=50 WERROR=0 sinkhole_drop_attacker.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>

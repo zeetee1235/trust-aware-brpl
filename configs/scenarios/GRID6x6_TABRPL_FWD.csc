@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>TA-BRPL Ablation: T_fwd only — GRID 6x6</title>
+    <title>TA-BRPL Experiment — GRID 6x6 — TA-BRPL</title>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "generator": "scripts/generate_random_topologies.py",
+  "num_nodes": 36,
+  "root_id": 1,
+  "attacker_count": 1,
+  "attack_profile": "sinkhole_drop",
+  "attack_drop_pct": 50,
+  "tx_range": 50.0,
+  "protocols": [
+    "BRPL",
+    "TABRPL",
+    "TABRPL_FWD",
+    "TABRPL_FWDCTRL"
+  ],
+  "densities": [
+    "sparse"
+  ],
+  "topology_seeds": [
+    1
+  ],
+  "topologies": [
+    {
+      "density": "sparse",
+      "topology_seed": 1,
+      "topology_name": "topo_001",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 4.2778,
+      "avg_hop_root": 3.6571,
+      "attacker_ids": [
+        4
+      ],
+      "scenarios": {
+        "BRPL": "configs/scenarios/rt_check/sparse/topo_001/RT_BRPL_sparse_topo_001.csc",
+        "TABRPL": "configs/scenarios/rt_check/sparse/topo_001/RT_TABRPL_sparse_topo_001.csc",
+        "TABRPL_FWD": "configs/scenarios/rt_check/sparse/topo_001/RT_TABRPL_FWD_sparse_topo_001.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/rt_check/sparse/topo_001/RT_TABRPL_FWDCTRL_sparse_topo_001.csc"
+      }
+    }
+  ]
+}

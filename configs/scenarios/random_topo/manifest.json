@@ -5,13 +5,13 @@
   "root_id": 1,
   "attacker_count": 1,
   "attack_profile": "sinkhole_drop",
-  "attack_drop_pct": 100,
+  "attack_drop_pct": 50,
   "tx_range": 50.0,
   "protocols": [
-    "RPL",
     "BRPL",
-    "SMTRUST",
-    "TABRPL"
+    "TABRPL",
+    "TABRPL_FWD",
+    "TABRPL_FWDCTRL"
   ],
   "densities": [
     "sparse",
@@ -20,7 +20,8 @@
   ],
   "topology_seeds": [
     1,
-    2
+    2,
+    3
   ],
   "topologies": [
     {
@@ -35,10 +36,10 @@
         4
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/sparse/topo_001/RT_RPL_sparse_topo_001.csc",
         "BRPL": "configs/scenarios/random_topo/sparse/topo_001/RT_BRPL_sparse_topo_001.csc",
-        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_001/RT_SMTRUST_sparse_topo_001.csc",
-        "TABRPL": "configs/scenarios/random_topo/sparse/topo_001/RT_TABRPL_sparse_topo_001.csc"
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_001/RT_TABRPL_sparse_topo_001.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/sparse/topo_001/RT_TABRPL_FWD_sparse_topo_001.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/sparse/topo_001/RT_TABRPL_FWDCTRL_sparse_topo_001.csc"
       }
     },
     {
@@ -53,10 +54,28 @@
         8
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/sparse/topo_002/RT_RPL_sparse_topo_002.csc",
         "BRPL": "configs/scenarios/random_topo/sparse/topo_002/RT_BRPL_sparse_topo_002.csc",
-        "SMTRUST": "configs/scenarios/random_topo/sparse/topo_002/RT_SMTRUST_sparse_topo_002.csc",
-        "TABRPL": "configs/scenarios/random_topo/sparse/topo_002/RT_TABRPL_sparse_topo_002.csc"
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_002/RT_TABRPL_sparse_topo_002.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/sparse/topo_002/RT_TABRPL_FWD_sparse_topo_002.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/sparse/topo_002/RT_TABRPL_FWDCTRL_sparse_topo_002.csc"
+      }
+    },
+    {
+      "density": "sparse",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 220.0,
+      "height": 220.0,
+      "avg_degree": 3.8889,
+      "avg_hop_root": 3.0857,
+      "attacker_ids": [
+        27
+      ],
+      "scenarios": {
+        "BRPL": "configs/scenarios/random_topo/sparse/topo_003/RT_BRPL_sparse_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/sparse/topo_003/RT_TABRPL_sparse_topo_003.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/sparse/topo_003/RT_TABRPL_FWD_sparse_topo_003.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/sparse/topo_003/RT_TABRPL_FWDCTRL_sparse_topo_003.csc"
       }
     },
     {
@@ -71,10 +90,10 @@
         3
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/medium/topo_001/RT_RPL_medium_topo_001.csc",
         "BRPL": "configs/scenarios/random_topo/medium/topo_001/RT_BRPL_medium_topo_001.csc",
-        "SMTRUST": "configs/scenarios/random_topo/medium/topo_001/RT_SMTRUST_medium_topo_001.csc",
-        "TABRPL": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_medium_topo_001.csc"
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_medium_topo_001.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_FWD_medium_topo_001.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/medium/topo_001/RT_TABRPL_FWDCTRL_medium_topo_001.csc"
       }
     },
     {
@@ -89,10 +108,28 @@
         26
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/medium/topo_002/RT_RPL_medium_topo_002.csc",
         "BRPL": "configs/scenarios/random_topo/medium/topo_002/RT_BRPL_medium_topo_002.csc",
-        "SMTRUST": "configs/scenarios/random_topo/medium/topo_002/RT_SMTRUST_medium_topo_002.csc",
-        "TABRPL": "configs/scenarios/random_topo/medium/topo_002/RT_TABRPL_medium_topo_002.csc"
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_002/RT_TABRPL_medium_topo_002.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/medium/topo_002/RT_TABRPL_FWD_medium_topo_002.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/medium/topo_002/RT_TABRPL_FWDCTRL_medium_topo_002.csc"
+      }
+    },
+    {
+      "density": "medium",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 180.0,
+      "height": 180.0,
+      "avg_degree": 5.9444,
+      "avg_hop_root": 2.6571,
+      "attacker_ids": [
+        26
+      ],
+      "scenarios": {
+        "BRPL": "configs/scenarios/random_topo/medium/topo_003/RT_BRPL_medium_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/medium/topo_003/RT_TABRPL_medium_topo_003.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/medium/topo_003/RT_TABRPL_FWD_medium_topo_003.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/medium/topo_003/RT_TABRPL_FWDCTRL_medium_topo_003.csc"
       }
     },
     {
@@ -107,10 +144,10 @@
         8
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/dense/topo_001/RT_RPL_dense_topo_001.csc",
         "BRPL": "configs/scenarios/random_topo/dense/topo_001/RT_BRPL_dense_topo_001.csc",
-        "SMTRUST": "configs/scenarios/random_topo/dense/topo_001/RT_SMTRUST_dense_topo_001.csc",
-        "TABRPL": "configs/scenarios/random_topo/dense/topo_001/RT_TABRPL_dense_topo_001.csc"
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_001/RT_TABRPL_dense_topo_001.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/dense/topo_001/RT_TABRPL_FWD_dense_topo_001.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/dense/topo_001/RT_TABRPL_FWDCTRL_dense_topo_001.csc"
       }
     },
     {
@@ -125,10 +162,28 @@
         3
       ],
       "scenarios": {
-        "RPL": "configs/scenarios/random_topo/dense/topo_002/RT_RPL_dense_topo_002.csc",
         "BRPL": "configs/scenarios/random_topo/dense/topo_002/RT_BRPL_dense_topo_002.csc",
-        "SMTRUST": "configs/scenarios/random_topo/dense/topo_002/RT_SMTRUST_dense_topo_002.csc",
-        "TABRPL": "configs/scenarios/random_topo/dense/topo_002/RT_TABRPL_dense_topo_002.csc"
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_002/RT_TABRPL_dense_topo_002.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/dense/topo_002/RT_TABRPL_FWD_dense_topo_002.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/dense/topo_002/RT_TABRPL_FWDCTRL_dense_topo_002.csc"
+      }
+    },
+    {
+      "density": "dense",
+      "topology_seed": 3,
+      "topology_name": "topo_003",
+      "width": 145.0,
+      "height": 145.0,
+      "avg_degree": 9.2222,
+      "avg_hop_root": 1.6571,
+      "attacker_ids": [
+        34
+      ],
+      "scenarios": {
+        "BRPL": "configs/scenarios/random_topo/dense/topo_003/RT_BRPL_dense_topo_003.csc",
+        "TABRPL": "configs/scenarios/random_topo/dense/topo_003/RT_TABRPL_dense_topo_003.csc",
+        "TABRPL_FWD": "configs/scenarios/random_topo/dense/topo_003/RT_TABRPL_FWD_dense_topo_003.csc",
+        "TABRPL_FWDCTRL": "configs/scenarios/random_topo/dense/topo_003/RT_TABRPL_FWDCTRL_dense_topo_003.csc"
       }
     }
   ]
