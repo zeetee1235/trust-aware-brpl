@@ -39,6 +39,9 @@ CFLAGS += -DTA_TRUST_COND_EVICT_COOLDOWN_SECONDS=180
 CFLAGS += -DTA_TRUST_NN_HOLD_SECONDS=300
 # v13.4 stabilization baseline: non-attacker -> non-attacker switch margin.
 CFLAGS += -DTA_TRUST_NN_EXTRA_MARGIN=260
+# NA re-entry suppression baseline (sweep target: 300/600/900).
+CFLAGS += -DTA_TRUST_ATT_REENTRY_HOLD_SECONDS=300
+CFLAGS += -DTA_TRUST_ATT_REENTRY_EXTRA_MARGIN=180
 # v13.7 gate sensitivity: raise early sinkhole suspicion so attacker
 # challenger is blocked in early attack window before capture settles.
 CFLAGS += -DTA_ADMISSION_WARN_STREAK=1

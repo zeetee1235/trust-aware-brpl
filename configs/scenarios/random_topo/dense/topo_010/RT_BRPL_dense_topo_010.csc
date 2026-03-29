@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <simconf>
   <simulation>
-    <title>TA-BRPL RandomTopo BRPL density=dense topo=010</title>
+    <title>TA-BRPL RandomTopo BRPL density=dense topo=010 attack=sinkhole_drop</title>
     <randomseed>10</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -91,10 +91,10 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
     <motetype>
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>sinkhole_type</identifier>
-      <description>Sinkhole Attacker (BRPL)</description>
-      <source>[CONFIG_DIR]/../../../../../motes/sinkhole_attacker.c</source>
-      <commands>$(MAKE) -f Makefile.sinkhole_brpl TARGET=cooja clean
-      $(MAKE) -f Makefile.sinkhole_brpl TARGET=cooja WERROR=0 sinkhole_attacker.cooja</commands>
+      <description>Sinkhole+Drop Attacker (BRPL)</description>
+      <source>[CONFIG_DIR]/../../../../../motes/sinkhole_drop_attacker.c</source>
+      <commands>$(MAKE) -f Makefile.sinkhole_drop_brpl TARGET=cooja ATTACK_DROP_PCT=0 clean
+      $(MAKE) -f Makefile.sinkhole_drop_brpl TARGET=cooja ATTACK_DROP_PCT=0 WERROR=0 sinkhole_drop_attacker.cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
       <moteinterface>org.contikios.cooja.contikimote.interfaces.ContikiVib</moteinterface>
@@ -587,7 +587,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
         org.contikios.cooja.contikimote.interfaces.ContikiRadio
         <bitrate>250.0</bitrate>
       </interface_config>
-      <motetype_identifier>attacker_type</motetype_identifier>
+      <motetype_identifier>sinkhole_type</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -638,7 +638,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
         org.contikios.cooja.contikimote.interfaces.ContikiRadio
         <bitrate>250.0</bitrate>
       </interface_config>
-      <motetype_identifier>attacker_type</motetype_identifier>
+      <motetype_identifier>sender_type</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -672,7 +672,7 @@ $(MAKE) -f Makefile.receiver_brpl TARGET=cooja WERROR=0 receiver_root.cooja</com
         org.contikios.cooja.contikimote.interfaces.ContikiRadio
         <bitrate>250.0</bitrate>
       </interface_config>
-      <motetype_identifier>attacker_type</motetype_identifier>
+      <motetype_identifier>sender_type</motetype_identifier>
     </mote>
     <mote>
       <interface_config>

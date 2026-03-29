@@ -17,6 +17,8 @@ PROTOCOLS="RPL BRPL SMTRUST TABRPL"
 DENSITIES="sparse,medium,dense"
 TOPOLOGY_SEEDS="1-80"
 RUN_SEEDS="1-5"
+ATTACK_PROFILE="sinkhole_drop"
+ATTACK_DROP_PCT=50
 PARALLEL_JOBS=12
 FORCE_RERUN=0
 MONITOR_INTERVAL=20
@@ -37,6 +39,8 @@ while [[ $# -gt 0 ]]; do
     --densities) DENSITIES="$2"; shift 2 ;;
     --topology-seeds) TOPOLOGY_SEEDS="$2"; shift 2 ;;
     --run-seeds) RUN_SEEDS="$2"; shift 2 ;;
+    --attack-profile) ATTACK_PROFILE="$2"; shift 2 ;;
+    --attack-drop-pct) ATTACK_DROP_PCT="$2"; shift 2 ;;
     --jobs) PARALLEL_JOBS="$2"; shift 2 ;;
     --rerun|--force-rerun) FORCE_RERUN=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -58,6 +62,8 @@ fi
   --protocols "$(echo "$PROTOCOLS" | tr ' ' ',')" \
   --densities "$DENSITIES" \
   --topology-seeds "$TOPOLOGY_SEEDS" \
+  --attack-profile "$ATTACK_PROFILE" \
+  --attack-drop-pct "$ATTACK_DROP_PCT" \
   --out-dir "$RANDOM_DIR" \
   --manifest "$MANIFEST"
 
@@ -301,6 +307,8 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "Densities : $DENSITIES"
   echo "TopoSeeds : $TOPOLOGY_SEEDS"
   echo "RunSeeds  : $RUN_SEEDS"
+  echo "Attack    : $ATTACK_PROFILE"
+  echo "Drop pct  : $ATTACK_DROP_PCT"
   echo "Total jobs: $TOTAL"
   printf '%s\n' "${JOBS[@]}" | sed -n '1,20p'
   exit 0
@@ -331,6 +339,8 @@ echo "Protocols : $PROTOCOLS"
 echo "Densities : $DENSITIES"
 echo "TopoSeeds : $TOPOLOGY_SEEDS"
 echo "RunSeeds  : $RUN_SEEDS"
+echo "Attack    : $ATTACK_PROFILE"
+echo "Drop pct  : $ATTACK_DROP_PCT"
 echo "Total jobs: $TOTAL"
 echo "Run root  : $RUN_ROOT"
 echo "Results   : $RESULTS_DIR"

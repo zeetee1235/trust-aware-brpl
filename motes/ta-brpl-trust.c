@@ -148,6 +148,17 @@
 #ifndef TA_TRUST_LAMBDA_DECREASE_FWD
 #define TA_TRUST_LAMBDA_DECREASE_FWD 200
 #endif
+#ifndef TA_TRUST_ATT_REENTRY_HOLD_SECONDS
+#define TA_TRUST_ATT_REENTRY_HOLD_SECONDS 600
+#endif
+#ifndef TA_TRUST_ATT_REENTRY_EXTRA_MARGIN
+#define TA_TRUST_ATT_REENTRY_EXTRA_MARGIN 180
+#endif
+/* 1: strict NA/re-entry guard (no severe-escape bypass)
+ * 0: legacy v13.12 behavior (allow bypass when current parent is severe) */
+#ifndef TA_TRUST_STRICT_NA_GUARD
+#define TA_TRUST_STRICT_NA_GUARD 1
+#endif
 #define TA_REVIEW_STATE_NORMAL    0
 #define TA_REVIEW_STATE_UNDER     1
 #define TA_REVIEW_STATE_PENALIZED 2
@@ -210,6 +221,7 @@ typedef struct {
   uint16_t      val_obs_acc;
   clock_time_t  reentry_block_until;
   clock_time_t  recent_attacker_parent_until;
+  clock_time_t  recent_attacker_like_until;
 
   /* Admission accounting (new-parent candidates only). */
   uint32_t adm_new_eval;
@@ -1426,6 +1438,30 @@ ta_trust_update_all(void)
       }
     }
 
+    /* Track attacker-like history for targeted NA re-entry suppression.
+     * This is independent from "recent attacker parent" and can fire even
+     * when the candidate was not the immediately previous parent. */
+    if(TA_TRUST_ATT_REENTRY_HOLD_SECONDS > 0 &&
+       is_attacker_like_entry(e)) {
+      clock_time_t now = clock_time();
+      clock_time_t hold =
+        (clock_time_t)TA_TRUST_ATT_REENTRY_HOLD_SECONDS * CLOCK_SECOND;
+      clock_time_t until = now + hold;
+      uint8_t newly_armed =
+        (e->recent_attacker_like_until == 0 ||
+         now >= e->recent_attacker_like_until);
+      if(until > e->recent_attacker_like_until) {
+        e->recent_attacker_like_until = until;
+        if(newly_armed) {
+          printf("CSV,ATT_REENTRY_TAG_SET,%u,%u,%u,%lu\n",
+                 (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+                 (unsigned)e->node_id,
+                 (unsigned)TA_TRUST_ATT_REENTRY_HOLD_SECONDS,
+                 (unsigned long)e->recent_attacker_like_until);
+        }
+      }
+    }
+
     if(e->node_id == current_parent_id || e->trust < TA_TRUST_TAU_WARN) {
       uint16_t penalty_scale = penalty_scale_for_entry(e);
       int escape = escape_mode_for_entry(e);
@@ -1661,7 +1697,7 @@ brpl_trust_parent_allowed(uint16_t node_id)
   ta_trust_entry_t *e = find_entry(node_id);
   uint8_t is_new_candidate = 0;
   uint8_t blocked = 0;
-  uint8_t reason = 0; /* 1 blacklist, 2 trust, 3 review, 4 severe, 5 cond_evict, 6 reentry */
+  uint8_t reason = 0; /* 1 blacklist, 2 trust, 3 review, 4 severe, 5 cond_evict, 6 reentry, 7 att_reentry_hold */
 
   if(e == NULL) {
     return 1;
@@ -1686,6 +1722,16 @@ brpl_trust_parent_allowed(uint16_t node_id)
            (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
            (unsigned)e->node_id,
            (unsigned long)e->reentry_block_until);
+  } else if(node_id != current_parent_id &&
+            (TA_TRUST_STRICT_NA_GUARD || !is_current_parent_severe_attacker_like()) &&
+            e->recent_attacker_like_until != 0 &&
+            clock_time() < e->recent_attacker_like_until) {
+    blocked = 1;
+    reason = 7;
+    printf("CSV,ATT_REENTRY_HOLD_HIT,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)e->node_id,
+           (unsigned long)e->recent_attacker_like_until);
   } else if(node_id != current_parent_id && e->trust < TA_TRUST_TAU_JOIN) {
     blocked = 1;
     reason = 2;
@@ -1746,7 +1792,8 @@ enum {
   TA_SWITCH_REASON_LOSS_EVIDENCE_MISSING = 21,
   TA_SWITCH_REASON_NN_HOLD = 30,
   TA_SWITCH_REASON_REENTRY_GUARD = 31,
-  TA_SWITCH_REASON_NA_GUARD = 32
+  TA_SWITCH_REASON_NA_GUARD = 32,
+  TA_SWITCH_REASON_ATT_HISTORY_HOLD = 33
 };
 
 static uint8_t
@@ -1778,6 +1825,7 @@ ta_build_switch_policy(uint16_t preferred_id,
   uint8_t pref_attacker_like = is_attacker_like_entry(pref);
   uint8_t cand_attacker_like = is_attacker_like_entry(cand);
   uint8_t cand_recent_attacker_parent = 0;
+  uint8_t cand_recent_attacker_like = 0;
   uint8_t rs_count = recent_switch_count_in_window();
   uint8_t sw_type = ta_switch_type(pref_attacker_like, cand_attacker_like);
   uint8_t relax_for_an = (sw_type == TA_SWITCH_TYPE_AN) ? 1 : 0;
@@ -1806,6 +1854,10 @@ ta_build_switch_policy(uint16_t preferred_id,
   if(cand->recent_attacker_parent_until != 0 &&
      now < cand->recent_attacker_parent_until) {
     cand_recent_attacker_parent = 1;
+  }
+  if(cand->recent_attacker_like_until != 0 &&
+     now < cand->recent_attacker_like_until) {
+    cand_recent_attacker_like = 1;
   }
 
   if(cand->blacklisted) {
@@ -1875,10 +1927,18 @@ ta_build_switch_policy(uint16_t preferred_id,
     goto done;
   }
 
-  /* v13.1: stronger non-att -> attacker-like suppression.
-   * If current parent is non-attacker-like, block transitions to
-   * attacker-like challengers during hold/cooldown windows. */
-  if(!severe_escape &&
+  /* v13.1+: stronger non-att -> attacker-like suppression.
+   * For NA transitions, do not relax with severe_escape: severe_escape can
+   * be raised by tfwd-only noise while switch-type is still non-att->att. */
+  if((TA_TRUST_STRICT_NA_GUARD || !severe_escape) &&
+     sw_type == TA_SWITCH_TYPE_NA &&
+     cand_recent_attacker_like) {
+    out->block_switch = 1;
+    out->reason_code = TA_SWITCH_REASON_ATT_HISTORY_HOLD;
+    goto done;
+  }
+
+  if((TA_TRUST_STRICT_NA_GUARD || !severe_escape) &&
      sw_type == TA_SWITCH_TYPE_NA &&
      (rs_count > 0 ||
       current_parent_elapsed() <
@@ -1916,6 +1976,10 @@ ta_build_switch_policy(uint16_t preferred_id,
 
   if(!severe_escape && rs_count > 0) {
     uint32_t candidate = (uint32_t)extra + TA_TRUST_RECENT_SWITCH_MARGIN;
+    extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
+  }
+  if(!severe_escape && cand_recent_attacker_like) {
+    uint32_t candidate = (uint32_t)extra + TA_TRUST_ATT_REENTRY_EXTRA_MARGIN;
     extra = (candidate > 65535u) ? 65535u : (uint16_t)candidate;
   }
   if(!severe_escape && (cand_attacker_like || cand_recent_attacker_parent)) {
@@ -1957,6 +2021,13 @@ done:
            (unsigned)rs_count,
            (unsigned)cand_attacker_like,
            (unsigned)cand_recent_attacker_parent,
+           (unsigned)severe_escape,
+           (unsigned long)now);
+  } else if(out->block_switch && block_reason == TA_SWITCH_REASON_ATT_HISTORY_HOLD) {
+    printf("CSV,ATT_REENTRY_GUARD_BLOCK,%u,%u,%u,%u,%lu\n",
+           (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
+           (unsigned)challenger_id,
+           (unsigned)cand_recent_attacker_like,
            (unsigned)severe_escape,
            (unsigned long)now);
   } else if(out->block_switch &&
@@ -2051,6 +2122,13 @@ brpl_preferred_parent_changed(uint16_t old_id, uint16_t new_id)
       if(old_e != NULL && is_attacker_like_entry(old_e)) {
         old_e->recent_attacker_parent_until =
           now + (clock_time_t)TA_TRUST_RECENT_ATTACKER_PARENT_WINDOW_SECONDS * CLOCK_SECOND;
+        if(TA_TRUST_ATT_REENTRY_HOLD_SECONDS > 0) {
+          clock_time_t until =
+            now + (clock_time_t)TA_TRUST_ATT_REENTRY_HOLD_SECONDS * CLOCK_SECOND;
+          if(until > old_e->recent_attacker_like_until) {
+            old_e->recent_attacker_like_until = until;
+          }
+        }
         printf("CSV,REENTRY_RECENT_PARENT_SET,%u,%u,%u,%lu\n",
                (unsigned)linkaddr_node_addr.u8[LINKADDR_SIZE - 1],
                (unsigned)old_id,

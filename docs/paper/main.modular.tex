@@ -1,0 +1,488 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage{kotex}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\geometry{margin=2.3cm}
+\graphicspath{{figures/}{figures/report/}{figures/new/}{figures/new/main/}{figures/legacy/}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible
+}
+
+\title{\textbf{TA-BRPL 학술 보고서 초안 (Korean Draft)}\\
+\large 모델링, 알고리즘, 파라미터, v1--v13.12 시행착오, 메인실험 통합 분석}
+\author{TA-BRPL Research Team}
+\date{2026-03-28}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{초록 (Abstract)}
+\addcontentsline{toc}{chapter}{초록 (Abstract)}
+본 문서는 TA-BRPL(Trust-Aware BRPL)의 개발 전 주기(v1--v13.12)를 코드/정책/실험 단위로 통합 정리한 학술 보고서 초안이다.
+핵심 연구 질문은 ``trust를 넣으면 왜 항상 더 안전해지지 않는가''이며, 이에 대해 (i) 신뢰 모델 설계, (ii) admission/retention/eviction 정책 연결, (iii) 토폴로지 일반화 실패 원인을 계층적으로 분석했다.
+
+고정 토폴로지(full40)에서 최종 후보 v13.12는 BRPL 대비 공격자 의존 지표(att\_share, hit\_ratio) 개선을 재현했으나, 랜덤 토폴로지 메인실험(75 topology pairs, 750 runs)에서는 overall 기준 $\Delta$att\_share=+0.0058, $\Delta$hit\_ratio=+0.0087로 일관 우위를 재현하지 못했다.
+본 결과는 ``메커니즘 자체의 무효''가 아니라 ``일반화 과정의 선택 편향(selection bias)과 정책-지형 상호작용''을 시사한다.
+
+본 보고서는 최종 v 파라미터, 빌드 프로파일, 수식 기반 모델링, 버전별 정량 갭, 자동 생성 figure 42종을 포함한 재현 가능한 형태로 작성되었으며, 후속 연구의 직접 실행 기준(재현 명령/산출물 경로)까지 명시한다.
+
+\chapter*{Keywords}
+\addcontentsline{toc}{chapter}{Keywords}
+TA-BRPL, BRPL, RPL, Trust-aware routing, Sinkhole, Attacker isolation, Admission control, Churn control, Cooja, Contiki-NG
+
+\chapter{서론 (Introduction)}
+\section{문제 배경}
+LLN/WSN 라우팅 보안에서 sinkhole류 공격은 단순 drop 이전에 route capture를 통해 의사결정 권한을 장악한다.
+따라서 보안 평가는 PDR 단일 지표로 충분하지 않다.
+본 연구는 ``데이터를 더 많이 보낸다''보다 ``공격자에게 네트워크 제어권을 덜 넘긴다''를 1차 목표로 둔다.
+
+\section{연구 질문}
+본 프로젝트의 핵심 질문은 다음과 같다.
+\begin{itemize}
+  \item Q1: Trust model($T_{fwd}, T_{ctrl}, T_{hon}$)을 BRPL parent 선택에 결합하면 attacker isolation이 향상되는가?
+  \item Q2: 향상이 발생한다면 churn 비용은 어떤 수준에서 bounded 가능한가?
+  \item Q3: 고정 토폴로지에서의 개선이 랜덤 토폴로지 분포로 일반화되는가?
+\end{itemize}
+
+\section{핵심 기여와 현재 상태}
+\begin{itemize}
+  \item 기여 1: TA-BRPL trust sensing과 decision policy를 분리(soft suspicion vs hard evidence)하는 구현 구조 확립.
+  \item 기여 2: v1--v13.12의 실패/개선 패턴을 정량 지표($\Delta$att, $\Delta$hit, $\Delta$churn, $\Delta$PDR)로 추적 가능하게 정리.
+  \item 기여 3: 고정 토폴로지(full40)에서 isolation 우위 재현(v13.8, v13.12).
+  \item 현재 한계: 랜덤 토폴로지 메인실험에서는 overall 일관 우위 미달.
+\end{itemize}
+
+\chapter{시스템 및 위협 모델}
+\section{시스템 구성}
+코드베이스 핵심 구성요소는 다음과 같다.
+\begin{table}[H]
+\centering
+\caption{핵심 구현 파일과 역할}
+\begin{tabular}{p{0.34\linewidth}p{0.60\linewidth}}
+\toprule
+파일 & 역할 \\
+\midrule
+\texttt{motes/ta-brpl-trust.c} & TA-BRPL trust/validation/switch-policy 핵심 엔진 \\
+\texttt{contiki-ng-brpl/.../rpl-brpl.c} & BRPL parent scoring 및 trust hook 결합 지점 \\
+\texttt{project-conf.h} & 실험/프로토콜 파라미터 기본값(compile-time) \\
+\texttt{motes/Makefile.tabrpl} & 최종 후보 v13.12 오버라이드 매크로 \\
+\texttt{scripts/run\_sinkhole\_sweep.sh} & 고정 토폴로지 40-run 실행 \\
+\texttt{scripts/run\_random\_topo\_sweep.sh} & 랜덤 토폴로지 대량 실행 \\
+\texttt{docs/paper/generate\_main\_experiment\_artifacts.py} & 메인실험 figure/tex 자동 생성 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{공격자 모델(Threat Model)}
+본 문서에서 다루는 공격은 sinkhole 성격(저-rank 유인 및 경로 장악)과 sink+drop 결합 효과를 중심으로 해석한다.
+랜덤 메인실험 파이프라인은 현재 단일 공격 프로파일 기반으로 구성되어 있어, 프로토콜 문서의 scenario-aware 완전 매트릭스(1500 runs)는 아직 fully activated 상태가 아니다.
+
+\section{평가 지표와 우선순위}
+프로토콜 잠금 문서(\texttt{docs/MAIN\_EXPERIMENT\_PROTOCOL.md}) 기준 endpoint는 다음과 같다.
+\begin{itemize}
+  \item Primary: \texttt{att\_share}, \texttt{hit\_ratio}
+  \item Secondary: \texttt{churn}
+  \item Tertiary: \texttt{PDR\_dur}
+\end{itemize}
+
+\chapter{TA-BRPL 모델링 및 알고리즘 설계}
+\section{Trust 모델}
+TA-BRPL은 이웃 $j$에 대해 세 축의 trust 관측값을 유지한다.
+\begin{align}
+T_{fwd}(i,j) &: \text{forwarding evidence 기반 신뢰} \\
+T_{ctrl}(i,j) &: \text{control-plane(rank/DIO/version) 일관성} \\
+T_{hon}(i,j) &: \text{queue/behavior honesty}
+\end{align}
+
+집계 trust는 가중 기하평균으로 계산한다.
+\begin{equation}
+T_{agg}(i,j)=T_{fwd}^{w_{fwd}}\cdot T_{ctrl}^{w_{ctrl}}\cdot T_{hon}^{w_{hon}}
+\end{equation}
+
+시간 업데이트는 비대칭 EWMA를 사용한다.
+\begin{equation}
+T(t+1)=\lambda T(t)+(1-\lambda)\tilde{T}(t),\quad
+\lambda=\begin{cases}
+\lambda_{normal}, & \text{상승/완만 변화}\\
+\lambda_{decrease}, & \text{하락 시}
+\end{cases}
+\end{equation}
+
+\section{의사결정 계층}
+정책 계층은 ``의심 기반 soft penalty''와 ``증거 기반 hard exclusion''으로 분리된다.
+\begin{itemize}
+  \item Soft layer: admission/switch ranking에서 penalty 또는 margin 부여
+  \item Hard layer: validation/review score 누적 기반 차단(blacklist, severe block)
+\end{itemize}
+
+\section{핵심 병목: 관측-결정 연결 품질}
+시행착오의 핵심 교훈은 trust 관측값 자체보다 \textbf{관측값을 switch policy로 연결하는 방식}이 성능을 좌우한다는 점이다.
+특히 $T_{fwd}$의 attribution bias(공격자 drop이 상류 relay까지 오염)와 과도한 escape 활성화는 churn cascade를 유발했다.
+
+\section{최종 v13.12 빌드 프로파일과 유효 파라미터}
+\input{generated/report/table_final_build_profile.tex}
+
+\begingroup
+\small
+\input{generated/report/table_model_params_effective.tex}
+\endgroup
+
+\chapter{실험 설계 및 재현성}
+\section{실험 매트릭스}
+\subsection*{고정 토폴로지(full40)}
+\begin{itemize}
+  \item Topology: GRID, BOTTLE
+  \item Protocol: BRPL, TA-BRPL
+  \item Scenario: SINK\_ONLY, SINK\_DROP50
+  \item Seeds: 1--5
+\end{itemize}
+
+\subsection*{랜덤 토폴로지 메인실험}
+현재 완료된 메인실험은 다음 단위로 구성된다.
+\begin{itemize}
+  \item Density: sparse/medium/dense
+  \item Topology seeds: 1--25 (각 density)
+  \item Run seeds: 1--5
+  \item Protocol: BRPL, TA-BRPL
+  \item 총 실행: 750 runs (75 topology pairs)
+\end{itemize}
+
+\section{랜덤 토폴로지 생성 규칙}
+\texttt{scripts/generate\_random\_topologies.py}는 density별 영역 크기/평균 degree 제약, root 고정(center), 연결성 필터, attacker 후보 중앙성 기반 샘플링을 적용한다.
+즉 ``topology seed''와 ``run seed''를 분리하여 구조 변동과 실행 변동을 구분한다.
+
+\section{통계 요약 방식}
+본 보고서에서는 topology-paired 평균 기반으로 $\Delta$(TA-BRPL-BRPL)을 계산하고, bootstrap 95\% CI와 win-rate를 병행 보고한다.
+
+\section{재현 명령}
+\begin{lstlisting}[language=bash,caption={핵심 재현 명령어}]
+# (A) fixed topology 40-run
+./scripts/run_sinkhole_sweep.sh --jobs 8 --results-dir results/sinkhole_sweep_policy_v13_12_escapecool360_full40 --rerun
+
+# (B) random topology main 750-run
+./scripts/run_random_topo_sweep.sh \
+  --protocols BRPL,TABRPL \
+  --densities sparse,medium,dense \
+  --topology-seeds 1-25 \
+  --run-seeds 1-5 \
+  --jobs 12 \
+  --results-dir results/random_topo_main_v1 \
+  --rerun
+
+# (C) main postprocess + paper artifacts
+./scripts/postprocess_main_experiment.sh \
+  --results-dir results/random_topo_main_v1 \
+  --out-dir docs/paper/generated/main \
+  --fig-dir docs/paper/figures/new/main \
+  --bootstrap-resamples 10000
+
+# (D) report tables/appendix figures
+python3 docs/paper/generate_report_figures.py
+python3 docs/paper/generate_main_report_assets.py
+
+# (E) compile this report
+cd docs/paper
+latexmk -pdf -interaction=nonstopmode main.tex
+\end{lstlisting}
+
+\chapter{버전 진화와 시행착오 정량 분석 (v1--v13.12)}
+\section{버전 전개 개요}
+\input{generated/report/table_key_versions.tex}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r01_version_delta_heatmap.pdf}
+  \caption{v1--v13 주요 버전 평균 갭 히트맵 ($\Delta$=TA-BRPL-BRPL)}
+\end{figure}
+\noindent\textbf{그림 해석.}
+이 히트맵은 초기 버전(v1--v3)에서 $\Delta$att, $\Delta$hit, $\Delta$churn이 동시에 악화되던 구간과,
+v13.8/v13.12에서 $\Delta$att, $\Delta$hit가 음수(개선)로 이동한 구간을 한눈에 보여준다.
+즉 개선의 핵심은 ``신뢰 도입 여부''가 아니라 ``정책 결합 방식''이라는 점이다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r02_version_delta_trends.pdf}
+  \caption{버전별 평균 갭 추이}
+\end{figure}
+\noindent\textbf{그림 해석.}
+추이 그래프에서는 v5, v8a에서 churn이 재급등하는 반면, v13 계열에서 isolation 지표가 안정적으로 개선되는 흐름이 확인된다.
+이 패턴은 escape/eviction을 공격적으로 열면 재붕괴가 발생한다는 시행착오 기록과 일치한다.
+
+\section{핵심 실패 패턴}
+\begin{itemize}
+  \item v1/v2: trust 도입 직후 churn 폭증과 isolation 실패
+  \item v3/v4: admission 중심 안정화로 부분 회복
+  \item v5: escape 재활성화로 churn 재폭증
+  \item v6: conditional eviction 과보수(발동 부족)
+  \item v8: $T_{fwd}$ attribution bias 진단(오탐 cascade)
+\end{itemize}
+
+\section{v13 계열의 전환점}
+v13.8에서 loss-aware gate 결합으로 full40 기준 isolation 우위를 확보했고,
+v13.12에서 escape cooldown 확장(120$\rightarrow$360s)으로 BOTTLE churn을 추가 완화했다.
+
+\input{generated/report/table_v13_version_compare.tex}
+
+\chapter{최종 후보 v13.12 결과 (고정 토폴로지 full40)}
+\section{셀 단위 결과}
+\input{generated/report/table_v13_full40_cells.tex}
+
+\section{시각적 비교}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r03_v13_cell_att_share.pdf}
+  \caption{v13.8/v13.12 vs BRPL: cell-wise att\_share}
+\end{figure}
+\noindent\textbf{그림 해석.}
+네 개 셀(GRID/BOTTLE $\times$ SINK\_ONLY/SINK\_DROP50) 모두에서 TA-BRPL의 att\_share가 BRPL보다 낮다.
+특히 BOTTLE에서 감소폭이 크게 나타나 capture 억제 효과가 구조적으로 존재함을 보여준다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r04_v13_cell_churn.pdf}
+  \caption{v13.8/v13.12 vs BRPL: cell-wise churn}
+\end{figure}
+\noindent\textbf{그림 해석.}
+churn 비용은 주로 BOTTLE 셀에서 크게 발생하며, v13.12가 v13.8 대비 소폭 완화된 형태를 보인다.
+즉 v13.12의 의미는 isolation을 유지한 채 비용을 줄인 ``보수적 안정화''에 있다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r05_v13_cell_pdr_dur.pdf}
+  \caption{v13.8/v13.12 vs BRPL: cell-wise PDR\_dur}
+\end{figure}
+\noindent\textbf{그림 해석.}
+PDR\_dur는 셀별로 큰 역전 없이 비슷한 범위를 유지하며, v13.12가 일부 셀에서 개선 방향으로 이동한다.
+따라서 full40에서는 ``격리 우위 + 제한된 전달 손실'' 프레임이 성립한다.
+
+\section{해석}
+full40 기준에서 v13.12는 공격자 의존 지표를 BRPL보다 낮게 유지하면서(churn 비용 존재),
+중요 병목이 ``탐지 부재''가 아니라 ``비용 관리''임을 보여준다.
+
+\chapter{랜덤 토폴로지 메인실험 결과 (75 topology pairs)}
+\section{Overall endpoint 요약}
+\input{generated/report/table_random_main_overall_endpoints.tex}
+
+\section{Density별 상세 결과}
+\input{generated/report/table_random_main_density_detailed.tex}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r06_main_density_abs_metrics.pdf}
+  \caption{density별 절대 지표(BRPL vs TA-BRPL)}
+\end{figure}
+\noindent\textbf{그림 해석.}
+랜덤 메인실험에서는 density 전반에서 TA-BRPL의 att\_share/hit\_ratio 절대값이 BRPL 대비 낮아지지 않는다.
+이 그림은 full40에서 보였던 우위가 랜덤 분포로 그대로 일반화되지 않았음을 직접적으로 보여준다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r07_main_density_delta_ci.pdf}
+  \caption{density별 $\Delta$와 95\% CI}
+\end{figure}
+\noindent\textbf{그림 해석.}
+$\Delta$hit\_ratio는 overall에서 양수 CI 구간으로 나타나 악화가 통계적으로 일관된 방향임을 시사한다.
+반면 $\Delta$att\_share는 CI가 0을 걸치므로 효과 부재 또는 미약한 차이로 해석하는 것이 보수적이다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r08_main_topology_delta_cdf.pdf}
+  \caption{topology-paired $\Delta$ CDF}
+\end{figure}
+\noindent\textbf{그림 해석.}
+CDF는 ``일부 토폴로지에서 크게 좋아짐''과 ``다수 토폴로지에서 소폭 악화''가 공존하는 분포 구조를 보여준다.
+즉 평균값 하나보다 topology-paired 분포 자체가 현재 병목(일관성 부족)을 더 잘 설명한다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{fig_r09_main_tradeoff_scatter.pdf}
+  \caption{isolation-cost trade-off scatter}
+\end{figure}
+\noindent\textbf{그림 해석.}
+scatter에서 다수 점이 $\Delta$att\_share>0, $\Delta$churn>0 영역에 위치하면 ``비용 증가 대비 격리 이득 부재'' 케이스가 많다는 뜻이다.
+이는 현재 단계의 핵심 보강 대상이 aggressive penalty가 아니라 topology-robust selection policy임을 뒷받침한다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{fig_r10_main_winrate_heatmap.pdf}
+  \caption{density별 win-rate / non-inferiority heatmap}
+\end{figure}
+\noindent\textbf{그림 해석.}
+overall win-rate(att\_share)가 50\% 미만이고 hit\_ratio도 우위가 낮은 수준에 머무른다.
+즉 메인실험 기준으로는 ``일관 우위'' 주장을 하기 어렵고, 제한적 조건부 효과로 기술해야 한다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r11_main_run_box_att_share.pdf}
+  \caption{run-level att\_share 분포}
+\end{figure}
+\noindent\textbf{그림 해석.}
+run-level boxplot은 TA-BRPL 분포가 BRPL보다 충분히 좌측으로 이동하지 않음을 보여준다.
+이는 특정 seed에서의 개선이 전체 분포를 지배하지 못한다는 증거다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig_r12_main_run_box_pdr_dur.pdf}
+  \caption{run-level PDR\_dur 분포}
+\end{figure}
+\noindent\textbf{그림 해석.}
+PDR\_dur 분포는 density에 따라 겹침이 크지만, overall에서는 TA-BRPL이 약간 불리한 방향으로 이동한다.
+본 연구의 1차 목표가 isolation이라도, 이 전달 손실을 줄이는 후속 최적화가 필요함을 시사한다.
+
+\section{자동 생성 스냅샷(원본 산출물 포함)}
+\input{generated/main/main_results_auto.tex}
+
+\section{핵심 해석}
+랜덤 토폴로지 overall에서 $\Delta$att\_share와 $\Delta$hit\_ratio가 양수이므로,
+현재 코드(최종 후보 설정)의 강한 주장은 ``전 토폴로지 일관 isolation 우위''가 아니라
+``고정 토폴로지에서는 우위가 확인되나 랜덤 일반화는 아직 미달''이다.
+
+\chapter{비교 분석: legacy/new/main 연계 해석}
+\section{Quickcheck 대비 Main 변화}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{fig_r13_quickcheck_vs_main.pdf}
+  \caption{quickcheck 대비 main(750-run) overall 갭 변화}
+\end{figure}
+\noindent\textbf{그림 해석.}
+quickcheck에서 보였던 유리한 신호가 main 스케일에서 약화/역전되는 현상을 확인할 수 있다.
+즉 현재 정책은 소표본에서는 좋아 보일 수 있으나 분포 일반화 강건성은 부족하다.
+
+\section{신규 비교 figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig1_mean_gap.pdf}
+  \caption{신규 admission tuning 평균 갭 비교}
+\end{figure}
+\noindent\textbf{그림 해석.}
+admission 임계값/마진 튜닝만으로 개선 가능한 구간과 한계 구간이 분리되어 나타난다.
+이는 추가 복잡도보다 ``효과가 실제로 걸리는 정책 변수''를 선별해야 함을 의미한다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig2_cell_metrics.pdf}
+  \caption{신규 cell-level metric 비교}
+\end{figure}
+\noindent\textbf{그림 해석.}
+cell-level 분해는 평균에서 보이지 않던 토폴로지/시나리오 의존성을 드러낸다.
+정책 평가 단위를 반드시 셀 단위와 평균 단위로 함께 보고해야 함을 보여주는 그림이다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig3_admission_block_rate.pdf}
+  \caption{신규 admission block rate}
+\end{figure}
+\noindent\textbf{그림 해석.}
+block rate는 ``얼마나 자주 막았는가''를 보여주지만, 그것만으로 성능 향상을 보장하지 않는다.
+따라서 본 연구에서는 block rate를 보조 진단지표로 두고, 최종 평가는 isolation/churn/PDR로 수행한다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fig4_tradeoff_map.pdf}
+  \caption{신규 trade-off map}
+\end{figure}
+\noindent\textbf{그림 해석.}
+trade-off map은 정책 후보를 Pareto 관점(격리 이득 vs 안정성 비용)에서 비교하는 도구다.
+최종 후보는 우상향(비용만 증가) 영역이 아니라, 가능한 한 좌하향(이득 확보+비용 억제) 영역을 지향해야 한다.
+
+\section{legacy 진단 figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{fig_arch_system_flow.pdf}
+  \caption{legacy: 시스템 아키텍처 플로우}
+\end{figure}
+\noindent\textbf{그림 해석.}
+아키텍처 플로우는 trust sensing, BRPL scoring hook, validation layer가 어떤 순서로 결합되는지 보여준다.
+시행착오의 대부분은 이 연결 순서에서 발생한 정책 상호작용 문제로 귀결된다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{fig_loss_t_fwd_collapse.pdf}
+  \caption{legacy: loss 구간 $T_{fwd}$ collapse 진단}
+\end{figure}
+\noindent\textbf{그림 해석.}
+loss 구간에서 $T_{fwd}$가 급락하면 무고한 relay까지 attacker-like로 분류될 수 있다.
+이 현상은 v8 계열에서 확인된 attribution bias와 직접 연결된다.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\linewidth]{fig_twophase_detection.pdf}
+  \caption{legacy: two-phase detection 개념}
+\end{figure}
+\noindent\textbf{그림 해석.}
+two-phase 관점은 ``의심(suspicion)''과 ``확정(exclusion)''을 분리해야 한다는 설계 원칙을 시각화한다.
+현재 TA-BRPL의 soft/hard 계층 분리 철학은 이 개념에서 출발했다.
+
+\chapter{논의 (Discussion)}
+\section{왜 trust를 넣었는데 BRPL보다 나빠질 수 있는가}
+현재 데이터가 지지하는 설명은 다음과 같다.
+\begin{enumerate}
+  \item 관측 신호(특히 echo 기반 $T_{fwd}$)와 원인 노드 attribution이 완전히 일치하지 않는다.
+  \item admission/escape/guard의 상호작용이 토폴로지 다양성에서 동일하게 작동하지 않는다.
+  \item 고정 토폴로지에서 유효했던 margin/cooldown 조합이 랜덤 분포에서는 selection bias를 유발할 수 있다.
+\end{enumerate}
+
+\section{현재 결과의 학술적 포지셔닝}
+객관적으로 본 문서의 strongest claim은 다음이다.
+\begin{itemize}
+  \item ``v1--v13.12 progression에서 정책 실패 메커니즘을 재현 가능하게 분해했다.''
+  \item ``full40에서 isolation 우위를 만들고 churn 완화까지 일부 달성했다.''
+\end{itemize}
+
+반면 아직 조심해야 할 claim은 다음이다.
+\begin{itemize}
+  \item ``랜덤 토폴로지 전반의 일관 우위'' (현 시점 데이터로는 미충족)
+\end{itemize}
+
+\section{다음 단계}
+\begin{enumerate}
+  \item scenario-aware random matrix(SINK\_ONLY/SINK\_DROP50)를 메인 파이프라인에 완전 복구
+  \item topology-conditioned candidate ordering bias 분석(특히 medium/dense)
+  \item 동일 통계 단위(topology-paired)로 v13.12 이후 미세 개선 재검증
+\end{enumerate}
+
+\chapter{결론 (Conclusion)}
+TA-BRPL 연구는 ``trust를 더 세게 넣으면 좋아진다''는 단순 명제를 반박하고,
+``trust sensing--decision coupling 품질''이 보안 라우팅 성능을 좌우함을 보여주었다.
+
+최종 후보 v13.12는 고정 토폴로지에서 의미 있는 isolation 성과를 확보했지만,
+랜덤 토폴로지 메인실험에서는 일관 우위를 재현하지 못했다.
+따라서 본 결과는 종료점이 아니라, SCI급 일반화 주장을 위해 반드시 필요한 중간 검증 기반으로 해석된다.
+
+\appendix
+
+\chapter{전체 버전 결과표 (자동생성)}
+\input{generated/report/table_all_versions.tex}
+
+\chapter{Figure 인벤토리}
+\input{generated/report/table_figure_inventory.tex}
+
+\chapter{All Figure Gallery (누락 방지 전체 수록)}
+\input{generated/report/appendix_all_figures.tex}
+
+\end{document}

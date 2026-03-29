@@ -27,6 +27,8 @@ SCENARIOS_DIR = ROOT / "configs" / "scenarios"
 
 DEFAULT_PROTOCOLS = ["RPL", "BRPL", "SMTRUST", "TABRPL"]
 DEFAULT_DENSITIES = ["sparse", "medium", "dense"]
+DEFAULT_ATTACK_PROFILE = "sinkhole_drop"
+DEFAULT_ATTACK_DROP_PCT = 50
 
 DENSITY_PROFILES = {
     "sparse": {
@@ -49,6 +51,19 @@ DENSITY_PROFILES = {
     },
 }
 
+ATTACK_PROFILE_TO_MOTETYPE = {
+    "drop": "attacker_type",
+    "sinkhole": "sinkhole_type",
+    "sinkhole_drop": "sinkhole_type",
+}
+
+SINKHOLE_DROP_MAKEFILE_BY_PROTOCOL = {
+    "RPL": "Makefile.sinkhole_drop_rpl",
+    "SMTRUST": "Makefile.sinkhole_drop_rpl",
+    "BRPL": "Makefile.sinkhole_drop_brpl",
+    "TABRPL": "Makefile.sinkhole_drop_tabrpl",
+}
+
 
 def parse_spec(spec: str) -> List[int]:
     values: List[int] = []
@@ -68,6 +83,45 @@ def parse_spec(spec: str) -> List[int]:
     if not uniq:
         raise ValueError(f"empty spec: {spec!r}")
     return uniq
+
+
+def pick_attack_count(template_info: dict, attack_profile: str) -> int:
+    if attack_profile == "drop":
+        return int(template_info["attacker_count"])
+    return int(template_info["sinkhole_count"])
+
+
+def configure_sinkhole_motetype_for_drop(
+    *,
+    sim: ET.Element,
+    proto: str,
+    rel_to_motes: str,
+    attack_drop_pct: int,
+) -> None:
+    makefile = SINKHOLE_DROP_MAKEFILE_BY_PROTOCOL.get(proto)
+    if makefile is None:
+        raise RuntimeError(f"unsupported protocol for sinkhole_drop profile: {proto}")
+
+    for motetype in sim.findall("motetype"):
+        ident = motetype.findtext("identifier")
+        if ident != "sinkhole_type":
+            continue
+        desc = motetype.find("description")
+        src = motetype.find("source")
+        cmd = motetype.find("commands")
+        if desc is not None:
+            desc.text = f"Sinkhole+Drop Attacker ({proto})"
+        if src is not None:
+            src.text = f"[CONFIG_DIR]/{rel_to_motes}/sinkhole_drop_attacker.c"
+        if cmd is not None:
+            cmd.text = (
+                f"$(MAKE) -f {makefile} TARGET=cooja ATTACK_DROP_PCT={attack_drop_pct} clean\n"
+                f"      $(MAKE) -f {makefile} TARGET=cooja ATTACK_DROP_PCT={attack_drop_pct} "
+                f"WERROR=0 sinkhole_drop_attacker.cooja"
+            )
+        return
+
+    raise RuntimeError("sinkhole_type motetype not found in template")
 
 
 def text_has(elem: ET.Element, needle: str) -> bool:
@@ -267,6 +321,8 @@ def write_csc_from_template(
     topo_seed: int,
     density: str,
     topo_index: int,
+    attack_profile: str,
+    attack_drop_pct: int,
 ) -> None:
     tree = ET.parse(template)
     sim = tree.getroot().find("simulation")
@@ -274,9 +330,13 @@ def write_csc_from_template(
         raise RuntimeError(f"invalid csc: {template}")
 
     title = sim.find("title")
+    proto = template.stem.replace("GRID6x6_", "")
+    attack_motetype = ATTACK_PROFILE_TO_MOTETYPE[attack_profile]
     if title is not None:
-        proto = template.stem.replace("GRID6x6_", "")
-        title.text = f"TA-BRPL RandomTopo {proto} density={density} topo={topo_index:03d}"
+        title.text = (
+            f"TA-BRPL RandomTopo {proto} density={density} "
+            f"topo={topo_index:03d} attack={attack_profile}"
+        )
 
     seed_elem = sim.find("randomseed")
     if seed_elem is not None:
@@ -294,6 +354,14 @@ def write_csc_from_template(
             continue
         src_name = Path(src_txt).name
         src_elem.text = f"[CONFIG_DIR]/{rel_to_motes}/{src_name}"
+
+    if attack_profile == "sinkhole_drop":
+        configure_sinkhole_motetype_for_drop(
+            sim=sim,
+            proto=proto,
+            rel_to_motes=rel_to_motes,
+            attack_drop_pct=attack_drop_pct,
+        )
 
     for mote in sim.findall("mote"):
         node_id = extract_mote_id(mote)
@@ -314,7 +382,7 @@ def write_csc_from_template(
             if node_id == root_id:
                 mt.text = "root_type"
             elif node_id in attackers_set:
-                mt.text = "attacker_type"
+                mt.text = attack_motetype
             else:
                 mt.text = "sender_type"
 
@@ -328,6 +396,18 @@ def main() -> None:
     ap.add_argument("--protocols", default=",".join(DEFAULT_PROTOCOLS), help="Comma-separated protocols")
     ap.add_argument("--densities", default=",".join(DEFAULT_DENSITIES), help="Comma-separated density groups")
     ap.add_argument("--topology-seeds", default="1-80", help="Topology seed range/list (e.g., 1-25 or 1,3,7)")
+    ap.add_argument(
+        "--attack-profile",
+        default=DEFAULT_ATTACK_PROFILE,
+        choices=sorted(ATTACK_PROFILE_TO_MOTETYPE.keys()),
+        help="Attack profile for attacker nodes: drop | sinkhole | sinkhole_drop",
+    )
+    ap.add_argument(
+        "--attack-drop-pct",
+        type=int,
+        default=DEFAULT_ATTACK_DROP_PCT,
+        help="Selective forwarding drop percentage for sinkhole_drop profile (0..100).",
+    )
     ap.add_argument("--out-dir", default=str(SCENARIOS_DIR / "random_topo"))
     ap.add_argument("--manifest", default=str(SCENARIOS_DIR / "random_topo" / "manifest.json"))
     ap.add_argument("--min-distance", type=float, default=8.0)
@@ -343,6 +423,8 @@ def main() -> None:
     for d in densities:
         if d not in DENSITY_PROFILES:
             raise SystemExit(f"Unknown density {d!r}. Available: {', '.join(sorted(DENSITY_PROFILES))}")
+    if not (0 <= args.attack_drop_pct <= 100):
+        raise SystemExit(f"--attack-drop-pct must be in [0,100], got {args.attack_drop_pct}")
 
     template_info = parse_template_info(SCENARIOS_DIR / f"GRID6x6_{protocols[0]}.csc")
     for p in protocols[1:]:
@@ -352,7 +434,11 @@ def main() -> None:
 
     num_nodes = template_info["num_nodes"]
     root_id = template_info["root_id"]
-    attacker_count = template_info["attacker_count"]
+    attacker_count = pick_attack_count(template_info, args.attack_profile)
+    if attacker_count <= 0:
+        raise SystemExit(
+            f"attack profile '{args.attack_profile}' selected but matching attacker count is 0 in templates"
+        )
     tx_range = args.tx_range if args.tx_range is not None else template_info["tx_range"]
 
     out_dir = Path(args.out_dir).resolve()
@@ -364,6 +450,8 @@ def main() -> None:
         "num_nodes": num_nodes,
         "root_id": root_id,
         "attacker_count": attacker_count,
+        "attack_profile": args.attack_profile,
+        "attack_drop_pct": args.attack_drop_pct if args.attack_profile == "sinkhole_drop" else None,
         "tx_range": tx_range,
         "protocols": protocols,
         "densities": densities,
@@ -415,6 +503,8 @@ def main() -> None:
                     topo_seed=topo_seed,
                     density=density,
                     topo_index=topo_seed,
+                    attack_profile=args.attack_profile,
+                    attack_drop_pct=args.attack_drop_pct,
                 )
                 record["scenarios"][proto] = str(out.relative_to(ROOT))
 

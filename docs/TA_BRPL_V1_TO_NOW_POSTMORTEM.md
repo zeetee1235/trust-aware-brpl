@@ -1,9 +1,13 @@
 # TA-BRPL v1~현재 시행착오 정리 (Postmortem)
 
-작성일: 2026-03-28  
+작성일: 2026-03-29  
 목적: v1부터 현재까지의 실험/튜닝 과정을 "삽질 포함"으로 정리하고, 같은 실수를 반복하지 않기 위한 기준 문서로 사용.
 
 메인실험 목표/endpoint 고정 문서: `docs/MAIN_EXPERIMENT_PROTOCOL.md`
+
+버전 표기 정리(중요):
+- `main.tex`의 "Main v1" = 프로젝트 버전 `v14` (랜덤 토폴로지 메인 pre-fix)
+- `main.tex`의 "Main v2" = 프로젝트 버전 `v14.1` (랜덤 토폴로지 메인 post-fix)
 
 ---
 
@@ -180,6 +184,41 @@
 - "단일 간단 정책으로 churn을 조금이라도 줄인다" 목표 달성.
 - 다만 churn 절대값은 여전히 높아 후속 최적화 여지 큼.
 
+## v14 (random main pre-fix, 750-run)
+
+- 결과 위치
+- `results/random_topo_main_v1`
+- 상태
+- 랜덤 토폴로지 메인실험 750-run 완료했지만 BRPL 대비 overall 열세.
+- 핵심 수치(Overall, TA-BRPL - BRPL)
+- `Δatt_share=+0.0058`
+- `Δhit_ratio=+0.0087`
+- `Δchurn=+0.0474`
+- `ΔPDR_dur=-0.0171`
+- 결론
+- 이 시점 결과만 보면 "격리 실패 + 비용 증가 + PDR 악화"로 판정.
+
+## v14.1 (random main post-fix, 750-run) — 메인 반전
+
+- 결과 위치
+- `results/random_topo_main_v2`
+- 상태
+- 공격 프로파일/파이프라인 경로를 바로잡고 동일 규모(750-run) 재실행.
+- 핵심 수치(Overall, TA-BRPL - BRPL)
+- `Δatt_share=-0.0169` (95% CI `[-0.0231, -0.0108]`)
+- `Δhit_ratio=-0.0166`
+- `Δchurn=+0.0364`
+- `ΔPDR_dur=+0.0102`
+- v14 대비 변화량
+- `att_share: +0.0058 -> -0.0169` (개선폭 `-0.0228`)
+- `hit_ratio: +0.0087 -> -0.0166` (개선폭 `-0.0253`)
+- `churn: +0.0474 -> +0.0364` (개선폭 `-0.0110`)
+- `PDR_dur: -0.0171 -> +0.0102` (개선폭 `+0.0274`)
+- 결론
+- 랜덤 토폴로지 75쌍 기준으로 attacker dependency 감소 방향이 명확해졌고,
+- PDR 평균도 음수에서 양수로 반전.
+- churn 비용은 남아 있으나 v14 대비 완화됨.
+
 ---
 
 ## 4) 삽질 패턴 요약 (재발 방지)
@@ -199,13 +238,23 @@
 - 5. att_share만 보고 성공 판단
 - hit_ratio/churn/PDR 동반 확인 없으면 실사용 가치가 흔들림.
 
+- 6. 버전 라벨 혼용(main v1/v2 vs v14/v14.1)
+- 결과 해석 문서마다 라벨이 다르면 인과 서사가 깨짐.
+- 보고서/코드/실험 디렉토리의 버전 매핑을 문서 상단에 고정해야 함.
+
+- 7. 파이프라인/공격 프로파일 검증 없이 메인실험 확장
+- 알고리즘 실패와 실험 설정 실패가 섞여 잘못된 결론으로 이어질 수 있음.
+- 메인 실행 전 `attack_profile`, sim.log 프로토콜 태그(`SINKHOLE_DROP`)를 선확인해야 함.
+
 ---
 
-## 5) 현재 상태(2026-03-28)
+## 5) 현재 상태(2026-03-29)
 
-- 기준 추천 버전: `v13.12` (`results/sinkhole_sweep_policy_v13_12_escapecool360_full40`)
+- 고정 토폴로지(full40) 기준 추천: `v13.12` (`results/sinkhole_sweep_policy_v13_12_escapecool360_full40`)
+- 랜덤 토폴로지 메인 기준 추천: `v14.1` (`results/random_topo_main_v2`)
 - 상태 한 줄 요약
-- "격리 우위는 확보했고, churn은 단일 정책으로 소폭 완화했으나 BOTTLE 비용은 아직 남아 있음"
+- "고정 토폴로지 최적화(v13.12) + 랜덤 메인 반전(v14.1)까지 확인됐고,
+  이제 남은 과제는 sparse churn 비용 추가 완화와 scenario 축 완전 복원"
 
 ---
 
@@ -233,3 +282,6 @@
 - v8a: `results/sinkhole_sweep_policy_v8a/summary.csv`
 - v13.8(full40): `results/sinkhole_sweep_policy_v13_8_lossgate_full40/summary.csv`
 - v13.12(full40): `results/sinkhole_sweep_policy_v13_12_escapecool360_full40/summary.csv`
+- v14(main pre-fix): `results/random_topo_main_v1`
+- v14.1(main post-fix): `results/random_topo_main_v2`
+- v14.1 요약 CSV: `docs/paper/generated/main_v2_final/summary_by_density.csv`
