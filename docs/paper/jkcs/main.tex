@@ -77,23 +77,25 @@ Sinkhole-Induced Route Capture in Low-Power and Lossy Networks\par}
 % 국문 초록
 \begin{minipage}{0.96\textwidth}
 \koabstract{%
-저전력 손실 네트워크(LLN)에서 RPL은 낮은 제어 오버헤드와 안정적 부모 유지가 중요하지만,
-바로 그 안정성이 sinkhole 공격자에게는 유리하게 작용할 수 있다.
-공격자는 허위로 낮은 rank를 광고해 먼저 트래픽을 자신에게 집중시키고
-(\emph{경로 장악, route capture}),
-이후 선택적 포워딩이나 grayhole 동작으로 가용성을 저하시킨다.
-기존 PDR 중심 평가는 이 선행 장악 단계를 놓치기 쉽고,
-신뢰 기반 즉시 차단은 반대로 부모 교체(churn)를 폭증시켜
-보안과 안정성 사이의 trade-off를 악화시킨다.
+저전력 손실 네트워크(LLN)에서 RPL은 낮은 제어 오버헤드와 토폴로지 안정성을 중시하므로,
+한 번 선택된 부모 노드가 오래 유지되는 경향이 있다.
+이 특성은 sinkhole 공격자가 낮은 rank를 허위로 광고해 경로를 유인할 때
+장기적인 \emph{경로 장악(route capture)}으로 이어질 수 있다.
+공격자는 먼저 트래픽을 자신에게 집중시키고,
+이후 선택적 포워딩(selective forwarding)으로 가용성을 저하시킨다.
+PDR은 드롭 이후 피해를 반영하지만, 드롭 이전의 경로 장악 단계를 직접 측정하지 못한다.
+반대로 신뢰 하락을 즉시 퇴출로 연결하면 부모 교체(churn)가 폭증해
+보안과 안정성 사이의 trade-off가 악화된다.
 또한 BRPL류의 queue-aware 라우팅은 혼잡 우회에는 강하지만,
 공격자가 큐 광고를 조작하거나 초기에는 정상 포워딩으로 신뢰를 위장하는 경우
-공격자를 오히려 ``좋은 부모''로 오래 유지할 수 있다.
+공격자가 선호 부모 위치를 장기간 유지할 위험이 있다.
 본 논문은 Backpressure RPL(BRPL)의 부모 선택 점수에
 경량 신뢰 패널티를 직접 결합한 \textbf{TA-BRPL}을 제안한다.
-TA-BRPL은 전달 신뢰도($T_{fwd}$), 제어 평면 일관성($T_{ctrl}$),
-큐 정직성($T_{hon}$)의 세 신호를 가중 기하 평균으로 집계하고,
-비대칭 EWMA, 2단계 review/blacklist, admission/dwell/switch-margin 게이트를 통해
-신뢰를 \emph{탐지 알람}이 아니라 \emph{라우팅 의사결정}에 안정적으로 결합한다.
+TA-BRPL은 (i)~전달 신뢰도($T_{fwd}$), (ii)~제어 평면 일관성($T_{ctrl}$),
+(iii)~큐 정직성($T_{hon}$)을 가중 기하 평균으로 집계한 신뢰값을
+BRPL 부모 선택 비용에 소프트 패널티로 반영한다.
+또한 비대칭 EWMA, 2단계 review/blacklist, admission/dwell/switch-margin 정책으로
+신뢰를 \emph{탐지 알람}이 아닌 \emph{라우팅 의사결정}에 안정적으로 통합한다.
 Contiki-NG/Cooja에서 밀도별 층화 랜덤 토폴로지 75개와
 토폴로지당 5개 MAC 시드(총 750회)를 사용한 쌍체 실험 결과,
 TA-BRPL은 BRPL 대비 공격자 경유율(att\_share)을
@@ -115,30 +117,30 @@ LLN, RPL, BRPL, Sinkhole 공격, 신뢰 기반 라우팅, 경로 장악, 선택�
 % 영문 초록
 \begin{minipage}{0.96\textwidth}
 \enabstract{%
-In low-power and lossy networks (LLNs), RPL must balance low control overhead,
-topology stability, and resilience to routing manipulation.
-This balance becomes fragile under sinkhole attacks:
-an attacker first forges an attractive low-rank advertisement to capture routes,
-then selectively drops traffic to degrade availability.
-Packet-delivery-ratio (PDR)-centric evaluation misses this early route-capture phase,
-whereas aggressive trust-based eviction often destabilizes routing through churn explosion.
+In low-power and lossy networks (LLNs), RPL prioritizes low control overhead and topology
+stability, causing selected parent nodes to persist for extended periods.
+This property becomes a vulnerability under sinkhole attacks:
+an attacker forges an attractive low-rank advertisement to induce
+\emph{route capture}---concentrating upstream traffic through itself---and subsequently
+drops packets selectively to degrade availability.
+PDR-centric evaluation misses this early capture phase, since packet loss only manifests later.
+Conversely, aggressively evicting distrusted parents triggers churn explosion.
 Queue-aware protocols such as Backpressure RPL (BRPL) improve congestion handling,
-yet remain vulnerable when an attacker lies about queue state or behaves benignly long enough
-to retain parent preference.
+yet remain exploitable when an attacker manipulates queue advertisements or behaves benignly
+long enough to retain parent preference.
 We propose \textbf{TA-BRPL}, a trust-aware extension that embeds a lightweight trust penalty
 directly into the BRPL parent-selection score.
-TA-BRPL combines three trust axes---forwarding fidelity ($T_{fwd}$),
-control-plane consistency ($T_{ctrl}$), and queue-advertisement honesty ($T_{hon}$)---%
-through a weighted geometric mean, then couples the resulting trust to routing
-via asymmetric EWMA, two-stage review/blacklist validation, and stabilization gates
-(admission, dwell time, and switch margin).
+TA-BRPL aggregates three trust signals---(i)~forwarding fidelity ($T_{fwd}$),
+(ii)~control-plane consistency ($T_{ctrl}$), and (iii)~queue-advertisement honesty ($T_{hon}$)---%
+via a weighted geometric mean, and couples the result to routing
+through asymmetric EWMA, two-stage review/blacklist validation, and stabilization gates
+(admission threshold, dwell time, and switch margin).
 Experiments across 75 stratified random topologies with five MAC seeds each
 (750 simulations) in Contiki-NG/Cooja show that TA-BRPL reduces attacker traffic share
-by $\Delta = -0.0169$ ($p < 10^{-4}$, 76\% topology win-rate),
-reduces hit ratio by $\Delta = -0.0166$,
+by $\Delta = -0.0169$ ($p < 10^{-4}$, 76\% win-rate) and hit ratio by $\Delta = -0.0166$,
 improves attack-phase PDR by $\Delta = +0.0102$ ($p = 0.002$),
-and limits churn overhead to $\Delta = +0.0364$, well below the pre-declared bound of $+0.1$.
-These findings suggest that the key challenge in LLN secure routing is not only detecting
+and limits churn to $\Delta = +0.0364$, well within the pre-declared bound of $+0.1$.
+These results suggest that the central challenge in LLN secure routing is not only detecting
 malicious parents, but integrating trust into routing decisions without sacrificing stability.}
 \vspace{4pt}
 
@@ -179,7 +181,7 @@ sinkhole 공격자는 오랫동안 preferred parent로 남아
 초기에는 패킷을 정상 전달함으로써 겉보기 PDR을 유지한다.
 그러나 그 사이 점점 더 많은 노드가 공격자를 경유하게 되며,
 \emph{경로 장악(route capture)}이 완성되면
-공격자는 selective forwarding이나 grayhole 동작으로
+공격자는 selective forwarding으로
 가용성을 크게 훼손할 수 있다.
 Karlof와 Wagner~\cite{karlof2003}, RFC~7416~\cite{rfc7416},
 Wallgren 등~\cite{secrpl}, Mayzaud 등~\cite{mayzaud2016}은
@@ -204,14 +206,16 @@ churn이 +2.43까지 폭증했다.
 그러나 queue-aware라는 장점이 곧바로 보안 강건성을 의미하지는 않는다.
 공격자가 낮은 rank와 낮은 queue를 함께 광고하거나,
 초기에는 정상 포워딩으로 신뢰를 위장한 뒤 드롭을 시작하면,
-BRPL의 queue term은 오히려 공격자를 ``좋은 부모''로 오래 유지할 수 있다.
+BRPL의 queue term은 오히려 공격자를 선호 부모 위치에 오래 유지할 수 있다.
 즉 BRPL류는 혼잡에 강하지만,
 queue honesty와 control-plane manipulation을 별도로 다루지 않는 한
 sinkhole 하에서 불완전하다.
 
 본 논문은 다음 두 연구 질문에 답한다.
 \textbf{RQ1:} sinkhole의 경로 장악 단계에서 PDR 저하 이전에 공격자 경유를 감소시킬 수 있는가?
+(지표: att\_share, hit\_ratio)
 \textbf{RQ2:} 신뢰를 라우팅 metric에 결합할 때 churn 폭증을 구조적으로 제어하면서도 방어 효과를 유지할 수 있는가?
+(지표: churn $\Delta \leq +0.1$, PDR 비열세)
 이를 위해 H1(격리 개선), H2(PDR 비열세), H3(안정성 상한)을 사전 선언하고,
 경로 장악 억제를 1차 목표로 하는 평가 프레임을 채택한다.
 
@@ -326,6 +330,7 @@ trust-aware routing의 stability cost를 동시에 다루는 설계는 드물다
 \centering\small
 \caption{RPL 보안 방어 계열 비교 (O: 충족, P: 부분, X: 미충족)}
 \label{tab:relwork}
+\resizebox{\linewidth}{!}{%
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lllccccl}
 \toprule
@@ -340,7 +345,8 @@ IDS 기반   & SVELTE \cite{raza2013}           & 런타임 이상 탐지       
 \midrule
 \textbf{본 연구} & \textbf{TA-BRPL}           & \textbf{3축 trust + BRPL coupling + gate} & $\circ$ & $\times$ & $\circ$ & \textbf{$\circ$(명시)} & 단일 공격자·UDGM \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
 \noindent
@@ -402,7 +408,7 @@ route capture는 단일 링크 문제가 아니라 서브트리 단위의 구조
 
 \textbf{sinkhole}은 허위로 낮은 rank를 광고해 경로를 유인하는 단계다.
 \textbf{blackhole}은 자신을 경유한 패킷을 전부 버리는 경우이며,
-\textbf{selective forwarding / grayhole}은 일정 비율만 드롭해
+\textbf{selective forwarding}은 일정 비율만 드롭해
 은닉성을 높이는 경우다.
 본 실험은 이들을 분리된 세 공격이 아니라
 ``유인 이후 50\% selective drop''이라는 연속 시나리오로 사용한다.
@@ -432,9 +438,11 @@ route capture는 단일 링크 문제가 아니라 서브트리 단위의 구조
 
 \subsection{설계 철학: 소프트 패널티 + 보수적 게이트}
 
-TA-BRPL의 설계 원칙은 두 문장으로 요약된다:
-\textit{``의심스러운 노드는 즉시 차단하지 말고 조용히 덜 선호하라''};
-\textit{``행동을 바꿀 때는 충분한 증거가 쌓인 뒤에 천천히 바꿔라''}.
+TA-BRPL은 두 설계 원칙에 따라 구성된다.
+\textbf{P1 (소프트 페널티):} 불신 노드를 즉시 차단하는 대신,
+신뢰 저하를 부모 선택 비용에 연속적으로 반영해 점진적으로 비선호 노드로 강등한다.
+\textbf{P2 (보수적 전환):} 충분한 증거가 누적되기 전에는 부모를 교체하지 않으며,
+admission/dwell/switch-margin 게이트가 이 원칙을 각각 다른 failure mode에서 시행한다.
 
 그림~\ref{fig:arch}는 신뢰 파이프라인 전체 구조를 보여준다.
 세 신호가 집계된 뒤 비대칭 EWMA로 업데이트되고,
@@ -528,12 +536,17 @@ forwarding fidelity가 낮거나 queue honesty가 무너지면
 \end{equation}
 $\lambda_d=0.4<\lambda_u=0.7$: 악화는 빠르게, 회복은 느리게 반영한다.
 
-정규화 신뢰 $t(v)=\hat{T}(v)/1000$, 불신뢰도 $d(v)=1-t(v)$에 대해
+신뢰 $t(v)=\hat{T}(v)\in[0,1]$, 불신뢰도 $d(v)=1-t(v)$에 대해
 BRPL 점수 반영식은:
 \begin{equation}
   S'_{TA}(v)=S_{BRPL}(v)\cdot\frac{t(v)}{1+\lambda_p d(v)},
   \label{eq:penalty}
 \end{equation}
+여기서 $S_{TA}(v)$는 \emph{최대화} 목표이다 (클수록 더 좋은 부모).
+$t$가 감소하면 계수 $t/(1+\lambda_p d)$가 단조 감소하므로
+불신뢰 노드의 점수가 낮아져 부모 선택에서 불리해진다.
+($t\to1$이면 계수$\to 1/(1+0)=1$, $t\to0$이면 계수$\to0$.)
+
 \begin{equation}
   S_{TA}(v)=S'_{TA}(v)\cdot\eta_{val}(v)\cdot\eta_{policy}(v)\cdot\eta_{sticky}(v).
   \label{eq:full}
@@ -560,13 +573,14 @@ $\eta_{sticky}$는 불필요한 즉시 재전환 억제이다.
 이 세 게이트는 서로 다른 failure mode를 막는다.
 전환 마진은 약간 더 좋아 보이는 후보로의 미세 진동을 막고,
 체류 시간은 일시적 신뢰 하락이 즉시 재전환으로 이어지는 것을 방지하며,
-허용 임계는 충분히 검증되지 않은 후보가
-``새로운 좋은 부모''처럼 갑자기 들어오는 것을 제한한다.
+허용 임계는 신뢰도가 충분히 검증되지 않은 후보가
+선호 부모로 급격히 진입하는 것을 제한한다.
 즉 TA-BRPL의 안정성은 단일 threshold가 아니라
 admission, retention, switching policy의 조합에서 나온다.
 
 표~\ref{tab:versions}에서 게이트 없는 v1에서 churn +2.43이었던 것이
-v13.12(최종)에서 +0.036으로 감소한 추이를 확인할 수 있다.
+v13.12(최종)에서 +0.42로 감소한 추이를 확인할 수 있다
+(고정 토폴로지 기준; 75쌍 평균에서는 $\Delta=+0.036$으로 추가 개선됨).
 
 \begin{table}[t]
 \centering\small
@@ -786,21 +800,21 @@ churn 비용을 제한된 범위 안에 유지할 수 있었다.
 \section{한계 및 위협요인}
 \label{sec:discussion}
 
-본 연구 결과는 유의미하지만, 몇 가지 중요한 한계를 함께 해석해야 한다.
+본 연구 결과는 유의미하지만, 다음 한계를 함께 고려해야 한다.
 
 \textbf{귀책(attribution) 한계.}
 $T_{fwd}$는 에코 기반 전달 신뢰를 이용하므로,
 실제 드롭 위치가 상위 홉에 있을 때 그 아래의 정직한 relay가
 낮은 forwarding trust를 받을 수 있다.
 본 연구는 $T_{ctrl}$, $T_{hon}$, review/blacklist, dwell gate로 이를 완화했지만,
-특히 저밀도 네트워크에서는 귀책 편향이 완전히 사라지지 않는다.
+특히 저밀도 네트워크에서는 이러한 귀책 편향이 완전히 제거되지 않는다.
 
 \textbf{정적 시뮬레이션 환경.}
 실험은 Contiki-NG/Cooja와 UDGM 무선 모델에서 수행되었다.
-이는 재현성과 통제성 측면에서는 장점이 있으나,
+이 설정은 재현성과 통제성 측면에서는 장점이 있으나,
 실제 배치의 fading, hidden terminal, 비동기 간섭, 장기적인 링크 변화를
 충분히 반영하지 못한다.
-따라서 본 결과는 메커니즘 검증에는 적합하지만
+따라서 본 결과는 메커니즘 검증에는 적합하지만,
 실환경 성능을 직접 대변하지는 않는다.
 
 \textbf{공격 범위의 제한.}
@@ -808,14 +822,14 @@ $T_{fwd}$는 에코 기반 전달 신뢰를 이용하므로,
 다중 공모 공격자, version-number attack, Sybil, mobility,
 온오프 공격, 공격자 간 역할 분담은 현재 범위 밖이다.
 또한 RFTrust~\cite{rftrust2021}, PCC-RPL~\cite{pccrpl2022} 같은
-동급 보안 라우팅과의 직접 비교도 후속 과제로 남아 있다.
+동급 보안 라우팅과의 직접 비교도 아직 수행하지 않았다.
 
 \textbf{파라미터 민감도.}
 제시한 결과는 v13.12 파라미터 스냅샷을 기준으로 한다.
 이 값들은 반복 실험을 통해 안정화된 조합이지만,
 밀도와 공격 강도에 따라 최적점이 달라질 수 있다.
-특히 sparse 네트워크에서 churn 비용이 더 크게 나타난 것은
-공통 파라미터가 모든 밀도에 동일하게 최적은 아니라는 점을 시사한다.
+특히 sparse 네트워크에서 churn 비용이 더 크게 나타난 것은,
+공통 파라미터가 모든 밀도에 동일하게 최적인 것은 아님을 시사한다.
 
 \textbf{에너지/지연 비용 미측정.}
 본 논문은 att\_share, hit\_ratio, PDR, churn을 주 지표로 삼았고,
@@ -831,13 +845,12 @@ $T_{fwd}$는 에코 기반 전달 신뢰를 이용하므로,
 본 논문은 sinkhole 공격을 경로 장악 → 가용성 파괴의 2단계 위협으로 정의하고,
 방어 1차 목표를 PDR이 아닌 \emph{경로 장악 억제}로 재설정한 \textbf{TA-BRPL}을 제안했다.
 
-핵심 결론은 세 축으로 정리된다.
-\textbf{(i)~경로 장악 억제}: att\_share/hit\_ratio가 유의하게 감소했고 ($p<10^{-4}$),
-이는 공격자 의존 강도와 오염 범위를 동시에 줄였음을 뜻한다.
-\textbf{(ii)~가용성 보전}: 공격 구간 PDR은 평균적으로 개선되었고,
+실험 결과, TA-BRPL은 att\_share와 hit\_ratio를 유의하게 감소시켜
+공격자 의존 강도와 오염 범위를 함께 줄였다 ($p<10^{-4}$).
+공격 구간 PDR은 평균적으로 개선되었고,
 토폴로지의 93.3\%가 비열세 기준을 통과했다.
-\textbf{(iii)~안정성 상한}: churn 증가는 존재하지만
-95\% CI 상한이 사전 선언한 $+0.1$보다 충분히 낮아,
+또한 churn 증가는 존재했지만,
+95\% CI 상한이 사전 선언한 $+0.1$보다 낮아
 관리 가능한 stability overhead 범위에 머물렀다.
 
 따라서 TA-BRPL의 핵심 기여는 ``더 강한 탐지기''를 추가한 것이 아니라,
@@ -847,10 +860,36 @@ admission, dwell, switch-margin으로 라우팅 진동을 제어하는
 이는 LLN 보안에서 route capture 억제와 routing stability가
 별개의 문제가 아니라 하나의 공동 설계 문제임을 보여준다.
 
-향후에는 stage-split 인과 검증, 다중 공격자, 현실 무선 모델,
-에너지/지연 오버헤드, 그리고 RFTrust/PCC-RPL 같은
-동급 보안 라우팅과의 직접 비교를 통해
-TA-BRPL의 적용 범위와 일반화 가능성을 더 엄밀히 검증할 계획이다.
+\subsection*{향후 연구}
+
+후속 연구는 다음 네 방향으로 확장될 수 있다.
+
+\textbf{다중 공격자 및 공모 시나리오.}
+본 실험은 단일 내부자 공격자를 가정했다.
+두 개 이상의 공격자가 공모해 서로의 신뢰 신호를 보강하거나,
+역할을 분담해 탐지를 회피하는 시나리오에서
+TA-BRPL의 방어 효과가 어떻게 달라지는지 검증이 필요하다.
+특히 공격자 간 공모가 $T_{ctrl}$의 rank 이상 탐지를 희석시킬 수 있는지가 핵심 쟁점이다.
+
+\textbf{현실적 손실 환경 및 이동성.}
+UDGM은 결정론적 거리 기반 전송 모델로,
+실제 배치의 fading, shadowing, hidden terminal, 비동기 간섭을 충분히 재현하지 못한다.
+Unit Disk Graph 모델을 넘어 TOSSIM, MiXiM 또는 실측 trace 기반 채널 모델로 확장하고,
+노드 이동성이 있는 환경에서 $T_{fwd}$ 귀책 정확도와 churn 비용을 재평가할 계획이다.
+
+\textbf{온오프 및 전략적 공격자.}
+공격자가 신뢰 측정 주기에 맞춰 정상 행동과 드롭을 교번하는 온오프 공격은
+EWMA 기반 신뢰 감쇠를 의도적으로 우회할 수 있다.
+비대칭 EWMA($\lambda_d < \lambda_u$) 파라미터 조정과
+관측 창 기반 review/blacklist의 내성을 체계적으로 분석할 필요가 있다.
+
+\textbf{에너지·지연 오버헤드 및 동급 비교.}
+현재 평가는 att\_share, hit\_ratio, PDR, churn에 집중하며
+제어 메시지 증가량, 에너지 소모, per-packet latency를 정량화하지 않았다.
+실배치 가능성을 평가하려면 이 비용 축이 보완되어야 한다.
+또한 RFTrust~\cite{rftrust2021}, PCC-RPL~\cite{pccrpl2022} 같은
+동급 신뢰 기반 라우팅과의 직접 비교를 통해
+TA-BRPL의 상대적 강점과 적용 범위를 더 엄밀히 규명할 필요가 있다.
 
 
 % ============================================================
