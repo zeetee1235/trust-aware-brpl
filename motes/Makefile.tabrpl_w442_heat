@@ -1,0 +1,4 @@
+include Makefile.tabrpl
+CFLAGS += -DTA_TRUST_W_FWD=4
+CFLAGS += -DTA_TRUST_W_CTRL=4
+CFLAGS += -DTA_TRUST_W_HON=2

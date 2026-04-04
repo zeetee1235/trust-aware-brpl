@@ -9,6 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.font_manager as fm
+from matplotlib.transforms import blended_transform_factory
 from pathlib import Path
 
 # 한글 폰트
@@ -62,11 +63,25 @@ ax1.set_ylim(-0.005, 0.18)
 ax1.legend(loc="upper left", fontsize=7.5, framealpha=0.8)
 ax1.yaxis.set_major_locator(plt.MultipleLocator(0.05))
 
-# Phase 1 강조 화살표
-ax1.annotate("", xy=(T_ATTACK+15, 0.065), xytext=(T_ATTACK+15, 0.03),
-             arrowprops=dict(arrowstyle="->", color="#f4a460", lw=1.2))
-ax1.text(T_ATTACK+20, 0.068, "경로 장악\n시작", fontsize=6.5,
-         color="#b07020", va="bottom")
+# Phase 1 강조 callout
+ax1.annotate(
+    "경로 장악\n시작",
+    xy=(T_ATTACK + 8, 0.058),
+    xytext=(455, 0.092),
+    fontsize=6.3,
+    color="#8a5b18",
+    ha="left",
+    va="center",
+    bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="#f4a460", alpha=0.92),
+    arrowprops=dict(
+        arrowstyle="-|>",
+        color="#f4a460",
+        lw=1.1,
+        shrinkA=2,
+        shrinkB=2,
+        connectionstyle="arc3,rad=0.15",
+    ),
+)
 
 # ── PDR ─────────────────────────────────────────────────────
 ax2.plot(t_pts, pdr_brpl, "o--", color="#e74c3c", lw=1.8, ms=4)
@@ -76,17 +91,43 @@ ax2.set_xlabel("시뮬레이션 시간 (초)", fontsize=8)
 ax2.set_ylim(0.88, 1.03)
 ax2.yaxis.set_major_locator(plt.MultipleLocator(0.04))
 
-# Phase 2 강조 화살표
-ax2.annotate("", xy=(T_DROP+15, 0.940), xytext=(T_DROP+15, 0.975),
-             arrowprops=dict(arrowstyle="->", color="#e74c3c", lw=1.2))
-ax2.text(T_DROP+20, 0.935, "PDR\n저하", fontsize=6.5,
-         color="#c0392b", va="top")
+# Phase 2 강조 callout
+ax2.annotate(
+    "PDR\n저하",
+    xy=(T_DROP + 6, 0.940),
+    xytext=(560, 0.920),
+    fontsize=6.3,
+    color="#b03024",
+    ha="center",
+    va="top",
+    bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="#e74c3c", alpha=0.92),
+    arrowprops=dict(
+        arrowstyle="-|>",
+        color="#e74c3c",
+        lw=1.1,
+        shrinkA=2,
+        shrinkB=2,
+        connectionstyle="arc3,rad=-0.12",
+    ),
+)
 
-# ── 페이즈 레이블 (ax1 상단) ─────────────────────────────────
+# ── 페이즈 레이블 (ax1 상단 가장자리) ─────────────────────────
+phase_tf = blended_transform_factory(ax1.transData, ax1.transAxes)
 phase_xs = [(175, "정상"), (415, "Phase 1\n경로 장악"), (555, "Phase 2\n드롭"), (775, "복구")]
 for px, plbl in phase_xs:
-    ax1.text(px, 0.168, plbl, ha="center", va="top", fontsize=6,
-             color="gray", multialignment="center")
+    ax1.text(
+        px,
+        0.98,
+        plbl,
+        transform=phase_tf,
+        ha="center",
+        va="top",
+        fontsize=5.8,
+        color="gray",
+        multialignment="center",
+        bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.75),
+        clip_on=False,
+    )
 
 ax1.set_xlim(0, 900)
 
